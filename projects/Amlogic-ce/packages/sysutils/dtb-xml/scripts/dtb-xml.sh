@@ -79,6 +79,7 @@ function update_migrated_xml() {
       if [ "$?" == 0 ]; then
         cmd_value=$(xmlstarlet sel -t -m "//$update_node/$option" -m "cmd[$cnt]/value" -v "concat(.,' ')" $xml_file)
         [ -n "$cmd_value" ] && cmd_value=${cmd_value::-1}
+        [ -n "$cmd_value" ] && cmd_value=${cmd_value#"0x"}
         if [ "$act_value" != "$cmd_value" ]; then
           continue 2
         fi
@@ -126,6 +127,27 @@ function migrate_dtb_to_xml() {
     option_nodes=$(xmlstarlet sel -t -m "//$node/*" -v "name()" -n $xml_file)
     name_option_available=0
 
+    # check if the node apply at all by dt_id
+    # if not skip any further check and set to 'migrated'
+    node_dt_id=$(xmlstarlet sel -t -v "//$node/@dt_id" $xml_file)
+    if [ -n "$node_dt_id" ]; then
+      DT_ID=$(sh $SYSTEM_ROOT/usr/bin/dtname)
+      log " dt_id: $node_dt_id,  coreelec-dt-id: $DT_ID"
+
+      dt_id_match=0
+      for dt_id in $node_dt_id; do
+        case $DT_ID in
+          *"$dt_id"*)
+            dt_id_match=1
+            ;;
+        esac
+      done
+
+      if [ "$dt_id_match" == 0 -o -z "$DT_ID" ]; then
+        option_nodes=""
+      fi
+    fi
+
     for option in $option_nodes; do
       cmd_count=$(xmlstarlet sel -t -c "count(//$node/$option/cmd)" $xml_file)
       # check all commands for this current node of BOOT_ROOT dtb.xml if all commands are equal to dtb.img
@@ -136,6 +158,7 @@ function migrate_dtb_to_xml() {
         if [ "$?" == 0 ]; then
           cmd_value=$(xmlstarlet sel -t -m "//$node/$option" -m "cmd[$cnt]/value" -v "concat(.,' ')" $xml_file)
           [ -n "$cmd_value" ] && cmd_value=${cmd_value::-1}
+          [ -n "$cmd_value" ] && cmd_value=${cmd_value#"0x"}
           if [ "$act_value" != "$cmd_value" ]; then
             continue 2
           fi
@@ -149,7 +172,7 @@ function migrate_dtb_to_xml() {
       if [ "$node_status" != "$name_option" ]; then
         # special handling to migrate heartbeat setting from config.ini on Odroid devices
         if [ "$node" == "sys_led" ]; then
-          DT_ID=$(dtname)
+          DT_ID=$(sh $SYSTEM_ROOT/usr/bin/dtname)
           case $DT_ID in
             *odroid*)
               log " detected Odroid device, migrate heartbeat led setting from config.ini"
@@ -205,6 +228,35 @@ function update_dtb_by_dtb_xml() {
 
     node_status=$(xmlstarlet sel -t -v "//$node/@status" $xml_file)
     log " status: $node_status"
+
+    node_dt_id=$(xmlstarlet sel -t -v "//$node/@dt_id" $xml_file)
+
+    # check if dt_id is set for this node
+    # if yes compare if the setting does apply for this $dtb_file
+    # if not skip node and set to 'migrated' to hide the option in CoreELEC settings
+    if [ -n "$node_dt_id" ]; then
+      log " dt_id: $node_dt_id"
+
+      DT_ID=$(sh $SYSTEM_ROOT/usr/bin/dtname)
+      log " coreelec-dt-id: $DT_ID"
+
+      dt_id_match=0
+      for dt_id in $node_dt_id; do
+        case $DT_ID in
+          *"$dt_id"*)
+            dt_id_match=1
+            ;;
+        esac
+      done
+
+      if [ "$dt_id_match" == 0 -o -z "$DT_ID" ]; then
+        log ""
+        log " not applicable as dt_id does not match"
+        log ""
+        xmlstarlet ed -L -u "//$node/@status" -v "migrated" $xml_file
+        continue
+      fi
+    fi
     log ""
 
     # check if node is 'migrated' and update if possible
@@ -310,7 +362,7 @@ function update_dtb_xml() {
         # check if old status still apply and set it if true
         for option in $option_nodes; do
           option_node_name=$(xmlstarlet sel -t -v "//$default_node/$option/@name" $xml_file)
-          if [ $node_status == $option_node_name ]; then
+          if [ "$node_status" == "$option_node_name" ]; then
             xmlstarlet ed -L -u "//$default_node/@status" -v "$node_status" $xml_file
             log " updated node status to: $node_status"
             continue 2
