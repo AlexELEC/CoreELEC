@@ -9,7 +9,7 @@ PKG_LICENSE="GPL"
 PKG_SITE="https://sourceware.org/elfutils/"
 PKG_URL="https://sourceware.org/elfutils/ftp/${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.bz2"
 PKG_DEPENDS_HOST="autoconf:host automake:host m4:host make:host zlib:host"
-PKG_DEPENDS_TARGET="toolchain zlib elfutils:host"
+PKG_DEPENDS_TARGET="toolchain zlib elfutils:host libarchive"
 PKG_LONGDESC="A collection of utilities to handle ELF objects."
 PKG_TOOLCHAIN="autotools"
 PKG_BUILD_FLAGS="+pic -cfg-libs -cfg-libs:host"
@@ -39,6 +39,10 @@ PKG_CONFIGURE_OPTS_TARGET="utrace_cv_cc_biarch=false \
                            --with-zlib \
                            --without-bzlib \
                            --without-lzma"
+
+pre_configure_target() {
+  export PKG_CONFIG="${PKG_CONFIG} --static"
+}
 
 post_makeinstall_target() {
   # don't install progs into sysroot
