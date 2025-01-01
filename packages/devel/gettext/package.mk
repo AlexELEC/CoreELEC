@@ -3,8 +3,8 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="gettext"
-PKG_VERSION="0.23"
-PKG_SHA256="bf31a9b6bdf3e364669c7bd9858f97e4a0c408a8d22940c5d4ab638b65460f85"
+PKG_VERSION="0.23.1"
+PKG_SHA256="c1f97a72a7385b7e71dd07b5fea6cdaf12c9b88b564976b23bd8c11857af2970"
 PKG_LICENSE="GPL"
 PKG_SITE="https://www.gnu.org/s/gettext/"
 PKG_URL="https://ftp.gnu.org/pub/gnu/gettext/${PKG_NAME}-${PKG_VERSION}.tar.xz"

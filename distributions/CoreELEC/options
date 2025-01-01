@@ -85,6 +85,8 @@
 # debug tty path
   DEBUG_TTY="/dev/ttyS0"
 
+# local console login prompt (yes / no)
+  LOCAL_LOGIN="no"
 
 ### KODI SETTINGS ###
 # Mediacenter to use (kodi / no)

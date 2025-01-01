@@ -14,9 +14,10 @@ PKG_CMAKE_OPTS_TARGET="-DWITH_GCRYPT=OFF \
                        -DWITH_GNUTLS=OFF \
                        -DWITH_GTK=OFF \
                        -DWITH_SDL=OFF \
-                       -DWITH_TIGHTVNC_FILETRANSFER=OFF \
-                       -DWITH_TESTS=OFF \
+                       -DWITH_TIGHTVNC_FILETRANSFER=0 \
                        -DWITH_EXAMPLES=OFF \
+                       -DWITH_TESTS=OFF \
+                       -DWITH_QT=OFF" \
                        -DBUILD_SHARED_LIBS=ON"
 
 pre_configure_target() {
