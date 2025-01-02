@@ -36,7 +36,7 @@ post_makeinstall_target() {
   rm -rf ${INSTALL}/usr/lib/udev/rules.d/90-alsa-restore.rules
 
   mkdir -p ${INSTALL}/.noinstall
-  for i in aconnect alsamixer amidi aplaymidi arecordmidi aseqdump aseqnet iecset; do
+  for i in aconnect amidi aplaymidi arecordmidi aseqdump aseqnet iecset; do
     mv ${INSTALL}/usr/bin/${i} ${INSTALL}/.noinstall
   done
 
