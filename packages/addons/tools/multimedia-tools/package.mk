@@ -37,6 +37,9 @@ addon() {
     # alsamixer
     cp -P $(get_install_dir alsa-utils)/.noinstall/alsamixer ${ADDON_BUILD}/${PKG_ADDON_ID}/bin/
 
+    # arecord
+    cp -PL $(get_install_dir alsa-utils)/usr/bin/arecord ${ADDON_BUILD}/${PKG_ADDON_ID}/bin/
+
     # mediainfo
     cp -P $(get_install_dir mediainfo)/usr/bin/mediainfo ${ADDON_BUILD}/${PKG_ADDON_ID}/bin
 
