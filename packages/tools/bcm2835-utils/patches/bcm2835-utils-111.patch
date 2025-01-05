@@ -1,0 +1,28 @@
+From c176592e36bb1ace8d5017df602b12acf132721e Mon Sep 17 00:00:00 2001
+From: Rudi Heitbaum <rudi@heitbaum.com>
+Date: Sun, 5 Jan 2025 23:49:42 +1100
+Subject: [PATCH] piolib: fixes may be used uninitialized
+
+Fixes compile error:
+    In function 'quadrature_encoder_get_count',
+        inlined from 'main' at /build/bcm2835-utils/piolib/examples/quadrature_encoder.c:58:21:
+/build/bcm2835-utils/piolib/examples/quadrature_encoder.pio.h:106:12: error: 'ret' may be used uninitialized [-Werror=maybe-uninitialized]
+      106 |     return ret;
+          |            ^~~
+---
+ piolib/examples/quadrature_encoder.pio.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/piolib/examples/quadrature_encoder.pio.h b/piolib/examples/quadrature_encoder.pio.h
+index eb15cb7..90991b0 100644
+--- a/piolib/examples/quadrature_encoder.pio.h
++++ b/piolib/examples/quadrature_encoder.pio.h
+@@ -94,7 +94,7 @@ static inline void quadrature_encoder_program_init(PIO pio, uint sm, uint pin, i
+ }
+ static inline int32_t quadrature_encoder_get_count(PIO pio, uint sm)
+ {
+-    uint ret;
++    uint ret = 0;
+     int n;
+     // if the FIFO has N entries, we fetch them to drain the FIFO,
+     // plus one entry which will be guaranteed to not be stale
