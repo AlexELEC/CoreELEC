@@ -40,6 +40,9 @@ post_makeinstall_target() {
     mv ${INSTALL}/usr/bin/${i} ${INSTALL}/.noinstall
   done
 
+  # temp fix until multimedia-tools addon is bumped
+  cp ${INSTALL}/usr/bin/alsamixer ${INSTALL}/.noinstall
+
   mkdir -p ${INSTALL}/usr/lib/udev
     cp ${PKG_DIR}/scripts/soundconfig ${INSTALL}/usr/lib/udev
 }
