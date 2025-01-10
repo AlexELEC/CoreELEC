@@ -2,8 +2,8 @@
 # Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="rust"
-PKG_VERSION="1.83.0"
-PKG_SHA256="722d773bd4eab2d828d7dd35b59f0b017ddf9a97ee2b46c1b7f7fac5c8841c6e"
+PKG_VERSION="1.84.0"
+PKG_SHA256="15cee7395b07ffde022060455b3140366ec3a12cbbea8f1ef2ff371a9cca51bf"
 PKG_LICENSE="MIT"
 PKG_SITE="https://www.rust-lang.org"
 PKG_URL="https://static.rust-lang.org/dist/rustc-${PKG_VERSION}-src.tar.gz"
@@ -53,6 +53,7 @@ rpath = true
 channel = "stable"
 codegen-tests = false
 optimize = true
+download-rustc = false
 
 [build]
 submodules = false

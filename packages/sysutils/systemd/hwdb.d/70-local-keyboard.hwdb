@@ -26,6 +26,10 @@ evdev:input:b0005v0957p1001*
  KEYBOARD_KEY_70045=volumeup
  KEYBOARD_KEY_70069=volumedown
 
+# foxtel remote
+evdev:input:b0005v06E7p8144*
+ KEYBOARD_KEY_c0041=enter
+
 # google tv remote
 evdev:name:*Chromecast Remote*:*
  KEYBOARD_KEY_c0041=enter

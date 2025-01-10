@@ -99,7 +99,7 @@ pre_configure_host() {
 }
 
 post_make_host() {
-  ninja ${NINJA_OPTS} llvm-config llvm-tblgen
+  ninja ${NINJA_OPTS} llvm-config llvm-objcopy llvm-tblgen
 
   if listcontains "${GRAPHIC_DRIVERS}" "iris"; then
     ninja ${NINJA_OPTS} llvm-as llvm-link llvm-spirv opt
@@ -109,6 +109,7 @@ post_make_host() {
 post_makeinstall_host() {
   mkdir -p ${TOOLCHAIN}/bin
     cp -a bin/llvm-config ${TOOLCHAIN}/bin
+    cp -a bin/llvm-objcopy ${TOOLCHAIN}/bin
     cp -a bin/llvm-tblgen ${TOOLCHAIN}/bin
 
   if listcontains "${GRAPHIC_DRIVERS}" "iris"; then
