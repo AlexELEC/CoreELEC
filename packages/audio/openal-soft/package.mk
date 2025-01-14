@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="openal-soft"
-PKG_VERSION="1.24.1"
-PKG_SHA256="e1b6ec960e00bfed3d480330274b0f102dc10e4ae0dbb70fd9db80d6978165b1"
+PKG_VERSION="1.24.2"
+PKG_SHA256="7efd383d70508587fbc146e4c508771a2235a5fc8ae05bf6fe721c20a348bd7c"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.openal.org/"
 PKG_URL="https://github.com/kcat/openal-soft/archive/${PKG_VERSION}.tar.gz"
