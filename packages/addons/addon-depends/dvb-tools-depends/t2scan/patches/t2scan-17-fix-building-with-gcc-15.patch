@@ -1,4 +1,4 @@
-From 8c7a865acea83d5144dd075ef40e0d4a3863b6b1 Mon Sep 17 00:00:00 2001
+From 3c08ff330853ed8ebac35d0905fa64134e9ca489 Mon Sep 17 00:00:00 2001
 From: Rudi Heitbaum <rudi@heitbaum.com>
 Date: Sun, 8 Dec 2024 11:51:12 +0000
 Subject: [PATCH] t2scan: fix -std=c23 build failure
@@ -18,8 +18,9 @@ Signed-off-by: Rudi Heitbaum <rudi@heitbaum.com>
 ---
  char-coding.h |  2 +-
  emulate.c     |  2 +-
+ emulate.h     |  2 +-
  tools.h       | 10 ++++++----
- 3 files changed, 8 insertions(+), 6 deletions(-)
+ 4 files changed, 9 insertions(+), 7 deletions(-)
 
 diff --git a/char-coding.h b/char-coding.h
 index 15bcdf9..93c78d2 100644
@@ -47,6 +48,19 @@ index d0cd744..cfe7ebe 100644
    em_device.highband = high_band;
    em_device.lnb_low = low_val;
    em_device.lnb_high = high_val;
+diff --git a/emulate.h b/emulate.h
+index fe3d6bf..392b817 100644
+--- a/emulate.h
++++ b/emulate.h
+@@ -17,7 +17,7 @@ void em_dvbapi(uint16_t * flags);
+ int  em_setproperty(struct dtv_properties * cmdseq);
+ int  em_getproperty(struct dtv_properties * cmdseq);
+ int  em_status(fe_status_t * status);
+-void em_lnb(bool high_band, uint32_t high_val, uint32_t low_val);
++void em_lnb(_Bool high_band, uint32_t high_val, uint32_t low_val);
+ void em_polarization(uint8_t p);
+ 
+ //--------------------------------------------------
 diff --git a/tools.h b/tools.h
 index 20b6a0d..221580e 100644
 --- a/tools.h
