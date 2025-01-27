@@ -3,8 +3,8 @@
 # Copyright (C) 2020-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libcdio"
-PKG_VERSION="2.1.1"
-PKG_SHA256="d3a7230f6804d5a84bf9805ed4a0de705b156299510c8085ae1fc693ca239f87"
+PKG_VERSION="2.2.0"
+PKG_SHA256="6f8fbdf4d189cf63f2a7a1549c516cd720c7b222c7aaadbc924a26e745a48539"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://www.gnu.org/software/libcdio/"
 PKG_URL="https://github.com/libcdio/libcdio/releases/download/${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.bz2"
