@@ -3,8 +3,8 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libnfs"
-PKG_VERSION="7afd17d094c8e564bf13e2dfe7bc60dc2e4fada8"
-PKG_SHA256="4a375b1bd3cc6b4ff2b5527044fe35acde260e43927087ee4efdcee95082ee0f"
+PKG_VERSION="20971deebdf0e0468521bf5b892c4154fc85ec42"
+PKG_SHA256="f2cbd1e9b87782b8b7094cb9943c1bff696cd72b72a081b6ef84b8e5d50d11de"
 PKG_LICENSE="LGPL2.1+"
 PKG_SITE="https://github.com/sahlberg/libnfs"
 PKG_URL="https://github.com/sahlberg/libnfs/archive/${PKG_VERSION}.tar.gz"
