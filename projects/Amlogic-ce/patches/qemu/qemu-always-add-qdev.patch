@@ -16,8 +16,8 @@ qdev.c:(.text+0x6c8): undefined reference to `qapi_event_send_device_deleted'
 +  stub_ss.add(files('qdev.c'))
 -
 -  # Stubs for QAPI events.  Those can always be included in the build, but
--  # they are not built at all for --disable-system --disable-tools builds.
--  if not (have_system or have_tools)
+-  # they are not built at all for --disable-system builds.
+-  if not have_system
 -    stub_ss.add(files('qdev.c'))
 -  endif
  endif
