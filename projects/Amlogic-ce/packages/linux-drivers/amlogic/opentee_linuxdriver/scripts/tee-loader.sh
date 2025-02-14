@@ -62,6 +62,8 @@ run_tee_from_coreelec() {
 run_tee_from_android() {
   message "run tee from android start"
 
+  local SOC=$(awk '/SoC[ \t]*:/ {printf "%s", $3}' /proc/cpuinfo)
+
   ! ls /dev/mapper/dynpart-* &>/dev/null && dmsetup create --concise "$(parse-android-dynparts /dev/super)"
 
   local active_slot=$(fw_printenv active_slot 2>/dev/null | awk -F '=' '/active_slot=/ {print $2}')
@@ -90,7 +92,11 @@ run_tee_from_android() {
   # wait for tee-supplicant process to start
   sleep 5
 
-  ln -sfn /vendor${VIDEO_UCODE_BIN_PATH} ${VIDEO_UCODE_BIN_PATH}
+  if [ -n "${SOC}" -a -f $(dirname ${VIDEO_UCODE_BIN_PATH})/${SOC}/video_ucode.bin ]; then
+    ln -sfn ${SOC}/video_ucode.bin ${VIDEO_UCODE_BIN_PATH}
+  else
+    ln -sfn /vendor${VIDEO_UCODE_BIN_PATH} ${VIDEO_UCODE_BIN_PATH}
+  fi
 
   android_wrapper /vendor/bin/tee_preload_fw ${VIDEO_UCODE_BIN_PATH}
   local rv=${?}
