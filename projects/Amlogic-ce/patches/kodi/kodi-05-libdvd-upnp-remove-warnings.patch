@@ -25,7 +25,7 @@ index deed2de5ac..9b4c418b81 100644
                            --libdir=${DEPENDS_PATH}/lib
                            "CC=${CMAKE_C_COMPILER}"
 -                          "CFLAGS=${CMAKE_C_FLAGS}"
-+                          "CFLAGS=${CMAKE_C_FLAGS} ${${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS"
++                          "CFLAGS=${CMAKE_C_FLAGS} ${${${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS}"
                            "LDFLAGS=${CMAKE_EXE_LINKER_FLAGS} ${LIBDVDCSS_FLAGS}")
      set(BUILD_COMMAND ${MAKE_EXECUTABLE})
      set(INSTALL_COMMAND ${MAKE_EXECUTABLE} install)
