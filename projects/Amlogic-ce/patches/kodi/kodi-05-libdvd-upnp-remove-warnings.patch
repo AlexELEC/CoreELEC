@@ -36,8 +36,7 @@ index 503f559e10..bf070db8d3 100644
 @@ -47,6 +47,7 @@ if(NOT TARGET LibDvdNav::LibDvdNav)
    endif()
 
--  string(APPEND ${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS "-D_XBMC")
-+  string(APPEND ${${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS "-D_XBMC")
+   string(APPEND ${${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS "-D_XBMC")
 +  string(APPEND ${${CMAKE_FIND_PACKAGE_NAME}_MODULE}_CFLAGS "-Wno-double-promotion -Wno-return-type")
 
    if(APPLE)
