@@ -2,8 +2,8 @@
 # Copyright (C) 2024-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="mt7668-wifi-bt"
-PKG_VERSION="54816a09cee5f74c62ba1b53024787cd3cf3e2e8"
-PKG_SHA256="2560fac936642fa2a830c584b151d3e20d18ee6d0c195ac8109ea79a962caf81"
+PKG_VERSION="92a01b1f61fbcd1ad8f2639cc9556ee8708fd7f6"
+PKG_SHA256="89b92dc6c548b315d7ad4ae8933491026810a744d4b69062f3a73ff4828c5568"
 PKG_ARCH="arm aarch64"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/noob404yt/mt7668-wifi-bt"
