@@ -26,6 +26,7 @@ PKG_CONFIGURE_OPTS_TARGET="-prefix /usr
                            -system-sqlite
                            -no-sql-mysql
                            -system-zlib
+                           -no-zstd
                            -no-mtdev
                            -system-libjpeg
                            -qt-libpng
