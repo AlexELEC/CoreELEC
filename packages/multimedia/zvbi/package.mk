@@ -17,5 +17,6 @@ PKG_CONFIGURE_OPTS_TARGET="--disable-dvb \
                            --disable-nls \
                            --disable-proxy \
                            --disable-tests \
+                           --disable-examples \
                            --without-doxygen \
                            --without-x"
