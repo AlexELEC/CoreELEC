@@ -561,6 +561,25 @@ local flash_label
 
 check_disks() {
   if [ "$RUN_FSCK" = "yes" -a -n "$RUN_FSCK_DISKS" ]; then
+    local run_fsck_disks_tmp="${RUN_FSCK_DISKS}"
+    RUN_FSCK_DISKS=""
+
+    # remove disk duplicates like /dev/data /dev/data
+    for fsck_disk in ${run_fsck_disks_tmp}; do
+      case " ${RUN_FSCK_DISKS} " in
+        *" ${fsck_disk} "*)
+          continue ;;
+        *)
+          #RUN_FSCK_DISKS="${RUN_FSCK_DISKS} ${fsck_disk}" ;;
+          if [ -z "${RUN_FSCK_DISKS}" ]; then
+            RUN_FSCK_DISKS="${fsck_disk}"
+          else
+            RUN_FSCK_DISKS="${RUN_FSCK_DISKS} ${fsck_disk}"
+          fi
+          ;;
+      esac
+    done
+      
     progress "Checking disk(s): $RUN_FSCK_DISKS"
     for i in 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0; do
       /usr/sbin/fsck -T -M -p -a $RUN_FSCK_DISKS >/dev/fsck.latest 2>&1
