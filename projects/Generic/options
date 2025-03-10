@@ -72,3 +72,8 @@
 
   # Default size of the ova image, in MB, eg. 4096
     OVA_SIZE="4096"
+
+  # ensure system size is at least 1 GB
+    if [ ${SYSTEM_SIZE} -lt 1024 ]; then
+      SYSTEM_SIZE=1024
+    fi

@@ -43,8 +43,13 @@ makeinstall_target() {
     cp -P kernel/nvidia.ko ${INSTALL}/usr/lib/nvidia
   mkdir -p ${INSTALL}/$(get_full_module_dir)/nvidia
     ln -sf /var/lib/nvidia.ko      ${INSTALL}/$(get_full_module_dir)/nvidia/nvidia.ko
+    cp -P kernel/nvidia-drm.ko     ${INSTALL}/$(get_full_module_dir)/nvidia
     cp -P kernel/nvidia-uvm.ko     ${INSTALL}/$(get_full_module_dir)/nvidia
     cp -P kernel/nvidia-modeset.ko ${INSTALL}/$(get_full_module_dir)/nvidia
+
+  # GSP firmware files
+  mkdir -p ${INSTALL}/$(get_full_firmware_dir)/nvidia/${PKG_VERSION}
+    cp firmware/gsp*.bin           ${INSTALL}/$(get_full_firmware_dir)/nvidia/${PKG_VERSION}
 
   # X driver
   mkdir -p ${INSTALL}/${XORG_PATH_MODULES}/drivers

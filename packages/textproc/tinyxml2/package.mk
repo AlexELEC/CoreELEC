@@ -3,8 +3,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="tinyxml2"
-PKG_VERSION="10.0.0"
-PKG_SHA256="3bdf15128ba16686e69bce256cc468e76c7b94ff2c7f391cc5ec09e40bff3839"
+PKG_VERSION="10.1.0"
+PKG_SHA256="9da7e1aebbf180ef6f39044b9740a4e96fa69e54a01318488512ae92ca97a685"
 PKG_LICENSE="zlib"
 PKG_SITE="http://www.grinninglizard.com/tinyxml2/index.html"
 PKG_URL="https://github.com/leethomason/tinyxml2/archive/${PKG_VERSION}.tar.gz"
