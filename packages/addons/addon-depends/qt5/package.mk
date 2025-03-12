@@ -24,7 +24,7 @@ PKG_CONFIGURE_OPTS_TARGET="-prefix /usr
                            -silent
                            -force-pkg-config
                            -make libs
-                           -no-dbus
+                           -dbus
                            -no-accessibility
                            -no-glib
                            -no-iconv
@@ -105,6 +105,15 @@ PKG_CONFIGURE_OPTS_TARGET="-prefix /usr
                            -skip qtwinextras
                            -skip qtx11extras
                            -skip qtxmlpatterns"
+
+post_unpack() {
+  # HOST_CFLAGS_DBUS is set to SYSROOT_PREFIX/usr/include
+  # from libsystemd.pc which is required by dbus-1.pc
+  # this fails to build some host tools
+  # with -no-dbus this workaround is not needed
+  sed -i "s|QT_HOST_CFLAGS_DBUS|QT_HOST_CFLAGS_DBUS_IGNORED|" \
+    ${PKG_BUILD}/qtbase/configure.json
+}
 
 configure_target() {
   QMAKE_CONF_DIR="qtbase/mkspecs/devices/linux-libreelec-g++"
