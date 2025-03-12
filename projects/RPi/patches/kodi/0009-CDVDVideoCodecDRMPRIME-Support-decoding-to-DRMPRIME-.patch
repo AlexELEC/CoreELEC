@@ -1,7 +1,7 @@
-From a6cd510a17a4a704c245b96734d7a44cba0e8d76 Mon Sep 17 00:00:00 2001
+From c2e865be9182adc4cc78658a507fd1415fb05efb Mon Sep 17 00:00:00 2001
 From: Dom Cobley <popcornmix@gmail.com>
 Date: Tue, 20 Jun 2023 15:13:09 +0100
-Subject: [PATCH 09/12] CDVDVideoCodecDRMPRIME: Support decoding to DRMPRIME
+Subject: [PATCH 09/13] CDVDVideoCodecDRMPRIME: Support decoding to DRMPRIME
  with sw deinterlace
 
 We can map a YUV style DRM_PRIME buffer back to AV_PIX_FMT_YUV420P
@@ -11,10 +11,10 @@ to allow subsquent sw deinterlace
  1 file changed, 22 insertions(+)
 
 diff --git a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
-index d07cccffddc1..9439f031800a 100644
+index a5d340525d69..c228a75f8b90 100644
 --- a/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
 +++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecDRMPRIME.cpp
-@@ -701,6 +701,9 @@ bool CDVDVideoCodecDRMPRIME::FilterOpen(const std::string& filters, AVPixelForma
+@@ -704,6 +704,9 @@ bool CDVDVideoCodecDRMPRIME::FilterOpen(const std::string& filters, AVPixelForma
    if (filters.find("deinterlace") != std::string::npos && pix_fmt == AV_PIX_FMT_YUV420P)
       pix_fmt = AV_PIX_FMT_DRM_PRIME;
  
@@ -24,7 +24,7 @@ index d07cccffddc1..9439f031800a 100644
    if (m_pFilterGraph)
      FilterClose();
  
-@@ -867,6 +870,25 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterIn()
+@@ -870,6 +873,25 @@ CDVDVideoCodec::VCReturn CDVDVideoCodecDRMPRIME::ProcessFilterIn()
      m_pFrame->data[0] = reinterpret_cast<uint8_t*>(descriptor);
      m_pFrame->format = AV_PIX_FMT_DRM_PRIME;
    }

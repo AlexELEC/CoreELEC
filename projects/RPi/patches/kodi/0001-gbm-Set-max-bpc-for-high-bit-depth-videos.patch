@@ -1,7 +1,7 @@
-From 2875c98a194df2251715a6b48118cc1734b8d663 Mon Sep 17 00:00:00 2001
+From 6a0368c3894cef146d1a22073eb0104a477d32fe Mon Sep 17 00:00:00 2001
 From: Dom Cobley <popcornmix@gmail.com>
 Date: Fri, 3 Dec 2021 16:00:50 +0000
-Subject: [PATCH 01/12] gbm: Set max bpc for high bit depth videos
+Subject: [PATCH 01/13] gbm: Set max bpc for high bit depth videos
 
 ---
  .../HwDecRender/VideoLayerBridgeDRMPRIME.cpp      | 15 +++++++++++++++
