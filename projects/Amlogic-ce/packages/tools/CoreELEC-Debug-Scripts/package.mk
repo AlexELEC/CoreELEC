@@ -2,8 +2,8 @@
 # Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="CoreELEC-Debug-Scripts"
-PKG_VERSION="1c7ff1b8c477c6ba0411d16ab0c15e0b3c3b3ff0"
-PKG_SHA256="0ace545ae4db56f8631b6311c8af09f71f99782c3145a8ab9406bb955392098e"
+PKG_VERSION="531c010f655a3faca187dd0fe9badb30d9284f97"
+PKG_SHA256="a520c512d554e6c018689b98e0e60e01a48ab5c939c035af2d20496d7f584a81"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/CoreELEC/CoreELEC-Debug-Scripts"
 PKG_URL="https://github.com/CoreELEC/CoreELEC-Debug-Scripts/archive/${PKG_VERSION}.tar.gz"
