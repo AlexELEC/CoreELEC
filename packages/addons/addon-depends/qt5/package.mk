@@ -57,7 +57,6 @@ PKG_CONFIGURE_OPTS_TARGET="-prefix /usr
                            -no-mtdev
                            -no-tslib
                            -no-xkbcommon
-                           -no-gif
                            -no-ico
                            -system-libpng
                            -system-libjpeg
