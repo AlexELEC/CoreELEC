@@ -14,14 +14,14 @@ PKG_LONGDESC="A XSLT C library."
 PKG_BUILD_FLAGS="+pic"
 
 PKG_CMAKE_OPTS_ALL="-DBUILD_SHARED_LIBS=ON \
-                    -DLIBXSLT_WITH_DEBUGGER=ON \
+                    -DLIBXSLT_WITH_DEBUGGER=OFF \
                     -DLIBXSLT_WITH_CRYPTO=OFF \
-                    -DLIBXSLT_WITH_MODULES=ON \
+                    -DLIBXSLT_WITH_MODULES=OFF \
                     -DLIBXSLT_WITH_PROFILER=ON \
                     -DLIBXSLT_WITH_PYTHON=OFF \
                     -DLIBXSLT_WITH_TESTS=OFF \
                     -DLIBXSLT_WITH_THREADS=ON \
-                    -DLIBXSLT_WITH_XSLT_DEBUG=ON"
+                    -DLIBXSLT_WITH_XSLT_DEBUG=OFF"
 
 PKG_CMAKE_OPTS_HOST=${PKG_CMAKE_OPTS_ALL}
 
