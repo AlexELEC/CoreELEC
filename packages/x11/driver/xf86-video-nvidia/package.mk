@@ -3,9 +3,6 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="xf86-video-nvidia"
-# Remember to run "python3 packages/x11/driver/xf86-video-nvidia/scripts/make_nvidia_udev.py" and commit
-# changes to "packages/x11/driver/xf86-video-nvidia/udev.d/96-nvidia.rules" whenever bumping version.
-# The build host may require installation of python3-lxml and python3-requests packages.
 PKG_VERSION="570.124.04"
 PKG_SHA256="49e6f9639ae13014bed73a25ab6226fdfa65d619679fb48425d5517c8ca03c39"
 PKG_ARCH="x86_64"
@@ -39,13 +36,8 @@ make_target() {
 
 makeinstall_target() {
   # Linux kernel modules
-  mkdir -p ${INSTALL}/usr/lib/nvidia
-    cp -P kernel/nvidia.ko ${INSTALL}/usr/lib/nvidia
   mkdir -p ${INSTALL}/$(get_full_module_dir)/nvidia
-    ln -sf /var/lib/nvidia.ko      ${INSTALL}/$(get_full_module_dir)/nvidia/nvidia.ko
-    cp -P kernel/nvidia-drm.ko     ${INSTALL}/$(get_full_module_dir)/nvidia
-    cp -P kernel/nvidia-uvm.ko     ${INSTALL}/$(get_full_module_dir)/nvidia
-    cp -P kernel/nvidia-modeset.ko ${INSTALL}/$(get_full_module_dir)/nvidia
+    cp -P kernel/*.ko ${INSTALL}/$(get_full_module_dir)/nvidia
 
   # GSP firmware files
   mkdir -p ${INSTALL}/$(get_full_firmware_dir)/nvidia/${PKG_VERSION}

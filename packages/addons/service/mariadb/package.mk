@@ -3,7 +3,7 @@
 
 PKG_NAME="mariadb"
 PKG_VERSION="11.8.1"
-PKG_REV="3"
+PKG_REV="4"
 PKG_SHA256="c58e9e96e8e69dba09aa179b9bea63fc2775f3194efb72dfc2c277abfb9936e5"
 PKG_LICENSE="GPL2"
 PKG_SITE="https://mariadb.org"
@@ -22,7 +22,6 @@ PKG_ADDON_TYPE="xbmc.service"
 configure_package() {
   PKG_CMAKE_OPTS_HOST=" \
     -DCMAKE_INSTALL_MESSAGE=NEVER \
-    -DSTACK_DIRECTION=-1 \
     -DHAVE_IB_GCC_ATOMIC_BUILTINS=1 \
     -DCMAKE_CROSSCOMPILING=OFF"
 
@@ -31,7 +30,6 @@ configure_package() {
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_CONFIG=mysql_release \
     -DFEATURE_SET=classic \
-    -DSTACK_DIRECTION=1 \
     -DDISABLE_LIBMYSQLCLIENT_SYMBOL_VERSIONING=ON \
     -DCMAKE_CROSSCOMPILING=ON \
     -DIMPORT_EXECUTABLES=${PKG_BUILD}/.${HOST_NAME}/import_executables.cmake \
