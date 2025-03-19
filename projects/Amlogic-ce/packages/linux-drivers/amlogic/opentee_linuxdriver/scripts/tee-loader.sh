@@ -80,8 +80,17 @@ run_tee_from_android() {
   mountpoint -q /android/system || mount -o ro /dev/mapper/dynpart-system${active_slot} /android/system
   mountpoint -q /android/vendor || mount -o ro /dev/mapper/dynpart-vendor${active_slot} /android/vendor
 
+  major=$(hexdump -e '"%d"' -n 1 -s 16 /vendor${VIDEO_UCODE_BIN_PATH})
+  minor=$(hexdump -e '"%d"' -n 1 -s 20 /vendor${VIDEO_UCODE_BIN_PATH})
+  message "Android ucode version: '${major}.${minor}'"
+  if [[ ${major} -gt 4 || ( ${major} -eq 4 && ${minor} -ge 1 ) ]]; then
+    message "run tee from android end"
+    return 2
+  fi
+
   if [ ! -x /vendor/bin/tee-supplicant ]; then
     message "tee-supplicant does not exist on android"
+    message "run tee from android end"
     return 1
   fi
 
@@ -130,9 +139,14 @@ case "${1}" in
   start)
     if [ -b /dev/super ]; then
       run_tee_from_android
-      [ ${?} -eq 0 ] && exit 0
+      rv=${?}
+      [ ${rv} -eq 0 ] && exit 0
 
-      message "using tee from android failed, trying from coreelec"
+      if [ ${rv} -eq 1 ]; then
+        message "using tee from android failed, trying from coreelec"
+      elif [ ${rv} -eq 2 ]; then
+        message "tee from android match SCS version, trying from coreelec"
+      fi
       cleanup_tee
     fi
 
