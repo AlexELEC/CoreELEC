@@ -80,8 +80,24 @@ run_tee_from_android() {
   mountpoint -q /android/system || mount -o ro /dev/mapper/dynpart-system${active_slot} /android/system
   mountpoint -q /android/vendor || mount -o ro /dev/mapper/dynpart-vendor${active_slot} /android/vendor
 
-  major=$(hexdump -e '"%d"' -n 1 -s 16 /vendor${VIDEO_UCODE_BIN_PATH})
-  minor=$(hexdump -e '"%d"' -n 1 -s 20 /vendor${VIDEO_UCODE_BIN_PATH})
+
+  offset=0
+  magic=$(echo $(hexdump -e '1/4 "%s"' -n 4 -s ${offset} /vendor${VIDEO_UCODE_BIN_PATH}) | rev)
+
+  if [[ ${magic} != 'NEWP' && ${magic} != 'PACK' ]]; then
+    offset=256
+    magic=$(echo $(hexdump -e '1/4 "%s"' -n 4 -s ${offset} /vendor${VIDEO_UCODE_BIN_PATH}) | rev)
+
+    if [[ ${magic} != 'PACK' ]]; then
+      message "video firmware is invalid"
+      message "run tee from android end"
+      return 1
+    fi
+  fi
+
+  major=$(hexdump -e '"%d"' -n 1 -s $((16 + ${offset})) /vendor${VIDEO_UCODE_BIN_PATH})
+  minor=$(hexdump -e '"%d"' -n 1 -s $((20 + ${offset})) /vendor${VIDEO_UCODE_BIN_PATH})
+
   message "Android ucode version: '${major}.${minor}'"
   if [[ ${major} -gt 4 || ( ${major} -eq 4 && ${minor} -ge 1 ) ]]; then
     message "run tee from android end"
