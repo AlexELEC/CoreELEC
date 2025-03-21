@@ -104,6 +104,10 @@ run_tee_from_android() {
     return 2
   fi
 
+  cat > /tmp/firmware.message << EOF
+Firmware version '${major}.${minor}' found. Please update Android to enable the best possible media support.
+EOF
+
   if [ ! -x /vendor/bin/tee-supplicant ]; then
     message "tee-supplicant does not exist on android"
     message "run tee from android end"
