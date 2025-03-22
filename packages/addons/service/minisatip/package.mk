@@ -2,9 +2,9 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="minisatip"
-PKG_VERSION="1.3.44"
-PKG_SHA256="82d1de38516e5a9826477d0517f40c20589f8cf30bc4cdcf2efd83685cee11e1"
-PKG_REV="9"
+PKG_VERSION="1.3.45"
+PKG_SHA256="12d4c4f2b967faf6c982293e3200aed1808b44160ad414c8aa4cccdf9b06d047"
+PKG_REV="10"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/catalinii/minisatip"
