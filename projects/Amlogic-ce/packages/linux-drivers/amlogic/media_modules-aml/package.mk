@@ -2,8 +2,8 @@
 # Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="media_modules-aml"
-PKG_VERSION="9787631b2a06d072bd1848992e3e0fb57a131162"
-PKG_SHA256="9f140afd7d0df3bc07ed5c6e6496036ac34c5a89fcd84daac7948cf64150fbbc"
+PKG_VERSION="7576adce80465808413f90c115ee0cd2aba45fdb"
+PKG_SHA256="794bcb14dd616cec0abe9675777447c9b6f28cc3390d1723e494768e473b4d60"
 PKG_LICENSE="GPL"
 PKG_SITE="https://coreelec.org"
 PKG_URL="https://github.com/CoreELEC/media_modules-aml/archive/${PKG_VERSION}.tar.gz"
@@ -19,26 +19,19 @@ pre_make_target() {
 make_target() {
   kernel_make -C $(kernel_path) M=${PKG_BUILD}/drivers \
     EXTRA_CFLAGS="-DLIMIT_DECODE_INSTANCE=1" \
-    CONFIG_AMLOGIC_MEDIA_VDEC_MPEG12=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_MPEG2_MULTI=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_MPEG4=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_MPEG4_MULTI=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_VC1=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_H264=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_H264_MULTI=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_H264_MVC=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_H265=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_H266=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_VP9=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_MJPEG=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_MJPEG_MULTI=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_REAL=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_AVS=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_AVS_MULTI=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_AVS2=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_AVS3=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_AV1=m \
-    CONFIG_AMLOGIC_MEDIA_VDEC_AVS3=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_VP9_FB=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_H265_FB=m \
     CONFIG_AMLOGIC_MEDIA_VDEC_AV1_FB=m \
@@ -53,7 +46,11 @@ makeinstall_target() {
     for soc in ${TEE_SOC}; do
       cp -PR ${PKG_BUILD}/firmware/${soc} ${INSTALL}/$(get_full_firmware_dir)/video
     done
-    cp -PR ${PKG_BUILD}/firmware/video_ucode.bin ${INSTALL}/$(get_full_firmware_dir)/video/NO_TEE
+    if [ -f "${PKG_BUILD}/firmware/NO_TEE/video_ucode.bin" ]; then
+      cp -PR ${PKG_BUILD}/firmware/NO_TEE/video_ucode.bin ${INSTALL}/$(get_full_firmware_dir)/video/NO_TEE
+    else
+      cp -PR ${PKG_BUILD}/firmware/video_ucode.bin ${INSTALL}/$(get_full_firmware_dir)/video/NO_TEE
+    fi
 
   mkdir -p ${INSTALL}/usr/lib/coreelec
     install -m 0755 ${PKG_DIR}/scripts/media_modules-aml.sh ${INSTALL}/usr/lib/coreelec/media_modules-aml
