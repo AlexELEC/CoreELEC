@@ -1,0 +1,11 @@
+--- a/storage/connect/plgxml.h	2025-02-12 10:13:23.000000000 +0000
++++ b/storage/connect/plgxml.h	2025-03-30 13:35:43.002151245 +0000
+@@ -5,7 +5,7 @@
+ /******************************************************************/
+ /*  Dual XML implementation base classes defines.                 */
+ /******************************************************************/
+-#if !defined(BASE_BUFFER_SIZE)
++#if !defined(__XML_TREE_H__)
+ enum ElementType {               // libxml2
+      XML_ELEMENT_NODE       =  1,
+      XML_ATTRIBUTE_NODE     =  2,
