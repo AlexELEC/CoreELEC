@@ -4,6 +4,7 @@
 
 # get coreelec release information
 source /etc/os-release
+source /usr/lib/coreelec/read-firmware-version
 
 VIDEO_UCODE_BIN_PATH=/lib/firmware/video/video_ucode.bin
 TEE_SUPPLICANT_PID_FILE=/var/run/tee-supplicant.pid
@@ -80,32 +81,15 @@ run_tee_from_android() {
   mountpoint -q /android/system || mount -o ro /dev/mapper/dynpart-system${active_slot} /android/system
   mountpoint -q /android/vendor || mount -o ro /dev/mapper/dynpart-vendor${active_slot} /android/vendor
 
-
-  offset=0
-  magic=$(echo $(hexdump -e '1/4 "%s"' -n 4 -s ${offset} /vendor${VIDEO_UCODE_BIN_PATH}) | rev)
-
-  if [[ ${magic} != 'NEWP' && ${magic} != 'PACK' ]]; then
-    offset=256
-    magic=$(echo $(hexdump -e '1/4 "%s"' -n 4 -s ${offset} /vendor${VIDEO_UCODE_BIN_PATH}) | rev)
-
-    if [[ ${magic} != 'PACK' ]]; then
-      message "video firmware is invalid"
-      message "run tee from android end"
-      return 1
-    fi
-  fi
-
-  major=$(hexdump -e '"%d"' -n 1 -s $((16 + ${offset})) /vendor${VIDEO_UCODE_BIN_PATH})
-  minor=$(hexdump -e '"%d"' -n 1 -s $((20 + ${offset})) /vendor${VIDEO_UCODE_BIN_PATH})
-
-  message "Android ucode version: '${major}.${minor}'"
-  if [[ ${major} -gt 4 || ( ${major} -eq 4 && ${minor} -ge 1 ) ]]; then
+  read_firmware_version /vendor${VIDEO_UCODE_BIN_PATH} &>/dev/null
+  message "Android ucode version: '${minor}.${batch}'"
+  if [[ ${minor} -gt 4 || ( ${minor} -eq 4 && ${batch} -ge 1 ) ]]; then
     message "run tee from android end"
     return 2
   fi
 
   cat > /tmp/firmware.message << EOF
-Firmware version '${major}.${minor}' found. Please update Android to enable the best possible media support.
+Firmware version '${minor}.${batch}' found. Please update Android to enable the best possible media support.
 EOF
 
   if [ ! -x /vendor/bin/tee-supplicant ]; then
@@ -164,10 +148,10 @@ case "${1}" in
 
       if [ ${rv} -eq 1 ]; then
         message "using tee from android failed, trying from coreelec"
+        cleanup_tee
       elif [ ${rv} -eq 2 ]; then
         message "tee from android match SCS version, trying from coreelec"
       fi
-      cleanup_tee
     fi
 
     run_tee_from_coreelec

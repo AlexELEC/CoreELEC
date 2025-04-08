@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2023-present Team CoreELEC (https://coreelec.org)
 
+source /usr/lib/coreelec/read-firmware-version
+SET_ANDROID_FIRMWARE="/sys/class/firmware_codec/android_firmware_version"
+
 modprobe -q amvdec_ports
 modprobe -q amvdec_avs
 modprobe -q amvdec_avs2
@@ -26,3 +29,9 @@ modprobe -q amvdec_vp9_fb
 modprobe -q amvdec_h265_fb
 modprobe -q amvdec_av1_fb
 modprobe -q amvdec_avs2_fb
+
+if [ -f ${SET_ANDROID_FIRMWARE} ]; then
+  read_firmware_version /vendor/lib/firmware/video/video_ucode.bin &>/dev/null
+  echo "Android firmware version: ${minor}.${batch}"
+  echo "${minor}.${batch}" > "${SET_ANDROID_FIRMWARE}"
+fi

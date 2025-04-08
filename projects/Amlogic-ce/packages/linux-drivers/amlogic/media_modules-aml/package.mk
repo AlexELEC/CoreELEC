@@ -54,6 +54,7 @@ makeinstall_target() {
 
   mkdir -p ${INSTALL}/usr/lib/coreelec
     install -m 0755 ${PKG_DIR}/scripts/media_modules-aml.sh ${INSTALL}/usr/lib/coreelec/media_modules-aml
+    install -m 0755 ${PKG_DIR}/scripts/read-firmware-version.sh ${INSTALL}/usr/lib/coreelec/read-firmware-version
 }
 
 post_install() {
