@@ -4,7 +4,7 @@
 PKG_NAME="btrfs-progs"
 PKG_VERSION="6.14"
 PKG_SHA256="5a85b791f0f32a4994e864ac4cb7abccce08e56db3010a1855ad0edeebc70b4c"
-PKG_REV="4"
+PKG_REV="0"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://btrfs.readthedocs.io/"

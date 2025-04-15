@@ -4,7 +4,7 @@
 PKG_NAME="pvr.freebox"
 PKG_VERSION="22.2.0-Piers"
 PKG_SHA256="400829cfdbaaf5c98aff602cfb84837e5ea0680b9365a3b32235ab280c53c7ef"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/aassif/pvr.freebox"
