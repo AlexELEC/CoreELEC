@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dtb-settings version="0">
 
-  <sys_led status="on" version="0">
+  <sys_led status="migrated" version="1">
     <sys_led_on name="on">
       <cmd path="/gpioleds/sys_led linux,default-trigger" type="s" >
         <value>default-on</value>
@@ -34,7 +34,7 @@
     </sys_led_off>
   </sys_led>
 
-  <red_led status="off" version="0">
+  <red_led status="migrated" version="1">
     <red_led_on name="on">
       <cmd path="/gpioleds/red_led linux,default-trigger" type="s" >
         <value>default-on</value>
@@ -67,7 +67,7 @@
     </red_led_off>
   </red_led>
 
-  <green_led status="off" version="0">
+  <green_led status="migrated" version="1">
     <green_led_on name="on">
       <cmd path="/gpioleds/green_led linux,default-trigger" type="s" >
         <value>default-on</value>
@@ -100,7 +100,7 @@
     </green_led_off>
   </green_led>
 
-  <bct3236_led status="on" version="0">
+  <bct3236_led status="migrated" version="1">
     <bct3236_led_on name="on">
       <cmd path="/soc/apb4@fe000000/i2c@6c000/bct3236@3c linux,default-trigger" type="s" >
         <value>default-on</value>
