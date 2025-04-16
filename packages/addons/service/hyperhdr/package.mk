@@ -44,6 +44,7 @@ PKG_CMAKE_OPTS_TARGET="-DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON \
                        -DUSE_STATIC_QT_PLUGINS=ON \
                        -DUSE_SYSTEM_FLATBUFFERS_LIBS=OFF \
                        -DFLATBUFFERS_FLATC_EXECUTABLE=${TOOLCHAIN}/bin/flatc \
+                       -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
                        -Wno-dev"
 
 pre_configure_target() {
