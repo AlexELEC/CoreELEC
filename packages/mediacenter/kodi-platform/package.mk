@@ -3,8 +3,8 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="kodi-platform"
-PKG_VERSION="809c5e9d711e378561440a896fcb7dbcd009eb3d"
-PKG_SHA256="159165ae641da5eb273885ce53b8a4b84e62a595c4974f9d12c1b5d1428ef25c"
+PKG_VERSION="kodiplatform-20250416"
+PKG_SHA256="e559715b37b91e219ea2bb72cff0d0b29cf08386685fd12328520a294bb17b57"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="https://github.com/xbmc/kodi-platform/archive/${PKG_VERSION}.tar.gz"
@@ -13,8 +13,7 @@ PKG_LONGDESC="kodi-platform:"
 
 PKG_CMAKE_OPTS_TARGET="-DCMAKE_INSTALL_LIBDIR:STRING=lib \
                        -DCMAKE_INSTALL_LIBDIR_NOARCH:STRING=lib \
-                       -DCMAKE_INSTALL_PREFIX_TOOLCHAIN=${SYSROOT_PREFIX}/usr \
-                       -DBUILD_SHARED_LIBS=0"
+                       -DBUILD_SHARED_LIBS=OFF"
 
 post_makeinstall_target() {
   rm -rf ${INSTALL}/usr/lib/kodiplatform
