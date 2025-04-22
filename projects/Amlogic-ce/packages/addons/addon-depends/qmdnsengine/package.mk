@@ -10,4 +10,5 @@ PKG_URL="https://github.com/nitroshare/qmdnsengine/archive/${PKG_VERSION}.tar.gz
 PKG_DEPENDS_TARGET="toolchain qt5"
 PKG_LONGDESC="Library provides an implementation of multicast DNS as per RFC 6762."
 
-PKG_CMAKE_OPTS_TARGET="-DBUILD_SHARED_LIBS=OFF"
+PKG_CMAKE_OPTS_TARGET="-DBUILD_SHARED_LIBS=OFF \
+                       -DCMAKE_POLICY_VERSION_MINIMUM=3.5"
