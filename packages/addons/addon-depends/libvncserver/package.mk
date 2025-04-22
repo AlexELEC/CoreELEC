@@ -18,7 +18,8 @@ PKG_CMAKE_OPTS_TARGET="-DWITH_GCRYPT=OFF \
                        -DWITH_EXAMPLES=OFF \
                        -DWITH_TESTS=OFF \
                        -DWITH_QT=OFF \
-                       -DBUILD_SHARED_LIBS=ON"
+                       -DBUILD_SHARED_LIBS=ON \
+                       -DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
 pre_configure_target() {
   # hide openssl >=3.0.0 warnings
