@@ -3,8 +3,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="firmware-imx"
-PKG_VERSION="8.26-d4c33ab"
-PKG_SHA256="b2fcf84a0417678aa441b1bcde9ece467f8bd063a63d8390684f8e37768d84cf"
+PKG_VERSION="8.27-5af0ceb"
+PKG_SHA256="61f925e606ab020b1a36f3f7f7e459c6847f5b9dbc79421f9ef86e8fc124eb2f"
 PKG_ARCH="aarch64 arm"
 PKG_LICENSE="other"
 PKG_SITE="http://www.freescale.com"
