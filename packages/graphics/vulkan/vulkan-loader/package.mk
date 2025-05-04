@@ -4,7 +4,7 @@
 
 PKG_NAME="vulkan-loader"
 PKG_VERSION="1.4.313"
-PKG_SHA256="5e1917fe5681fa405e63b70d4a27f48aa9c37e3ed820649d998f3d6ee12f4f2c"
+PKG_SHA256="0c2436993597f5bd0ee420b6b27632758ed3ab439043d251795fd13d4e70a2f3"
 PKG_LICENSE="Apache-2.0"
 PKG_SITE="https://github.com/KhronosGroup/Vulkan-Loader"
 PKG_URL="https://github.com/KhronosGroup/Vulkan-Loader/archive/v${PKG_VERSION}.tar.gz"
