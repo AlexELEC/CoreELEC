@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="ncftp"
-PKG_VERSION="3.2.9"
-PKG_SHA256="1d79348dd78e148f6a2491c9dab37d554d5fbce3a3b2bc2edd71b06d54ef97c1"
+PKG_VERSION="3.3.0"
+PKG_SHA256="7920f884c2adafc82c8e41c46d6f3d22698785c7b3f56f5677a8d5c866396386"
 PKG_LICENSE="GPLv3"
 PKG_SITE="http://www.ncftp.com/ncftp/"
 PKG_URL="https://www.ncftp.com/public_ftp/ncftp/ncftp-${PKG_VERSION}-src.tar.gz"
