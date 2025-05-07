@@ -3,8 +3,8 @@
 # Copyright (C) 2021-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="vulkan-tools"
-PKG_VERSION="1.4.313"
-PKG_SHA256="2a8d5535e51f134e5e962801bf20d4869d26c34ad1d2f1bf2e30f52426662f5b"
+PKG_VERSION="1.4.314"
+PKG_SHA256="720f10e8e5a8a816e869ab120a094480ba64c5a025822e88c5766c7938a435e0"
 PKG_LICENSE="Apache-2.0"
 PKG_SITE="https://github.com/KhronosGroup/Vulkan-Tools"
 PKG_URL="https://github.com/KhronosGroup/Vulkan-tools/archive/v${PKG_VERSION}.tar.gz"
