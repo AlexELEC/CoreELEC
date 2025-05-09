@@ -3,8 +3,8 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="mesa"
-PKG_VERSION="25.0.5"
-PKG_SHA256="c0d245dea0aa4b49f74b3d474b16542e4a8799791cd33d676c69f650ad4378d0"
+PKG_VERSION="25.1.0"
+PKG_SHA256="b1c45888969ee5df997e2542654f735ab1b772924b442f3016d2293414c99c14"
 PKG_LICENSE="OSS"
 PKG_SITE="http://www.mesa3d.org/"
 PKG_URL="https://mesa.freedesktop.org/archive/mesa-${PKG_VERSION}.tar.xz"
@@ -66,6 +66,12 @@ if listcontains "${GRAPHIC_DRIVERS}" "iris"; then
   PKG_MESON_OPTS_TARGET+=" -Dmesa-clc=system"
 fi
 
+if listcontains "${GRAPHIC_DRIVERS}" "panfrost"; then
+  PKG_DEPENDS_TARGET+=" mesa:host"
+  PKG_MESON_OPTS_HOST+=" -Dtools=panfrost"
+  PKG_MESON_OPTS_TARGET+=" -Dprecomp-compiler=system -Dmesa-clc=system"
+fi
+
 if listcontains "${GRAPHIC_DRIVERS}" "(nvidia|nvidia-ng)" ||
               [ "${OPENGL_SUPPORT}" = "yes" ] &&
               [ "${DISPLAYSERVER}" != "x11" ]; then
@@ -119,5 +125,9 @@ fi
 makeinstall_host() {
   mkdir -p "${TOOLCHAIN}/bin"
     cp -a src/compiler/clc/mesa_clc "${TOOLCHAIN}/bin"
-    cp -a src/compiler/spirv/vtn_bindgen "${TOOLCHAIN}/bin"
+    cp -a src/compiler/spirv/vtn_bindgen2 "${TOOLCHAIN}/bin"
+
+    if listcontains "${GRAPHIC_DRIVERS}" "panfrost"; then
+      cp -a src/panfrost/clc/panfrost_compile "${TOOLCHAIN}/bin"
+    fi
 }
