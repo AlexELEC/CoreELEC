@@ -16,8 +16,8 @@ PKG_PATCH_DIRS="${LINUX}"
 
 case "${LINUX}" in
   amlogic)
-    PKG_VERSION="9bc5c94e278f780af15b3f6e13ae08310aeae880" # 6.14.2
-    PKG_SHA256="c031ffd2ce70ffe5f89e8893b9b385169d3f27103af60e2e6b1903c67d3c98cd"
+    PKG_VERSION="e2d3e1fdb530198317501eb7ded4f3a5fb6c881c" # 6.14.6
+    PKG_SHA256="ba423436e51426f26ab4f82b799f92305e228db37610cdb1da9d67eb67661911"
     PKG_URL="https://github.com/torvalds/linux/archive/${PKG_VERSION}.tar.gz"
     PKG_SOURCE_NAME="linux-${LINUX}-${PKG_VERSION}.tar.gz"
     PKG_PATCH_DIRS="default rtlwifi/after-6.14"

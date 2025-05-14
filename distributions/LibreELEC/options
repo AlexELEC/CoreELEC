@@ -1,15 +1,19 @@
 ### DISTRO INFORMATION ###
 
-# Name of the Distro to build (full name, without special characters)
+# Distro name (full name, without special characters)
   DISTRONAME="LibreELEC"
 
-# short project description
+# Short distro description
   DESCRIPTION="LibreELEC is a fast and user-friendly Kodi Entertainment Center distribution."
 
+# Distribution Source location
+  DISTRO_MIRROR="https://sources.libreelec.tv/mirror"
+  DISTRO_SRC="https://sources.libreelec.tv/$DISTRO_VERSION"
 
-### USER INTERFACE SETTINGS ###
+# Distribution Home URL
+  DISTRO_HOME_URL="https://libreelec.tv"
 
-# Welcome Message for e.g. SSH Server (up to 5 Lines)
+# Welcome Message for SSH Server (up to 5 Lines)
   GREETING0="##############################################"
   GREETING1="#                 LibreELEC                  #"
   GREETING2="#            https://libreelec.tv            #"
@@ -90,6 +94,9 @@
 # local console login prompt (yes / no)
   LOCAL_LOGIN="no"
 
+# Enable SSH on boot (yes / no)
+  SSH_ENABLED_DEFAULT="no"
+
 ### KODI SETTINGS ###
 # Mediacenter to use (kodi / no)
   MEDIACENTER="kodi"
@@ -169,10 +176,6 @@
   KODI_PIPEWIRE_SUPPORT="no"
 
 ### KODI ADDONS ###
-
-# Distribution Specific source location
-  DISTRO_MIRROR="http://sources.libreelec.tv/mirror"
-  DISTRO_SRC="http://sources.libreelec.tv/$LIBREELEC_VERSION"
 
 # Addon Server Url
   ADDON_SERVER_URL="https://addons.libreelec.tv"
@@ -262,3 +265,11 @@
 # Space separated list is supported,
 # e.g. ADDITIONAL_PACKAGES="PACKAGE1 PACKAGE2"
   ADDITIONAL_PACKAGES=""
+
+# build and install driver addons (yes / no)
+  DRIVER_ADDONS_SUPPORT="no"
+
+# driver addons to install:
+# for a list of additional drivers see packages/linux-driver-addons
+# Space separated list is supported,
+  DRIVER_ADDONS="crazycat digital_devices dvb-latest"

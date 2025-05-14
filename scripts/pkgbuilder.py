@@ -730,7 +730,7 @@ class Builder:
 
     # Remove any source code directories that are no longer required.
     # Output from the subprocess is either appended to the burst logfile
-    # or is captured for later output to stdout (after the correspnding logfile).
+    # or is captured for later output to stdout (after the corresponding logfile).
     def autoRemovePackages(self, job):
         if self.autoremove:
             if self.debug:

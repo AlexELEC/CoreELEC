@@ -1,0 +1,34 @@
+From f7410af04d5d6099a99a033136688328699c7c75 Mon Sep 17 00:00:00 2001
+From: Christian Hewitt <christianshewitt@gmail.com>
+Date: Wed, 30 Apr 2025 11:51:27 +0000
+Subject: [PATCH 16/55] FROMGIT(6.15): arm64: dts: amlogic: dreambox: fix
+ missing clkc_audio node
+
+Add the clkc_audio node to fix audio support on Dreambox One/Two.
+
+Fixes: 83a6f4c62cb1 ("arm64: dts: meson: add initial support for Dreambox One/Two")
+CC: <stable@vger.kernel.org>
+Suggested-by: Emanuel Strobel <emanuel.strobel@yahoo.com>
+Signed-off-by: Christian Hewitt <christianshewitt@gmail.com>
+---
+ arch/arm64/boot/dts/amlogic/meson-g12b-dreambox.dtsi | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-g12b-dreambox.dtsi b/arch/arm64/boot/dts/amlogic/meson-g12b-dreambox.dtsi
+index de35fa2d7a6d..8e3e3354ed67 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-g12b-dreambox.dtsi
++++ b/arch/arm64/boot/dts/amlogic/meson-g12b-dreambox.dtsi
+@@ -116,6 +116,10 @@ &arb {
+ 	status = "okay";
+ };
+ 
++&clkc_audio {
++	status = "okay";
++};
++
+ &frddr_a {
+ 	status = "okay";
+ };
+-- 
+2.34.1
+

@@ -38,6 +38,7 @@ function do_mkimage() {
     PROJECT="${PROJECT}" \
     DEVICE="${DEVICE}" \
     DISTRO="${DISTRO}" \
+    DISTRO_HOME_URL="${DISTRO_HOME_URL}" \
     TARGET_IMG="${TARGET_IMG}" \
     BUILD_NAME="${IMAGE_NAME}" \
     IMAGE_NAME="${1:-${IMAGE_NAME}}" \
@@ -92,16 +93,16 @@ ORIGIN_URL="$(git remote -v | awk '$1 == "origin" { print $2 }' | head -1 | sed 
 
 [ "${BUILDER_NAME,,}" = "official" ] && BUILDER_NAME=
 if [ "${OFFICIAL}" = "yes" ]; then
-  LIBREELEC_BUILD="official"
+  DISTRO_BUILD="official"
 else
   if [ ${NON_PERIODIC} ]; then
     OS_STAGE="devel"
     BUILD_NUM="_$(date +%Y%m%d%H%M%S)"
   fi
   if [ -n "${BUILDER_NAME}" ]; then
-    LIBREELEC_BUILD="${BUILDER_NAME}"
+    DISTRO_BUILD="${BUILDER_NAME}"
   else
-    LIBREELEC_BUILD="community"
+    DISTRO_BUILD="community"
   fi
 fi
 
@@ -112,11 +113,11 @@ fi
 LIBREELEC_VERSION="${OS_VERSION}-${OS_CODENAME}${EXTRA_VERSION}"
 
 if [ -n "${CUSTOM_VERSION}" ]; then
-  LIBREELEC_VERSION="${CUSTOM_VERSION}"
+  DISTRO_VERSION="${CUSTOM_VERSION}"
 fi
 
-LIBREELEC_ARCH="${DEVICE:-${PROJECT}}.${TARGET_ARCH}"
-TARGET_VERSION="${LIBREELEC_ARCH}-${LIBREELEC_VERSION}"
+DISTRO_ARCH="${DEVICE:-${PROJECT}}.${TARGET_ARCH}"
+TARGET_VERSION="${DISTRO_ARCH}-${DISTRO_VERSION}"
 
 if [ -n "${CUSTOM_IMAGE_NAME}" ]; then
   IMAGE_NAME="${CUSTOM_IMAGE_NAME}"
@@ -146,7 +147,7 @@ rm -rf ${INSTALL}
 rm -rf ${STAMPS_INSTALL}
 mkdir -p ${INSTALL}
 
-# Create base layout of LibreELEC read-only file system
+# Create base layout of read-only file system
 for directory in etc dev proc run sys tmp usr var flash storage; do
   mkdir -p ${INSTALL}/${directory}
 done
@@ -173,21 +174,18 @@ echo "${TARGET_VERSION}" >${INSTALL}/etc/release
 # Create /etc/os-release
 cat <<EOF >${INSTALL}/etc/os-release
 NAME="${DISTRONAME}"
-VERSION="${LIBREELEC_VERSION}"
+VERSION="${DISTRO_VERSION}"
 ID="${DISTRONAME,,}"
 VERSION_ID="${OS_VERSION}"
-PRETTY_NAME="${DISTRONAME} (${LIBREELEC_BUILD}): ${LIBREELEC_VERSION}"
-HOME_URL="https://coreelec.org"
+PRETTY_NAME="${DISTRONAME} (${DISTRO_BUILD}): ${DISTRO_VERSION}"
+HOME_URL="${DISTRO_HOME_URL}"
 BUG_REPORT_URL="${ORIGIN_URL}"
 BUILD_ID="${GIT_HASH}"
-LIBREELEC_ARCH="${LIBREELEC_ARCH}"
-LIBREELEC_BUILD="${LIBREELEC_BUILD}"
-LIBREELEC_PROJECT="${PROJECT}"
-COREELEC_ARCH="${LIBREELEC_ARCH}"
-COREELEC_BUILD="${LIBREELEC_BUILD}"
-COREELEC_PROJECT="${PROJECT}"
+DISTRO_ARCH="${DISTRO_ARCH}"
+DISTRO_BUILD="${DISTRO_BUILD}"
+DISTRO_PROJECT="${PROJECT}"
 EOF
-[ -n "${DEVICE}" ] && echo "COREELEC_DEVICE=\"${DEVICE}\"" >>${INSTALL}/etc/os-release
+[ -n "${DEVICE}" ] && echo "DISTRO_DEVICE=\"${DEVICE}\"" >>${INSTALL}/etc/os-release
 [ -n "${BUILDER_NAME}" ] && echo "BUILDER_NAME=\"${BUILDER_NAME}\"" >>${INSTALL}/etc/os-release
 [ -n "${BUILDER_VERSION}" ] && echo "BUILDER_VERSION=\"${BUILDER_VERSION}\"" >>${INSTALL}/etc/os-release
 
@@ -206,7 +204,7 @@ ${GREETING1}
 ${GREETING2}
 ${GREETING3}
 ${GREETING4}
-${DISTRONAME} (${LIBREELEC_BUILD}): ${LIBREELEC_VERSION} (${LIBREELEC_ARCH})
+${DISTRONAME} (${DISTRO_BUILD}): ${DISTRO_VERSION} (${DISTRO_ARCH})
 EOF
 
 ln -sf /etc/issue ${INSTALL}/etc/motd
@@ -395,7 +393,7 @@ if [ "${1}" = "release" -o "${1}" = "mkimage" -o "${1}" = "noobs" ]; then
 
     RELEASE_DIR="${TARGET_IMG}/${IMAGE_NAME}-${1}"
 
-    # eg. LibreELEC_RPi, LibreELEC_RPi2 etc.
+    # eg. Distro_RPi, Distro_RPi2 etc.
     NOOBS_DISTRO="${DISTRONAME}_${DEVICE:-${PROJECT}}"
 
     # Create release dir
@@ -427,7 +425,7 @@ if [ "${1}" = "release" -o "${1}" = "mkimage" -o "${1}" = "noobs" ]; then
 
     sed -e "s%@DISTRONAME@%${DISTRONAME}%g" \
       -e "s%@PROJECT@%${DEVICE:-${PROJECT}}%g" \
-      -e "s%@LIBREELEC_VERSION@%${LIBREELEC_VERSION}%g" \
+      -e "s%@DISTRO_VERSION@%${DISTRO_VERSION}%g" \
       -e "s%@RELEASE_DATE@%$(date +%F)%g" \
       -e "s%@KERNEL_VERSION@%$(kernel_version)%g" \
       -e "s%@DESCRIPTION@%${DESCRIPTION}%g" \

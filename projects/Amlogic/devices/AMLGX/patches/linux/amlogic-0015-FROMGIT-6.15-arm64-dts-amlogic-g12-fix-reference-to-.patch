@@ -1,0 +1,52 @@
+From d9207b2496fb9ddbcf0b874af6920bcf2371752b Mon Sep 17 00:00:00 2001
+From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
+Date: Sun, 20 Apr 2025 18:48:01 +0200
+Subject: [PATCH 15/55] FROMGIT(6.15): arm64: dts: amlogic: g12: fix reference
+ to unknown/untested PWM clock
+
+Device-tree expects absent clocks to be specified as <0> (instead of
+using <>). This fixes using the FCLK4/FCLK3 clocks as they are now
+seen at their correct index (while before they were recognized, but at
+the correct index - resulting in the hardware using a different clock
+than what the kernel sees).
+
+Fixes: e6884f2e4129 ("arm64: dts: amlogic: g12: switch to the new PWM controller binding")
+Signed-off-by: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
+---
+ arch/arm64/boot/dts/amlogic/meson-g12-common.dtsi | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-g12-common.dtsi b/arch/arm64/boot/dts/amlogic/meson-g12-common.dtsi
+index 9b6593555912..4b75b4d07901 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-g12-common.dtsi
++++ b/arch/arm64/boot/dts/amlogic/meson-g12-common.dtsi
+@@ -2313,7 +2313,7 @@ pwm_ef: pwm@19000 {
+ 					     "amlogic,meson8-pwm-v2";
+ 				reg = <0x0 0x19000 0x0 0x20>;
+ 				clocks = <&xtal>,
+-					 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++					 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 					 <&clkc CLKID_FCLK_DIV4>,
+ 					 <&clkc CLKID_FCLK_DIV3>;
+ 				#pwm-cells = <3>;
+@@ -2325,7 +2325,7 @@ pwm_cd: pwm@1a000 {
+ 					     "amlogic,meson8-pwm-v2";
+ 				reg = <0x0 0x1a000 0x0 0x20>;
+ 				clocks = <&xtal>,
+-					 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++					 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 					 <&clkc CLKID_FCLK_DIV4>,
+ 					 <&clkc CLKID_FCLK_DIV3>;
+ 				#pwm-cells = <3>;
+@@ -2337,7 +2337,7 @@ pwm_ab: pwm@1b000 {
+ 					     "amlogic,meson8-pwm-v2";
+ 				reg = <0x0 0x1b000 0x0 0x20>;
+ 				clocks = <&xtal>,
+-					 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++					 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 					 <&clkc CLKID_FCLK_DIV4>,
+ 					 <&clkc CLKID_FCLK_DIV3>;
+ 				#pwm-cells = <3>;
+-- 
+2.34.1
+

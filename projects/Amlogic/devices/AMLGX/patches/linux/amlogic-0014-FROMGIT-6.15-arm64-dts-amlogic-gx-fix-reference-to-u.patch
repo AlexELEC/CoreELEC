@@ -1,0 +1,82 @@
+From bc7b1c3119fd74f4898d547849dffdfefccbcc06 Mon Sep 17 00:00:00 2001
+From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
+Date: Sun, 20 Apr 2025 18:48:00 +0200
+Subject: [PATCH 14/55] FROMGIT(6.15): arm64: dts: amlogic: gx: fix reference
+ to unknown/untested PWM clock
+
+Device-tree expects absent clocks to be specified as <0> (instead of
+using <>). This fixes using the FCLK4/FCLK3 clocks as they are now
+seen at their correct index (while before they were recognized, but at
+the correct index - resulting in the hardware using a different clock
+than what the kernel sees).
+
+Fixes: a526eeef9a81 ("arm64: dts: amlogic: gx: switch to the new PWM controller binding")
+Signed-off-by: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
+---
+ arch/arm64/boot/dts/amlogic/meson-gxbb.dtsi | 6 +++---
+ arch/arm64/boot/dts/amlogic/meson-gxl.dtsi  | 6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxbb.dtsi b/arch/arm64/boot/dts/amlogic/meson-gxbb.dtsi
+index 8ebce7114a60..6c134592c7bb 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxbb.dtsi
++++ b/arch/arm64/boot/dts/amlogic/meson-gxbb.dtsi
+@@ -741,7 +741,7 @@ mux {
+ 
+ &pwm_ab {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+@@ -752,14 +752,14 @@ &pwm_AO_ab {
+ 
+ &pwm_cd {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+ 
+ &pwm_ef {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxl.dtsi b/arch/arm64/boot/dts/amlogic/meson-gxl.dtsi
+index 2dc2fdaecf9f..19b8a39de6a0 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl.dtsi
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl.dtsi
+@@ -811,7 +811,7 @@ internal_phy: ethernet-phy@8 {
+ 
+ &pwm_ab {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+@@ -822,14 +822,14 @@ &pwm_AO_ab {
+ 
+ &pwm_cd {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+ 
+ &pwm_ef {
+ 	clocks = <&xtal>,
+-		 <>, /* unknown/untested, the datasheet calls it "vid_pll" */
++		 <0>, /* unknown/untested, the datasheet calls it "vid_pll" */
+ 		 <&clkc CLKID_FCLK_DIV4>,
+ 		 <&clkc CLKID_FCLK_DIV3>;
+ };
+-- 
+2.34.1
+

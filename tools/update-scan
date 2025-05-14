@@ -61,7 +61,7 @@ check_for_update() {
   esac
 
   # check the version of some packages even if they do not have a PKG_URL
-  # the PKG_WITHOUT_URLS is space seperated
+  # the PKG_WITHOUT_URLS is space separated
   PKGS_WITHOUT_URLS="jellyfin"
   if [[ ! " ${PKG_NAME} " == *" ${PKGS_WITHOUT_URLS} "* ]]; then
     # check if version and url are empty or self hosted by us and ignore those packages
