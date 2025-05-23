@@ -75,7 +75,7 @@
   SYSTEM_SIZE=512
 
 # Default system partition offset, in sectors, eg. 2048
-  SYSTEM_PART_START=8192
+  SYSTEM_PART_START=16384
 
 # build with swap support (yes / no)
   SWAP_SUPPORT="yes"

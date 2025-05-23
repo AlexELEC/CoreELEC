@@ -89,6 +89,9 @@ for arg in $(cat /proc/cmdline); do
           *odroid_c4*)
             SUBDEVICE="Odroid_C4"
             ;;
+          *odroid_c5*)
+            SUBDEVICE="Odroid_C5"
+            ;;
           *odroid_n2*)
             SUBDEVICE="Odroid_N2"
             ;;
