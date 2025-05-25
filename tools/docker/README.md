@@ -2,9 +2,9 @@
 
 **Docker containers**
 - Ubuntu
-  - focal     (Ubuntu 20.04)
   - jammy     (Ubuntu 22.04)
   - noble     (Ubuntu 24.04)
+  - plucky    (Ubuntu 25.04)
 - Debian
   - bookworm  (Debian 12)
 
