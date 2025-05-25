@@ -2,8 +2,8 @@
 # Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="opengl-meson"
-PKG_VERSION="8bfb8ebe38f615907852ada7ff375a04f53f3e81"
-PKG_SHA256="9468dad254ef7b2486f738f594c5a78fbb1926a6661923ae10054d9960978ec7"
+PKG_VERSION="11418b559cd1673790e5addf47c8f8b658aaa99d"
+PKG_SHA256="b19e88caf6bf23445027ca85c4e06a55f372d5eb040d67cd0da501b8fb67d83a"
 PKG_LICENSE="nonfree"
 PKG_SITE="http://openlinux.amlogic.com:8000/download/ARM/filesystem/"
 PKG_URL="https://github.com/CoreELEC/opengl-meson/archive/${PKG_VERSION}.tar.gz"
@@ -17,7 +17,8 @@ makeinstall_target() {
     cp -p lib/arm64/dvalin/r12p0/fbdev/libMali.so ${INSTALL}/usr/lib/libMali.dvalin.g12a.so
     cp -p lib/arm64/gondul/r37p0/fbdev/libMali_r1p0.so ${INSTALL}/usr/lib/libMali.gondul.so
     cp -p lib/arm64/dvalin/r37p0/fbdev/libMali.so ${INSTALL}/usr/lib/libMali.dvalin.so
-    cp -p lib/arm64/valhall/r41p0/fbdev/libMali.so ${INSTALL}/usr/lib/libMali.valhall.so
+    cp -p lib/arm64/valhall/r44p0/wayland/libMali_g57_dmaheap.so ${INSTALL}/usr/lib/libMali.valhall.g57.so
+    cp -p lib/arm64/valhall/r44p0/wayland/libMali_g310_dmaheap.so ${INSTALL}/usr/lib/libMali.valhall.g310.so
 
     ln -sf /var/lib/libMali.so ${INSTALL}/usr/lib/libMali.so
 
@@ -43,18 +44,25 @@ makeinstall_target() {
   mkdir -p ${INSTALL}/usr/sbin
     cp ${PKG_DIR}/scripts/libmali-overlay-setup ${INSTALL}/usr/sbin
   # install needed files for compiling
+  mkdir -p ${SYSROOT_PREFIX}/usr/include
+    cp -pr include/EGL_platform/platform_gbm/gbm/* ${SYSROOT_PREFIX}/usr/include
   mkdir -p ${SYSROOT_PREFIX}/usr/include/EGL
     cp -pr include/EGL ${SYSROOT_PREFIX}/usr/include
-    cp -pr include/EGL_platform/platform_fbdev/* ${SYSROOT_PREFIX}/usr/include/EGL
+    cp -pr include/EGL_platform/platform_fbdev/* ${SYSROOT_PREFIX}/usr/include/EGL &2>/dev/null
   mkdir -p ${SYSROOT_PREFIX}/usr/include/GLES2
     cp -pr include/GLES2 ${SYSROOT_PREFIX}/usr/include
   mkdir -p ${SYSROOT_PREFIX}/usr/include/GLES3
     cp -pr include/GLES3 ${SYSROOT_PREFIX}/usr/include
   mkdir -p ${SYSROOT_PREFIX}/usr/include/KHR
     cp -pr include/KHR ${SYSROOT_PREFIX}/usr/include
+  mkdir -p ${SYSROOT_PREFIX}/usr/lib/pkgconfig
+    cp -pr lib/pkgconfig/gbm/gbm.pc ${SYSROOT_PREFIX}/usr/lib/pkgconfig
+    cp -pr lib/pkgconfig/egl.pc ${SYSROOT_PREFIX}/usr/lib/pkgconfig
+    cp -pr lib/pkgconfig/glesv2.pc ${SYSROOT_PREFIX}/usr/lib/pkgconfig
   mkdir -p ${SYSROOT_PREFIX}/usr/lib
-    ln ${INSTALL}/usr/lib/libMali.gondul.so ${SYSROOT_PREFIX}/usr/lib/libEGL.so
-    ln ${INSTALL}/usr/lib/libMali.gondul.so ${SYSROOT_PREFIX}/usr/lib/libGLESv2.so
+    ln ${INSTALL}/usr/lib/libMali.valhall.g310.so ${SYSROOT_PREFIX}/usr/lib/libgbm.so
+    ln ${INSTALL}/usr/lib/libMali.valhall.g310.so ${SYSROOT_PREFIX}/usr/lib/libEGL.so
+    ln ${INSTALL}/usr/lib/libMali.valhall.g310.so ${SYSROOT_PREFIX}/usr/lib/libGLESv2.so
 }
 
 post_install() {
