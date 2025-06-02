@@ -48,6 +48,8 @@ makeinstall_target() {
       [ -z "${fwline}" ] && continue
       [[ ${fwline} =~ ^#.* ]] && continue
       [[ ${fwline} =~ ^[[:space:]] ]] && continue
+      link=$(echo "${fwline}" | awk -F ":" '{ print $2 }')
+      fwline=$(echo "${fwline}" | awk -F ":" '{ print $1 }')
 
       eval "(cd ${PKG_FW_SOURCE} && find "${fwline}" >/dev/null)" || die "ERROR: Firmware pattern does not exist: ${fwline}"
 
@@ -57,6 +59,7 @@ makeinstall_target() {
         if [ -f "${PKG_FW_SOURCE}/${fwfile}" ]; then
           mkdir -p "$(dirname "${FW_TARGET_DIR}/${fwfile}")"
             cp -Lv "${PKG_FW_SOURCE}/${fwfile}" "${FW_TARGET_DIR}/${fwfile}"
+            [ -n "${link}" ] && ln -s "${fwfile}" "${FW_TARGET_DIR}/${link}"
         else
           echo "ERROR: Firmware file ${fwfile} does not exist - aborting"
           exit 1
