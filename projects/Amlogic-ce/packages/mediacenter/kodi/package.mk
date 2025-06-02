@@ -4,8 +4,8 @@
 # Copyright (C) 2022-present Team CoreELEC (https://coreelec.tv)
 
 PKG_NAME="kodi"
-PKG_VERSION="b6c5c2c1fa7e64bbc13b3d7d9e4b001bca2a1614"
-PKG_SHA256="212e2fd308cc2c658ff9a51222e8fb71638fd46cd696aa78b8556ea9de4b7a1d"
+PKG_VERSION="5364602b6a6315a64a6e013f4aba0c84cee6fc91"
+PKG_SHA256="ae3e5f8c210328313bf0b2844f882a3cbdaafc91d90ceb99aab1fb5d3a4f043c"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="https://github.com/CoreELEC/xbmc/archive/${PKG_VERSION}.tar.gz"
@@ -231,6 +231,7 @@ configure_package() {
       fi
     elif [ "${KODIPLAYER_DRIVER}" = libamcodec ]; then
       KODI_PLATFORM="-DCORE_PLATFORM_NAME=aml -DAPP_RENDER_SYSTEM=gles"
+      PKG_DEPENDS_TARGET+=" wayland"
     fi
   fi
 
