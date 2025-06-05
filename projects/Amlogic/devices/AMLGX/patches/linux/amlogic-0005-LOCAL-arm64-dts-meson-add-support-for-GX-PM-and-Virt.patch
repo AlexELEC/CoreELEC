@@ -1,7 +1,7 @@
-From a943d0edc42f086d306761830e72203aec47e091 Mon Sep 17 00:00:00 2001
+From 48d789e1641771db846e43510558a7ee820cca9a Mon Sep 17 00:00:00 2001
 From: Neil Armstrong <narmstrong@baylibre.com>
 Date: Thu, 3 Nov 2016 15:29:25 +0100
-Subject: [PATCH 05/55] LOCAL: arm64: dts: meson: add support for GX PM and
+Subject: [PATCH 05/50] LOCAL: arm64: dts: meson: add support for GX PM and
  Virtual RTC
 
 Signed-off-by: Neil Armstrong <narmstrong@baylibre.com>
@@ -10,7 +10,7 @@ Signed-off-by: Neil Armstrong <narmstrong@baylibre.com>
  1 file changed, 9 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/amlogic/meson-gx.dtsi b/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
-index 5f9b0854c201..b702a7f7bcf5 100644
+index eebd4a4d388c..260628cf218e 100644
 --- a/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
 +++ b/arch/arm64/boot/dts/amlogic/meson-gx.dtsi
 @@ -223,6 +223,10 @@ sm: secure-monitor {

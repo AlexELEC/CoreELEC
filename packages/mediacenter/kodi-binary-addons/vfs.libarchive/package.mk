@@ -4,7 +4,7 @@
 PKG_NAME="vfs.libarchive"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="aab35cb6b03191609a7e97df02f2f102659c12e414f7b95595f9bb2047554daf"
-PKG_REV="2"
+PKG_REV="3"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/vfs.libarchive"

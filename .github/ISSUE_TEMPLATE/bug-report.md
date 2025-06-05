@@ -7,6 +7,13 @@ assignees: ''
 
 ---
 
+<!-- Before making a bug report please visit https//forum.libreelec.tv where -->
+<!-- a large community exists to help and support you. -->
+
+<!-- Opening a bug report without triaging the issue in the forum first will -->
+<!-- probably result in the report being closed, with an instruction to visit -->
+<!-- the forum for support. -->
+
 ### Describe the bug
 <!-- A clear description of what the bug is. -->
 
@@ -17,8 +24,9 @@ Steps to reproduce the behavior:
 3. See error
 
 ### Information
- - LibreELEC Version: [e.g. 9.2.1]
- - Hardware Platform: [e.g. RPi3]
+ - LibreELEC Version: [e.g. 12.0.2]
+ - Hardware Platform: [e.g. RPi4]
+ - Forum Thread: [URL]
 
 ### Log file
 <!-- Add debug log files (https://libreelec.wiki/how_to/provide_logfile) that we can search for errors. -->

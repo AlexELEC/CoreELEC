@@ -27,7 +27,7 @@ index b7e9f2d33..9a9e9a0a0 100644
  obexd_builtin_modules += mns
  obexd_builtin_sources += obexd/client/mns.c obexd/src/map_ap.h \
  				obexd/client/map-event.h
-@@ -104,11 +106,6 @@ obexd_src_obexd_CPPFLAGS = $(AM_CPPFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) \
+@@ -107,11 +109,6 @@ obexd_src_obexd_CPPFLAGS = $(AM_CPPFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) \
  				-D_FILE_OFFSET_BITS=64 \
  				-I$(builddir)/obexd/src
  
@@ -36,6 +36,6 @@ index b7e9f2d33..9a9e9a0a0 100644
 -obexd-remove-service-symlink:
 -endif
 -
- obexd_src_obexd_SHORTNAME = obexd
- 
- obexd_builtin_files = obexd/src/builtin.h $(obexd_builtin_nodist)
+ if OBEX
+ if SYSTEMD
+ obexd_src_obexd_CPPFLAGS += -DSYSTEMD
