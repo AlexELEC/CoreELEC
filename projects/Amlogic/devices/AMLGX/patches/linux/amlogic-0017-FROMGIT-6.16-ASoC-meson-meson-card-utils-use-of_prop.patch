@@ -1,4 +1,4 @@
-From 069d3f524abc88be5b335b4a1f4b108823fa0c08 Mon Sep 17 00:00:00 2001
+From a2c43a1fdf6a9ce8f5c2f39b66bbe12b143137e8 Mon Sep 17 00:00:00 2001
 From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
 Date: Sat, 19 Apr 2025 23:34:48 +0200
 Subject: [PATCH 17/50] FROMGIT(6.16): ASoC: meson: meson-card-utils: use

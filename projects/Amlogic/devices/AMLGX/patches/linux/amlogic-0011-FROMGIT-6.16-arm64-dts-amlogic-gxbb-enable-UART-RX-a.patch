@@ -1,4 +1,4 @@
-From a47d29eae229e62c4bf6f6d694d62ab7ccf4d2fe Mon Sep 17 00:00:00 2001
+From 72bed39069eff09afa075b506f434ddb60beb05c Mon Sep 17 00:00:00 2001
 From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
 Date: Sat, 29 Mar 2025 19:58:51 +0100
 Subject: [PATCH 11/50] FROMGIT(6.16): arm64: dts: amlogic: gxbb: enable UART

@@ -1,7 +1,7 @@
-From c9d9536006b6fc6b59d918c333b4563e4be040bf Mon Sep 17 00:00:00 2001
+From bc08bd56d8eb62b97d7028ac88eba9a2613f2617 Mon Sep 17 00:00:00 2001
 From: Christian Hewitt <christianshewitt@gmail.com>
 Date: Sun, 26 May 2024 12:53:07 +0000
-Subject: [PATCH 37/50] WIP: arm64: dts: meson: add Odroid-C2 HiFi-Shield
+Subject: [PATCH 39/50] WIP: arm64: dts: meson: add Odroid-C2 HiFi-Shield
  boards
 
 Add experimental device-tree files for Odroid C2 with HiFi-Shield+ (pcm5102a)

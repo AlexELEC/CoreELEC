@@ -1,4 +1,4 @@
-From 967bd7dbbb6ae6392aec7c41d3243c7d635cf6d1 Mon Sep 17 00:00:00 2001
+From e4b38fd1dcd0eb1abd14dc4bcd0517d2bcef499c Mon Sep 17 00:00:00 2001
 From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
 Date: Sat, 29 Mar 2025 20:07:12 +0100
 Subject: [PATCH 20/50] FROMLIST(v2): phy: amlogic: meson8b-usb2: Use the

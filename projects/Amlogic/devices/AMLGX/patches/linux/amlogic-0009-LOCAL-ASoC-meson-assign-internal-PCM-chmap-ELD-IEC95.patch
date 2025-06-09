@@ -1,4 +1,4 @@
-From e227a26c18cba4fe01be8dce8b6301d693c4ce04 Mon Sep 17 00:00:00 2001
+From 74691114248dc2f00dbaada19b5506f6a78ef7bd Mon Sep 17 00:00:00 2001
 From: Anssi Hannula <anssi.hannula@iki.fi>
 Date: Sun, 17 Apr 2022 04:37:48 +0000
 Subject: [PATCH 09/50] LOCAL: ASoC: meson: assign internal PCM

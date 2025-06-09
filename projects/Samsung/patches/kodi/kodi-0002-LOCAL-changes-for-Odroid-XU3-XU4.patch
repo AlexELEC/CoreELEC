@@ -201,8 +201,8 @@ index 5267c93c8f..bc0a9b1c96 100644
 +  * are no buffers available instead GEM buffers are running out, so we manually empty
 +  * the buffers here for a maximum of three
 +  */
-+  std::call_once(
-+     flag, [this]() { CLog::Log(LOGDEBUG, "CGBMUtils - using {} buffers", MAX_SURFACE_BUFFERS); });
++  std::call_once(flag, [this]()
++                 { CLog::Log(LOGDEBUG, "CGBMUtils - using {} buffers", MAX_SURFACE_BUFFERS); });
 +
 +  if (m_buffers.size() >= MAX_SURFACE_BUFFERS)
    {
@@ -211,8 +211,8 @@ index 5267c93c8f..bc0a9b1c96 100644
 -     * we have to release buffers. This means that the maximum amount of buffers had been reached.
 -     * For mesa this should be 4 buffers but it may vary across other implementations.
 -     */
--    std::call_once(
--        flag, [this]() { CLog::Log(LOGDEBUG, "CGBMUtils - using {} buffers", m_buffers.size()); });
+-    std::call_once(flag, [this]()
+-                   { CLog::Log(LOGDEBUG, "CGBMUtils - using {} buffers", m_buffers.size()); });
 -
 -    m_buffers.pop();
 +     while (!m_buffers.empty())

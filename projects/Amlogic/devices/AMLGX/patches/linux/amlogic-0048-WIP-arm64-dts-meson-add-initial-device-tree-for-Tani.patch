@@ -1,7 +1,7 @@
-From 0f82a6a67523a95d0322637707c3a936ed83355c Mon Sep 17 00:00:00 2001
+From 90c410aa206b5e6432196595c399dce44dca511d Mon Sep 17 00:00:00 2001
 From: Christian Hewitt <christianshewitt@gmail.com>
 Date: Thu, 9 Feb 2023 10:01:14 +0000
-Subject: [PATCH 46/50] WIP: arm64: dts: meson: add initial device-tree for
+Subject: [PATCH 48/50] WIP: arm64: dts: meson: add initial device-tree for
  Tanix TX9 Pro
 
 Oranth Tanix TX9 Pro is based on the Amlogic Q200 reference design with

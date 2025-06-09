@@ -1,4 +1,4 @@
-From fc926d1d75ffe9da12e856320e2ad0eb02a28ca2 Mon Sep 17 00:00:00 2001
+From a8b34bc50f933ff7e54d26eb89545c5e67f3387f Mon Sep 17 00:00:00 2001
 From: Martin Blumenstingl <martin.blumenstingl@googlemail.com>
 Date: Tue, 31 Dec 2024 20:42:06 +0100
 Subject: [PATCH 14/50] FROMGIT(6.16): dt-bindings: iio: adc:

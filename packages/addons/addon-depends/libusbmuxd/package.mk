@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libusbmuxd"
-PKG_VERSION="2.1.0"
-PKG_SHA256="3bda6abb2167e7818bd449aa03c5cfe175c6f965bab3979fda6d58e698df19af"
+PKG_VERSION="2.1.1"
+PKG_SHA256="bcc185615a0f4ba80b617696235a084c64b68a1bf546a1dedd85da6b62b8cfbe"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.libimobiledevice.org"
 PKG_URL="https://github.com/libimobiledevice/libusbmuxd/archive/${PKG_VERSION}.tar.gz"

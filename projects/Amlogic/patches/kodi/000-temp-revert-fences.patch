@@ -1,4 +1,4 @@
-From ed37390e03db3629a41ca09eeedd50dac072b9e4 Mon Sep 17 00:00:00 2001
+From ac0bbb9cb0c36175abfb6dc145d4af289315051d Mon Sep 17 00:00:00 2001
 From: Matthias Reichl <hias@horus.com>
 Date: Fri, 25 Oct 2024 16:19:44 +0200
 Subject: [PATCH 1/4] Revert "CEGLFence: Ignore improper atomic drmrequest when
@@ -31,7 +31,7 @@ index 58a9ec1683be..9d0065bdaf07 100644
 2.39.5
 
 
-From 5a8da1e3f14f6ac8feca4e13827bf046b8eb4e45 Mon Sep 17 00:00:00 2001
+From 0939d854f2b0746b6ad989ef0e655b6f216a0070 Mon Sep 17 00:00:00 2001
 From: Matthias Reichl <hias@horus.com>
 Date: Fri, 25 Oct 2024 16:20:19 +0200
 Subject: [PATCH 2/4] Revert "CDRMAtomic: Backlog only the last known good
@@ -43,13 +43,13 @@ This reverts commit 6c49df769b7a21a3857b25ea12dc8ba0302051aa.
  1 file changed, 3 insertions(+), 5 deletions(-)
 
 diff --git a/xbmc/windowing/gbm/drm/DRMAtomic.cpp b/xbmc/windowing/gbm/drm/DRMAtomic.cpp
-index 70ae92e9482d..ff7f137d60e6 100644
+index a197adbcb409..bb8776fb0db3 100644
 --- a/xbmc/windowing/gbm/drm/DRMAtomic.cpp
 +++ b/xbmc/windowing/gbm/drm/DRMAtomic.cpp
-@@ -149,11 +149,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+@@ -148,11 +148,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+   if (ret < 0)
    {
-     CLog::Log(LOGERROR, "CDRMAtomic::{} - atomic commit failed: {}", __FUNCTION__,
-               strerror(errno));
+     CLog::Log(LOGERROR, "CDRMAtomic::{} - atomic commit failed: {}", __FUNCTION__, strerror(errno));
 -    m_atomicRequestQueue.pop_back();
 -  }
 -  else if (m_atomicRequestQueue.size() > 1)
@@ -58,7 +58,7 @@ index 70ae92e9482d..ff7f137d60e6 100644
    }
  
    if (m_inFenceFd != -1)
-@@ -169,6 +164,9 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+@@ -168,6 +163,9 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
                  strerror(errno));
    }
  
@@ -72,7 +72,7 @@ index 70ae92e9482d..ff7f137d60e6 100644
 2.39.5
 
 
-From a62af43ef43a170ee3e50b89f88318d3751ad0fd Mon Sep 17 00:00:00 2001
+From edfde4bf9a6be9177b57765d3d69ce9e67769d05 Mon Sep 17 00:00:00 2001
 From: Matthias Reichl <hias@horus.com>
 Date: Fri, 25 Oct 2024 16:27:00 +0200
 Subject: [PATCH 3/4] Revert "CDRMAtomic: add support for using
@@ -95,10 +95,10 @@ This reverts commit e9710033029d86efa0c18a6121d2c6376f74ef10.
  12 files changed, 15 insertions(+), 102 deletions(-)
 
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.cpp b/xbmc/windowing/gbm/WinSystemGbm.cpp
-index 72497a215684..ba472fc29079 100644
+index d7ea32f6cb46..242c553c223a 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbm.cpp
-@@ -278,7 +278,7 @@ void CWinSystemGbm::UpdateDisplayHardwareScaling(const RESOLUTION_INFO& resInfo)
+@@ -273,7 +273,7 @@ void CWinSystemGbm::UpdateDisplayHardwareScaling(const RESOLUTION_INFO& resInfo)
    SetFullScreen(true, resMutable, false);
  }
  
@@ -107,7 +107,7 @@ index 72497a215684..ba472fc29079 100644
  {
    if (m_videoLayerBridge && !videoLayer)
    {
-@@ -293,7 +293,7 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
+@@ -288,7 +288,7 @@ void CWinSystemGbm::FlipPage(bool rendered, bool videoLayer, bool async)
      bo = m_GBM->GetDevice().GetSurface().LockFrontBuffer().Get();
    }
  
@@ -116,7 +116,7 @@ index 72497a215684..ba472fc29079 100644
  
    if (m_videoLayerBridge && !videoLayer)
    {
-@@ -310,14 +310,14 @@ bool CWinSystemGbm::UseLimitedColor()
+@@ -306,14 +306,14 @@ bool CWinSystemGbm::UseLimitedColor()
  bool CWinSystemGbm::Hide()
  {
    bool ret = m_DRM->SetActive(false);
@@ -134,7 +134,7 @@ index 72497a215684..ba472fc29079 100644
  }
  
 diff --git a/xbmc/windowing/gbm/WinSystemGbm.h b/xbmc/windowing/gbm/WinSystemGbm.h
-index 9609675d7220..8993b6d27865 100644
+index d6680e8c1848..feac645536b3 100644
 --- a/xbmc/windowing/gbm/WinSystemGbm.h
 +++ b/xbmc/windowing/gbm/WinSystemGbm.h
 @@ -49,7 +49,7 @@ public:
@@ -147,7 +147,7 @@ index 9609675d7220..8993b6d27865 100644
    bool CanDoWindowed() override { return false; }
    void UpdateResolutions() override;
 diff --git a/xbmc/windowing/gbm/WinSystemGbmEGLContext.cpp b/xbmc/windowing/gbm/WinSystemGbmEGLContext.cpp
-index b7e02d58b7be..c8c8c9ab410e 100644
+index ae015d225252..83509f94c8ef 100644
 --- a/xbmc/windowing/gbm/WinSystemGbmEGLContext.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbmEGLContext.cpp
 @@ -58,17 +58,6 @@ bool CWinSystemGbmEGLContext::InitWindowSystemEGL(EGLint renderableType, EGLint
@@ -169,7 +169,7 @@ index b7e02d58b7be..c8c8c9ab410e 100644
  }
  
 diff --git a/xbmc/windowing/gbm/WinSystemGbmEGLContext.h b/xbmc/windowing/gbm/WinSystemGbmEGLContext.h
-index e8b0a76d4407..2074dace314d 100644
+index 387beb210a20..5c2b5a34aebf 100644
 --- a/xbmc/windowing/gbm/WinSystemGbmEGLContext.h
 +++ b/xbmc/windowing/gbm/WinSystemGbmEGLContext.h
 @@ -9,7 +9,6 @@
@@ -180,7 +180,7 @@ index e8b0a76d4407..2074dace314d 100644
  #include "utils/EGLUtils.h"
  #include "windowing/linux/WinSystemEGL.h"
  
-@@ -51,8 +50,6 @@ protected:
+@@ -55,8 +54,6 @@ protected:
    bool InitWindowSystemEGL(EGLint renderableType, EGLint apiType);
    virtual bool CreateContext() = 0;
  
@@ -188,12 +188,12 @@ index e8b0a76d4407..2074dace314d 100644
 -
    struct delete_CVaapiProxy
    {
-     void operator()(CVaapiProxy *p) const;
+     void operator()(CVaapiProxy* p) const;
 diff --git a/xbmc/windowing/gbm/WinSystemGbmGLContext.cpp b/xbmc/windowing/gbm/WinSystemGbmGLContext.cpp
-index adbb539f210d..e4ff49c61835 100644
+index 65878a7e221d..063b6a213bd4 100644
 --- a/xbmc/windowing/gbm/WinSystemGbmGLContext.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbmGLContext.cpp
-@@ -119,37 +119,13 @@ void CWinSystemGbmGLContext::PresentRender(bool rendered, bool videoLayer)
+@@ -121,37 +121,13 @@ void CWinSystemGbmGLContext::PresentRender(bool rendered, bool videoLayer)
    {
      if (rendered)
      {
@@ -233,10 +233,10 @@ index adbb539f210d..e4ff49c61835 100644
      if (m_dispReset && m_dispResetTimer.IsTimePast())
      {
 diff --git a/xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp b/xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp
-index ad80abf46c3e..0d071c31f168 100644
+index 7538a6a69473..f26d0f9c5d32 100644
 --- a/xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp
 +++ b/xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp
-@@ -128,38 +128,13 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
+@@ -130,38 +130,13 @@ void CWinSystemGbmGLESContext::PresentRender(bool rendered, bool videoLayer)
    {
      if (rendered)
      {
@@ -277,7 +277,7 @@ index ad80abf46c3e..0d071c31f168 100644
      if (m_dispReset && m_dispResetTimer.IsTimePast())
      {
 diff --git a/xbmc/windowing/gbm/drm/DRMAtomic.cpp b/xbmc/windowing/gbm/drm/DRMAtomic.cpp
-index ff7f137d60e6..029b5cae813e 100644
+index bb8776fb0db3..7a72e22646cc 100644
 --- a/xbmc/windowing/gbm/drm/DRMAtomic.cpp
 +++ b/xbmc/windowing/gbm/drm/DRMAtomic.cpp
 @@ -111,11 +111,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
@@ -292,8 +292,8 @@ index ff7f137d60e6..029b5cae813e 100644
    }
    else if (videoLayer && !CServiceBroker::GetGUI()->GetWindowManager().HasVisibleControls())
    {
-@@ -151,12 +146,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
-               strerror(errno));
+@@ -150,12 +145,6 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+     CLog::Log(LOGERROR, "CDRMAtomic::{} - atomic commit failed: {}", __FUNCTION__, strerror(errno));
    }
  
 -  if (m_inFenceFd != -1)
@@ -305,19 +305,19 @@ index ff7f137d60e6..029b5cae813e 100644
    if (flags & DRM_MODE_ATOMIC_ALLOW_MODESET)
    {
      if (drmModeDestroyPropertyBlob(m_fd, blob_id) != 0)
-@@ -171,10 +160,9 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
+@@ -170,10 +159,9 @@ void CDRMAtomic::DrmAtomicCommit(int fb_id, int flags, bool rendered, bool video
    m_req = m_atomicRequestQueue.back().get();
  }
  
 -void CDRMAtomic::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer, bool async)
-+void CDRMAtomic::FlipPage(struct gbm_bo *bo, bool rendered, bool videoLayer)
++void CDRMAtomic::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer)
  {
-   struct drm_fb *drm_fb = nullptr;
+   struct drm_fb* drm_fb = nullptr;
 -  uint32_t flags = 0;
  
    if (rendered)
    {
-@@ -189,11 +177,10 @@ void CDRMAtomic::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer, boo
+@@ -188,11 +176,10 @@ void CDRMAtomic::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer, boo
        CLog::Log(LOGERROR, "CDRMAtomic::{} - Failed to get a new FBO", __FUNCTION__);
        return;
      }
@@ -332,7 +332,7 @@ index ff7f137d60e6..029b5cae813e 100644
    {
      flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
 diff --git a/xbmc/windowing/gbm/drm/DRMAtomic.h b/xbmc/windowing/gbm/drm/DRMAtomic.h
-index 6b196575878f..ca2cd9a1d0c9 100644
+index 1c4faf208724..8ea83068cf02 100644
 --- a/xbmc/windowing/gbm/drm/DRMAtomic.h
 +++ b/xbmc/windowing/gbm/drm/DRMAtomic.h
 @@ -27,7 +27,7 @@ class CDRMAtomic : public CDRMUtils
@@ -345,20 +345,20 @@ index 6b196575878f..ca2cd9a1d0c9 100644
    bool SetActive(bool active) override;
    bool InitDrm() override;
 diff --git a/xbmc/windowing/gbm/drm/DRMLegacy.cpp b/xbmc/windowing/gbm/drm/DRMLegacy.cpp
-index 4e9c3a6b9f3d..418d067e7024 100644
+index 9b2b052ff40a..d3c196fc5007 100644
 --- a/xbmc/windowing/gbm/drm/DRMLegacy.cpp
 +++ b/xbmc/windowing/gbm/drm/DRMLegacy.cpp
-@@ -108,7 +108,7 @@ bool CDRMLegacy::QueueFlip(struct gbm_bo *bo)
+@@ -107,7 +107,7 @@ bool CDRMLegacy::QueueFlip(struct gbm_bo* bo)
    return true;
  }
  
 -void CDRMLegacy::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer, bool async)
-+void CDRMLegacy::FlipPage(struct gbm_bo *bo, bool rendered, bool videoLayer)
++void CDRMLegacy::FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer)
  {
    if (rendered || videoLayer)
    {
 diff --git a/xbmc/windowing/gbm/drm/DRMLegacy.h b/xbmc/windowing/gbm/drm/DRMLegacy.h
-index e763f298f75a..2b7ff4561728 100644
+index 322a99bed8f7..4e7d1b03addf 100644
 --- a/xbmc/windowing/gbm/drm/DRMLegacy.h
 +++ b/xbmc/windowing/gbm/drm/DRMLegacy.h
 @@ -22,7 +22,7 @@ class CDRMLegacy : public CDRMUtils
@@ -371,7 +371,7 @@ index e763f298f75a..2b7ff4561728 100644
    bool SetActive(bool active) override;
    bool InitDrm() override;
 diff --git a/xbmc/windowing/gbm/drm/DRMUtils.h b/xbmc/windowing/gbm/drm/DRMUtils.h
-index f92f716fc4f3..5327e3557046 100644
+index 6df248104b14..315beb5932aa 100644
 --- a/xbmc/windowing/gbm/drm/DRMUtils.h
 +++ b/xbmc/windowing/gbm/drm/DRMUtils.h
 @@ -15,7 +15,6 @@
@@ -404,7 +404,7 @@ index f92f716fc4f3..5327e3557046 100644
 -
  protected:
    bool OpenDrm(bool needConnector);
-   drm_fb* DrmFbGetFromBo(struct gbm_bo *bo);
+   drm_fb* DrmFbGetFromBo(struct gbm_bo* bo);
 @@ -86,9 +78,6 @@ protected:
    int m_width = 0;
    int m_height = 0;
@@ -416,7 +416,7 @@ index f92f716fc4f3..5327e3557046 100644
  
  private:
 diff --git a/xbmc/windowing/gbm/drm/OffScreenModeSetting.h b/xbmc/windowing/gbm/drm/OffScreenModeSetting.h
-index bba0db9a53dd..4270d4ecb242 100644
+index aea436f867b4..606935cc021f 100644
 --- a/xbmc/windowing/gbm/drm/OffScreenModeSetting.h
 +++ b/xbmc/windowing/gbm/drm/OffScreenModeSetting.h
 @@ -22,7 +22,7 @@ class COffScreenModeSetting : public CDRMUtils
@@ -424,15 +424,15 @@ index bba0db9a53dd..4270d4ecb242 100644
    COffScreenModeSetting() = default;
    ~COffScreenModeSetting() override = default;
 -  void FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer, bool async) override {}
-+  void FlipPage(struct gbm_bo *bo, bool rendered, bool videoLayer) override {}
-   bool SetVideoMode(const RESOLUTION_INFO& res, struct gbm_bo *bo) override { return false; }
++  void FlipPage(struct gbm_bo* bo, bool rendered, bool videoLayer) override {}
+   bool SetVideoMode(const RESOLUTION_INFO& res, struct gbm_bo* bo) override { return false; }
    bool SetActive(bool active) override { return false; }
    bool InitDrm() override;
 -- 
 2.39.5
 
 
-From d2ee1e8c933ff32b729d4aa081b262fc0ece5c40 Mon Sep 17 00:00:00 2001
+From 665787525e8f502c974be55e70036b73c7d9b1ad Mon Sep 17 00:00:00 2001
 From: Matthias Reichl <hias@horus.com>
 Date: Fri, 25 Oct 2024 16:27:09 +0200
 Subject: [PATCH 4/4] Revert "CEGLFence: add support for using

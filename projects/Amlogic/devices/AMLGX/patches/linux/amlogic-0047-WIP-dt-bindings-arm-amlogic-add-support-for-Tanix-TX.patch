@@ -1,7 +1,7 @@
-From 8dc92185299d7a455ba1806bc2ef2165467088cd Mon Sep 17 00:00:00 2001
+From 8e208c9b8b47bde379c47c33958bbd189619eb6b Mon Sep 17 00:00:00 2001
 From: Christian Hewitt <christianshewitt@gmail.com>
 Date: Thu, 9 Feb 2023 09:59:58 +0000
-Subject: [PATCH 45/50] WIP: dt-bindings: arm: amlogic: add support for Tanix
+Subject: [PATCH 47/50] WIP: dt-bindings: arm: amlogic: add support for Tanix
  TX9 Pro
 
 The Oranth Tanix TX9 Pro is an Android STB using the Amlogic S912 chip

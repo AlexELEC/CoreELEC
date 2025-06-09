@@ -1,4 +1,4 @@
-From 13688c0e23b3f8f5e51a38324f7d06955a349333 Mon Sep 17 00:00:00 2001
+From d87779682e07059aae7bc6cec9935489af2ffbb0 Mon Sep 17 00:00:00 2001
 From: Heiner Kallweit <hkallweit1@gmail.com>
 Date: Mon, 4 Apr 2022 18:51:20 +0000
 Subject: [PATCH 24/50] FROMLIST(v5): auxdisplay: add support for Titanmec

@@ -1,4 +1,4 @@
-From cbf5b50694b3f5d1abe0250bd7405721f8ce3563 Mon Sep 17 00:00:00 2001
+From 4a2fbacda82c8a0878b7a84775f345ff335266c2 Mon Sep 17 00:00:00 2001
 From: Heiner Kallweit <hkallweit1@gmail.com>
 Date: Sun, 20 Feb 2022 08:26:27 +0000
 Subject: [PATCH 23/50] FROMLIST(v5): docs: ABI: document tm1628 attribute

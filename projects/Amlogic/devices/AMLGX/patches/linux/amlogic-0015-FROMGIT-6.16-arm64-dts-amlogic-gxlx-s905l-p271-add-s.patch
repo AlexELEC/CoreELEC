@@ -1,4 +1,4 @@
-From 7145fe3d6a802243bcc43b305fe66347ed392a94 Mon Sep 17 00:00:00 2001
+From 6e59acc3aa28875709d87990ec834219a481164f Mon Sep 17 00:00:00 2001
 From: Christian Hewitt <christianshewitt@gmail.com>
 Date: Wed, 1 Jan 2025 07:16:49 +0000
 Subject: [PATCH 15/50] FROMGIT(6.16): arm64: dts: amlogic: gxlx-s905l-p271:

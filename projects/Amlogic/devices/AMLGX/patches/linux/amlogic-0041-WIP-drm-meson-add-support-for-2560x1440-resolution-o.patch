@@ -1,7 +1,7 @@
-From bc2f467869be30356b75ae0b9af002b45c699db7 Mon Sep 17 00:00:00 2001
+From e06f03271acef28eae487cfca65ec6c4870141ff Mon Sep 17 00:00:00 2001
 From: Dongjin Kim <tobetter@gmail.com>
 Date: Thu, 10 Sep 2020 11:01:33 +0900
-Subject: [PATCH 39/50] WIP: drm/meson: add support for 2560x1440 resolution
+Subject: [PATCH 41/50] WIP: drm/meson: add support for 2560x1440 resolution
  output
 
 Add support for Quad HD (QHD) 2560x1440 resolution output. Timings
@@ -16,7 +16,7 @@ Signed-off-by: Christian Hewitt <christianshewitt@gmail.com>
  2 files changed, 20 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/gpu/drm/meson/meson_vclk.c b/drivers/gpu/drm/meson/meson_vclk.c
-index 3325580d885d..ce165c9587d7 100644
+index c4123bb958e4..13fb985ba207 100644
 --- a/drivers/gpu/drm/meson/meson_vclk.c
 +++ b/drivers/gpu/drm/meson/meson_vclk.c
 @@ -360,6 +360,8 @@ enum {

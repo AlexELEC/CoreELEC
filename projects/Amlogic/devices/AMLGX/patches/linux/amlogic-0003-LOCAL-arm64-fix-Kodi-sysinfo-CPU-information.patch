@@ -1,4 +1,4 @@
-From 02427d51911ba4c6645a78844376c99a9b11bcba Mon Sep 17 00:00:00 2001
+From 49c3682d0bf8ce8d8a77a522164da223e05bbdae Mon Sep 17 00:00:00 2001
 From: Christian Hewitt <christianshewitt@gmail.com>
 Date: Sat, 13 Apr 2019 05:45:18 +0000
 Subject: [PATCH 03/50] LOCAL: arm64: fix Kodi sysinfo CPU information

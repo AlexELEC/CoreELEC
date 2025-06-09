@@ -1,7 +1,7 @@
-From 15d48d1d6f845c4c9dbcd62de7df46e17c354d40 Mon Sep 17 00:00:00 2001
+From df2bd03352106bc643c9a1cec468cc28b93ef3a9 Mon Sep 17 00:00:00 2001
 From: Da Xue <da@libre.computer>
 Date: Tue, 8 Aug 2023 01:00:15 -0400
-Subject: [PATCH 38/50] WIP: net: phy: meson-gxl: implement
+Subject: [PATCH 40/50] WIP: net: phy: meson-gxl: implement
  meson_gxl_phy_resume()
 
 While testing the suspend/resume functionality, we found the ethernet

@@ -1,4 +1,4 @@
-From d1fc3d19e2feae15199863e81f4193b6a56651c9 Mon Sep 17 00:00:00 2001
+From 13348b7648cef8cf6094de558fdffbd93c3b6def Mon Sep 17 00:00:00 2001
 From: Neil Armstrong <neil.armstrong@linaro.org>
 Date: Wed, 5 Jun 2024 11:15:11 +0200
 Subject: [PATCH 31/50] FROMLIST(v1): dt-bindings: usb: dwc2: allow device
