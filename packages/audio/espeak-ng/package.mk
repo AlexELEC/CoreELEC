@@ -2,37 +2,29 @@
 # Copyright (C) 2021-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="espeak-ng"
-PKG_VERSION="1.52.0"
-PKG_SHA256="bb4338102ff3b49a81423da8a1a158b420124b055b60fa76cfb4b18677130a23"
+PKG_VERSION="a06074c8fd80f2fd3632164dc01ebf1135395e11"
+PKG_SHA256="6e5ab2c975b46ad126f74f57de9b0a543f301b42d97965710ba81105a6d75232"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/espeak-ng/espeak-ng"
-PKG_URL="https://github.com/espeak-ng/espeak-ng/archive/refs/tags/${PKG_VERSION}.tar.gz"
+PKG_URL="https://github.com/espeak-ng/espeak-ng/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_HOST="gcc:host"
 PKG_DEPENDS_TARGET="toolchain espeak-ng:host"
 PKG_LONGDESC="eSpeak NG is an open source speech synthesizer that supports more than a hundred languages and accents"
-PKG_TOOLCHAIN="autotools"
+PKG_BUILD_FLAGS="+pic"
 
-make_host() {
-  mkdir phsource dictsource
-  (
-    cd dictsource
-    ln -s ../../dictsource/* .
-  )
-  (
-    cd phsource
-    ln -s ../../phsource/* .
-  )
-  cp -aP ../espeak-ng-data .
-  make DESTDIR=$(pwd) -j1
-}
+PKG_CMAKE_OPTS_HOST="-DBUILD_SHARED_LIBS=OFF \
+                     -DCOMPILE_INTONATIONS=ON \
+                     -DENABLE_TESTS=OFF"
 
-make_target() {
-  make src/espeak-ng src/speak-ng
-}
+PKG_CMAKE_OPTS_TARGET="-DBUILD_SHARED_LIBS=ON \
+                       -DCOMPILE_INTONATIONS=OFF \
+                       -DENABLE_TESTS=OFF"
 
-makeinstall_target() {
-  make src/espeak-ng src/speak-ng
-  make install-exec DESTDIR=${INSTALL}
+post_makeinstall_target() {
+  safe_remove ${INSTALL}/usr/share/vim
+
   mkdir -p ${INSTALL}/usr/share/espeak-ng-data
   cp -prf ${TOOLCHAIN}/share/espeak-ng-data ${INSTALL}/usr/share
+  # add symlink for backwards compatibility with old programs
+  ln -sf espeak-ng ${INSTALL}/usr/bin/espeak
 }

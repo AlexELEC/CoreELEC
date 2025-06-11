@@ -1,0 +1,20 @@
+--- a/CMakeLists.txt	2025-05-31 11:45:48.000000000 +0000
++++ b/CMakeLists.txt	2025-06-09 11:10:14.439292321 +0000
+@@ -15,7 +15,7 @@
+ include(cmake/deps.cmake)
+ include(cmake/config.cmake)
+ add_subdirectory(src)
+-if (COMPILE_INTONATIONS AND NOT CMAKE_CROSSCOMPILING)
++if (COMPILE_INTONATIONS)
+   include(cmake/data.cmake)
+ endif()
+ include(cmake/docs.cmake)
+@@ -23,7 +23,7 @@
+ include(cmake/package.cmake)
+ include(CPack)
+ 
+-if(ENABLE_TESTS AND NOT CMAKE_CROSSCOMPILING)
++if(ENABLE_TESTS)
+   add_subdirectory(tests)
+ endif()
+ 

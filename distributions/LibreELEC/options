@@ -119,7 +119,7 @@
   PIPEWIRE_SUPPORT="no"
 
 # build and install eSpeak-NG support (yes / no)
-  ESPEAK_SUPPORT="no"
+  ESPEAK_SUPPORT="yes"
 
 # build and install with BluRay support (yes / no)
   KODI_BLURAY_SUPPORT="yes"
