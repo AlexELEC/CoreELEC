@@ -12,10 +12,7 @@ PKG_DEPENDS_TARGET="meson:host ninja:host gcc:host libcap kmod util-linux entrop
 PKG_LONGDESC="A system and session manager for Linux, compatible with SysV and LSB init scripts."
 
 PKG_MESON_OPTS_TARGET="--libdir=/usr/lib \
-                       -Drootprefix=/usr \
-                       -Dsplit-usr=false \
                        -Dsplit-bin=true \
-                       -Ddefault-hierarchy=hybrid \
                        -Dtty-gid=5 \
                        -Dtests=false \
                        -Dseccomp=disabled \
