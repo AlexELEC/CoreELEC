@@ -83,7 +83,18 @@ run_tee_from_android() {
 
   read_firmware_version /vendor${VIDEO_UCODE_BIN_PATH} &>/dev/null
   message "Android ucode version: '${minor}.${batch}'"
-  if [[ ${minor} -gt 4 || ( ${minor} -eq 4 && ${batch} -ge 1 ) ]]; then
+
+  if [ ${SERIAL_THIS} -lt 62 ]; then
+    message "Using CoreELEC uCode file"
+    ln -sfn NO_TEE/video_ucode.bin "$VIDEO_UCODE_BIN_PATH"
+  else
+    message "Using Android uCode file"
+    ln -sfn "/vendor$VIDEO_UCODE_BIN_PATH" "$VIDEO_UCODE_BIN_PATH"
+  fi
+
+  read_firmware_version ${VIDEO_UCODE_BIN_PATH} &>/dev/null
+  message "Used ucode version: '${minor}.${batch}'"
+  if [[ ${minor} -gt 4 || ( ${minor} -eq 4 && ${batch} -ge 143 ) ]]; then
     message "run tee from android end"
     return 2
   fi
@@ -102,8 +113,6 @@ EOF
   echo ${!} >${TEE_SUPPLICANT_PID_FILE}
   # wait for tee-supplicant process to start
   sleep 5
-
-  ln -sfn /vendor${VIDEO_UCODE_BIN_PATH} ${VIDEO_UCODE_BIN_PATH}
 
   android_wrapper /vendor/bin/tee_preload_fw ${VIDEO_UCODE_BIN_PATH}
   local rv=${?}
