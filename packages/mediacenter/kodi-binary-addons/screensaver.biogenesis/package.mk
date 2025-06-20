@@ -5,7 +5,7 @@
 PKG_NAME="screensaver.biogenesis"
 PKG_VERSION="22.0.2-Piers"
 PKG_SHA256="acb3e0c7885e4a0f766403d9c58e540ea09c75cf8926a83ba24bad725ad755d0"
-PKG_REV="2"
+PKG_REV="3"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/screensaver.biogenesis"

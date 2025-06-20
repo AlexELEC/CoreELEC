@@ -4,7 +4,7 @@
 PKG_NAME="vfs.sftp"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="01a23958331cb0cd78fd2e9367d1269d4319c20b84db5b132632f9c1acd5f3c5"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPLv2"
 PKG_SITE="https://github.com/xbmc/vfs.sftp"

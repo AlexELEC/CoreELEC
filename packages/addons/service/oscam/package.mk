@@ -4,7 +4,7 @@
 PKG_NAME="oscam"
 PKG_VERSION="11881"
 PKG_SHA256="0e9393a443510ea06faf418aa3c6431bbd12617a40f5de1c023218c4419e9006"
-PKG_REV="1"
+PKG_REV="0"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://git.streamboard.tv/common/oscam/-/wikis"

@@ -5,7 +5,7 @@
 PKG_NAME="audioencoder.wav"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="2bbc3e15706e02bbd3e6be3c232522e2091509a6fdf88d8af5db4cd6bf7b3476"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/audioencoder.wav"

@@ -4,7 +4,7 @@
 PKG_NAME="screensaver.asterwave"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="de92f8773f23c77f388201d316273f1a06103965bdb9684cbda19a73180c1488"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/screensaver.asterwave"

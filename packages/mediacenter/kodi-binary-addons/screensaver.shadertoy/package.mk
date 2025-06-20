@@ -5,7 +5,7 @@
 PKG_NAME="screensaver.shadertoy"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="90ef1c38afcc6c2d03a06946148a3a87ec01b1ffb5c2bb794af46da0a1309d96"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/screensaver.shadertoy"

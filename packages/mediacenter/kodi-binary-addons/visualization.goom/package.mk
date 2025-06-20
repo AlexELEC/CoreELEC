@@ -4,7 +4,7 @@
 PKG_NAME="visualization.goom"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="f87356122f91ea40d096d559d1180571e701e39867448768d14d6c2ba3b2e264"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/visualization.goom"

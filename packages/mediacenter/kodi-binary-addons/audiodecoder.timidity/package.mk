@@ -5,7 +5,7 @@
 PKG_NAME="audiodecoder.timidity"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="eb7bee9453825f86275ae05c4561fb52ee7fd9fa21857e303933cb57d28ccc4b"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/audiodecoder.timidity"

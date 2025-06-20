@@ -5,7 +5,7 @@
 PKG_NAME="audiodecoder.gme"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="2bf1fa5a11fe1ac86d02468bea9a30479a1a74261a4efd72b76b7cba62f75ddd"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/audiodecoder.gme"

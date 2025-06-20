@@ -4,7 +4,7 @@
 PKG_NAME="vfs.rar"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="7492cf73d52299218acc982c4b35b020ea801d36d47e40460341f4dde712de50"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/vfs.rar"

@@ -5,7 +5,7 @@
 PKG_NAME="audiodecoder.stsound"
 PKG_VERSION="21.0.2-Omega"
 PKG_SHA256="089ddd6c890e571f69eda0a85077d8ffe91c4b31fd0f9e20f47d4053c1e984a8"
-PKG_REV="1"
+PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/audiodecoder.stsound"

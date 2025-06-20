@@ -5,7 +5,7 @@
 PKG_NAME="pvr.dvbviewer"
 PKG_VERSION="22.2.1-Piers"
 PKG_SHA256="9d825950f54bf0edb206c65f8bd01339b6ec405086a8278a28fbd29af395b281"
-PKG_REV="2"
+PKG_REV="3"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/kodi-pvr/pvr.dvbviewer"

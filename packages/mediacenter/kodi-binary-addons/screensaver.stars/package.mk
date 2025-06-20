@@ -5,7 +5,7 @@
 PKG_NAME="screensaver.stars"
 PKG_VERSION="22.0.1-Piers"
 PKG_SHA256="6a0543489dff170c2132f46da509c8ffd8d1e6265a0b07d8792e9189d573d737"
-PKG_REV="2"
+PKG_REV="3"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/xbmc/screensaver.stars"
