@@ -19,7 +19,7 @@ PKG_ADDON_NAME="Amlogic VNC"
 PKG_ADDON_TYPE="xbmc.service"
 
 pre_configure_target() {
-  export CFLAGS+=" -Wno-stringop-truncation"
+  export CFLAGS+=" -Wno-incompatible-pointer-types"
 }
 
 makeinstall_target() {
