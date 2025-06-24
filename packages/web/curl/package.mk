@@ -32,6 +32,7 @@ PKG_CMAKE_OPTS_TARGET="-DENABLE_DEBUG=OFF \
                        -DCURL_DISABLE_SMTP=ON \
                        -DCURL_DISABLE_GOPHER=ON \
                        -DCURL_DISABLE_MQTT=ON \
+                       -DBUILD_LIBCURL_DOCS=OFF \
                        -DENABLE_CURL_MANUAL=OFF \
                        -DENABLE_IPV6=ON \
                        -DENABLE_THREADED_RESOLVER=ON \
