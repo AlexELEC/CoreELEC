@@ -49,6 +49,9 @@ run_tee_from_coreelec() {
   [ -f $(dirname ${VIDEO_UCODE_BIN_PATH})/${SOC}/video_ucode.bin ] && \
     ln -sfn ${SOC}/video_ucode.bin ${VIDEO_UCODE_BIN_PATH}
 
+  read_firmware_version ${VIDEO_UCODE_BIN_PATH} &>/dev/null
+  message "Using CoreELEC ucode file '${minor}.${batch}' for ${SOC}"
+
   tee-supplicant &
   echo ${!} >${TEE_SUPPLICANT_PID_FILE}
   # wait for tee-supplicant process to start
@@ -61,6 +64,7 @@ run_tee_from_coreelec() {
 }
 
 run_tee_from_android() {
+  local SERIAL_S5=$(printf "%d" "0x3e")
   message "run tee from android start"
 
   ! ls /dev/mapper/dynpart-* &>/dev/null && dmsetup create --concise "$(parse-android-dynparts /dev/super)"
@@ -83,25 +87,22 @@ run_tee_from_android() {
 
   read_firmware_version /vendor${VIDEO_UCODE_BIN_PATH} &>/dev/null
   message "Android ucode version: '${minor}.${batch}'"
-
-  if [ ${SERIAL_THIS} -lt 62 ]; then
-    message "Using CoreELEC uCode file"
-    ln -sfn NO_TEE/video_ucode.bin "$VIDEO_UCODE_BIN_PATH"
-  else
-    message "Using Android uCode file"
-    ln -sfn "/vendor$VIDEO_UCODE_BIN_PATH" "$VIDEO_UCODE_BIN_PATH"
-  fi
-
-  read_firmware_version ${VIDEO_UCODE_BIN_PATH} &>/dev/null
-  message "Used ucode version: '${minor}.${batch}'"
-  if [[ ${minor} -gt 4 || ( ${minor} -eq 4 && ${batch} -ge 143 ) ]]; then
+  if [[ ${minor} -gt 4 || ( ${minor} -eq 4 && ${batch} -ge 1 ) ]]; then
     message "run tee from android end"
     return 2
   fi
 
-  cat > /tmp/firmware.message << EOF
+  if [ ${SERIAL_THIS} -lt ${SERIAL_S5} ]; then
+    local SOC=$(awk '/SoC[ \t]*:/ {printf "%s", $3}' /proc/cpuinfo)
+    ln -sfn NO_TEE/video_ucode.bin "$VIDEO_UCODE_BIN_PATH"
+    read_firmware_version ${VIDEO_UCODE_BIN_PATH} &>/dev/null
+    message "Using CoreELEC ucode file '${minor}.${batch}' for ${SOC}"
+  else
+    ln -sfn /vendor${VIDEO_UCODE_BIN_PATH} ${VIDEO_UCODE_BIN_PATH}
+    cat > /tmp/firmware.message << EOF
 Firmware version '${minor}.${batch}' found. Please update Android to enable the best possible media support.
 EOF
+  fi
 
   if [ ! -x /vendor/bin/tee-supplicant ]; then
     message "tee-supplicant does not exist on android"
