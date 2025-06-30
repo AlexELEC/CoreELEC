@@ -3,8 +3,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="fontconfig"
-PKG_VERSION="2.16.2"
-PKG_SHA256="165b8fd2a119864c87464b233986c4a1bc09efb09c65de1ca40cc1e85ffb77e2"
+PKG_VERSION="2.17.0"
+PKG_SHA256="6caea32b8076ef313b9b77747daa9afd24b71bcd525447b2a3c585c4542a083b"
 PKG_LICENSE="OSS"
 PKG_SITE="https://www.freedesktop.org/wiki/Software/fontconfig/"
 PKG_URL="https://gitlab.freedesktop.org/api/v4/projects/890/packages/generic/fontconfig/${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.xz"

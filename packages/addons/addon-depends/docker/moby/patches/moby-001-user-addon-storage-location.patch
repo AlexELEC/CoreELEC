@@ -4,8 +4,8 @@
 #
 #
 diff -Naur a/cmd/dockerd/daemon_unix.go b/cmd/dockerd/daemon_unix.go
---- a/cmd/dockerd/daemon_unix.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/cmd/dockerd/daemon_unix.go	2025-02-20 10:29:44.441745187 +0000
+--- a/cmd/dockerd/daemon_unix.go	2025-06-20 16:22:35.000000000 +0000
++++ b/cmd/dockerd/daemon_unix.go	2025-06-25 12:49:40.558287815 +0000
 @@ -21,7 +21,7 @@
  
  func getDefaultDaemonConfigDir() string {
@@ -16,8 +16,8 @@ diff -Naur a/cmd/dockerd/daemon_unix.go b/cmd/dockerd/daemon_unix.go
  	// NOTE: CLI uses ~/.docker while the daemon uses ~/.config/docker, because
  	// ~/.docker was not designed to store daemon configurations.
 diff -Naur a/cmd/dockerd/options.go b/cmd/dockerd/options.go
---- a/cmd/dockerd/options.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/cmd/dockerd/options.go	2025-02-20 10:29:44.441449933 +0000
+--- a/cmd/dockerd/options.go	2025-06-20 16:22:35.000000000 +0000
++++ b/cmd/dockerd/options.go	2025-06-25 12:49:40.557989909 +0000
 @@ -39,7 +39,7 @@
  	//
  	//   - DOCKER_CONFIG only affects TLS certificates, but does not change the
@@ -36,10 +36,22 @@ diff -Naur a/cmd/dockerd/options.go b/cmd/dockerd/options.go
  	//   - look at "when" (and when _not_) XDG_CONFIG_HOME should be used. Its
  	//     needed for rootless, but perhaps could be used for non-rootless(?)
  	//   - When changing  the location for TLS config, (ideally) they should
+diff -Naur a/daemon/config/config_linux_test.go b/daemon/config/config_linux_test.go
+--- a/daemon/config/config_linux_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/daemon/config/config_linux_test.go	2025-06-25 12:49:40.538939276 +0000
+@@ -377,7 +377,7 @@
+ 	}{
+ 		{
+ 			name:       "deprecated-key-path",
+-			configJSON: `{"deprecated-key-path": "/etc/docker/key.json"}`,
++			configJSON: `{"deprecated-key-path": "/storage/.kodi/userdata/addon_data/service.system.docker/config/key.json"}`,
+ 		},
+ 		{
+ 			name:       "allow-nondistributable-artifacts",
 diff -Naur a/integration/plugin/authz/authz_plugin_test.go b/integration/plugin/authz/authz_plugin_test.go
---- a/integration/plugin/authz/authz_plugin_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/integration/plugin/authz/authz_plugin_test.go	2025-02-20 10:29:44.406641256 +0000
-@@ -56,15 +56,15 @@
+--- a/integration/plugin/authz/authz_plugin_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/integration/plugin/authz/authz_plugin_test.go	2025-06-25 12:49:40.521643361 +0000
+@@ -57,15 +57,15 @@
  
  	ctrl = &authorizationController{}
  
@@ -59,8 +71,8 @@ diff -Naur a/integration/plugin/authz/authz_plugin_test.go b/integration/plugin/
  		ctrl = nil
  	})
 diff -Naur a/integration-cli/docker_cli_external_volume_driver_test.go b/integration-cli/docker_cli_external_volume_driver_test.go
---- a/integration-cli/docker_cli_external_volume_driver_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/integration-cli/docker_cli_external_volume_driver_test.go	2025-02-20 10:29:44.713041018 +0000
+--- a/integration-cli/docker_cli_external_volume_driver_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/integration-cli/docker_cli_external_volume_driver_test.go	2025-06-25 12:49:40.867460226 +0000
 @@ -266,10 +266,10 @@
  		send(w, `{"Capabilities": { "Scope": "global" }}`)
  	})
@@ -75,12 +87,12 @@ diff -Naur a/integration-cli/docker_cli_external_volume_driver_test.go b/integra
  	return s
  }
 @@ -277,7 +277,7 @@
- func (s *DockerExternalVolumeSuite) TearDownSuite(ctx context.Context, c *testing.T) {
+ func (s *DockerExternalVolumeSuite) TearDownSuite(ctx context.Context, t *testing.T) {
  	s.volumePlugin.Close()
  
 -	err := os.RemoveAll("/etc/docker/plugins")
 +	err := os.RemoveAll("/storage/.kodi/userdata/addon_data/service.system.docker/config/plugins")
- 	assert.NilError(c, err)
+ 	assert.NilError(t, err)
  }
  
 @@ -371,7 +371,7 @@
@@ -93,8 +105,8 @@ diff -Naur a/integration-cli/docker_cli_external_volume_driver_test.go b/integra
  	assert.NilError(c, err)
  	defer os.RemoveAll(specPath)
 diff -Naur a/integration-cli/docker_cli_network_unix_test.go b/integration-cli/docker_cli_network_unix_test.go
---- a/integration-cli/docker_cli_network_unix_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/integration-cli/docker_cli_network_unix_test.go	2025-02-20 10:29:44.713475312 +0000
+--- a/integration-cli/docker_cli_network_unix_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/integration-cli/docker_cli_network_unix_test.go	2025-06-25 12:49:40.867898684 +0000
 @@ -226,14 +226,14 @@
  		}
  	})
@@ -119,13 +131,13 @@ diff -Naur a/integration-cli/docker_cli_network_unix_test.go b/integration-cli/d
  
 -	err := os.RemoveAll("/etc/docker/plugins")
 +	err := os.RemoveAll("/storage/.kodi/userdata/addon_data/service.system.docker/config/plugins")
- 	assert.NilError(c, err)
+ 	assert.NilError(t, err)
  }
  
 diff -Naur a/integration-cli/docker_cli_swarm_test.go b/integration-cli/docker_cli_swarm_test.go
---- a/integration-cli/docker_cli_swarm_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/integration-cli/docker_cli_swarm_test.go	2025-02-20 10:29:44.716710173 +0000
-@@ -825,14 +825,14 @@
+--- a/integration-cli/docker_cli_swarm_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/integration-cli/docker_cli_swarm_test.go	2025-06-25 12:49:40.871279027 +0000
+@@ -843,14 +843,14 @@
  		}
  	})
  
@@ -143,7 +155,7 @@ diff -Naur a/integration-cli/docker_cli_swarm_test.go b/integration-cli/docker_c
  	err = os.WriteFile(ipamFileName, []byte(url), 0o644)
  	assert.NilError(t, err)
  }
-@@ -845,7 +845,7 @@
+@@ -863,7 +863,7 @@
  	setupRemoteGlobalNetworkPlugin(c, mux, s.server.URL, globalNetworkPlugin, globalIPAMPlugin)
  	defer func() {
  		s.server.Close()
@@ -153,9 +165,9 @@ diff -Naur a/integration-cli/docker_cli_swarm_test.go b/integration-cli/docker_c
  	}()
  
 diff -Naur a/libnetwork/drivers/remote/driver_test.go b/libnetwork/drivers/remote/driver_test.go
---- a/libnetwork/drivers/remote/driver_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/libnetwork/drivers/remote/driver_test.go	2025-02-20 10:29:44.707404748 +0000
-@@ -44,7 +44,7 @@
+--- a/libnetwork/drivers/remote/driver_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/libnetwork/drivers/remote/driver_test.go	2025-06-25 12:49:40.861763019 +0000
+@@ -40,7 +40,7 @@
  }
  
  func setupPlugin(t *testing.T, name string, mux *http.ServeMux) func() {
@@ -165,9 +177,9 @@ diff -Naur a/libnetwork/drivers/remote/driver_test.go b/libnetwork/drivers/remot
  		specPath = filepath.Join(os.Getenv("programdata"), "docker", "plugins")
  	}
 diff -Naur a/libnetwork/ipams/remote/remote_test.go b/libnetwork/ipams/remote/remote_test.go
---- a/libnetwork/ipams/remote/remote_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/libnetwork/ipams/remote/remote_test.go	2025-02-20 10:29:44.699434031 +0000
-@@ -38,7 +38,7 @@
+--- a/libnetwork/ipams/remote/remote_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/libnetwork/ipams/remote/remote_test.go	2025-06-25 12:49:40.854121508 +0000
+@@ -35,7 +35,7 @@
  }
  
  func setupPlugin(t *testing.T, name string, mux *http.ServeMux) func() {
@@ -177,8 +189,8 @@ diff -Naur a/libnetwork/ipams/remote/remote_test.go b/libnetwork/ipams/remote/re
  		specPath = filepath.Join(os.Getenv("programdata"), "docker", "plugins")
  	}
 diff -Naur a/libnetwork/libnetwork_unix_test.go b/libnetwork/libnetwork_unix_test.go
---- a/libnetwork/libnetwork_unix_test.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/libnetwork/libnetwork_unix_test.go	2025-02-20 10:29:44.709262867 +0000
+--- a/libnetwork/libnetwork_unix_test.go	2025-06-20 16:22:35.000000000 +0000
++++ b/libnetwork/libnetwork_unix_test.go	2025-06-25 12:49:40.864001829 +0000
 @@ -2,4 +2,4 @@
  
  package libnetwork_test
@@ -186,8 +198,8 @@ diff -Naur a/libnetwork/libnetwork_unix_test.go b/libnetwork/libnetwork_unix_tes
 -var specPath = "/etc/docker/plugins"
 +var specPath = "/storage/.kodi/userdata/addon_data/service.system.docker/config/plugins"
 diff -Naur a/pkg/plugins/discovery.go b/pkg/plugins/discovery.go
---- a/pkg/plugins/discovery.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/pkg/plugins/discovery.go	2025-02-20 10:29:44.412930502 +0000
+--- a/pkg/plugins/discovery.go	2025-06-20 16:22:35.000000000 +0000
++++ b/pkg/plugins/discovery.go	2025-06-25 12:49:40.525984485 +0000
 @@ -128,12 +128,12 @@
  //
  // On Unix in non-rootless mode:
@@ -204,9 +216,9 @@ diff -Naur a/pkg/plugins/discovery.go b/pkg/plugins/discovery.go
  func SpecsPaths() []string {
  	return specsPaths()
 diff -Naur a/pkg/plugins/discovery_unix.go b/pkg/plugins/discovery_unix.go
---- a/pkg/plugins/discovery_unix.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/pkg/plugins/discovery_unix.go	2025-02-20 10:29:44.412746807 +0000
-@@ -12,7 +12,7 @@
+--- a/pkg/plugins/discovery_unix.go	2025-06-20 16:22:35.000000000 +0000
++++ b/pkg/plugins/discovery_unix.go	2025-06-25 12:49:40.525803226 +0000
+@@ -13,7 +13,7 @@
  	if configHome, err := homedir.GetConfigHome(); err != nil {
  		return filepath.Join(configHome, "docker/plugins")
  	}
@@ -215,7 +227,7 @@ diff -Naur a/pkg/plugins/discovery_unix.go b/pkg/plugins/discovery_unix.go
  }
  
  func rootlessLibPluginsPath() string {
-@@ -27,5 +27,5 @@
+@@ -28,5 +28,5 @@
  	if rootless.RunningWithRootlessKit() {
  		return []string{rootlessConfigPluginsPath(), rootlessLibPluginsPath()}
  	}
@@ -223,8 +235,8 @@ diff -Naur a/pkg/plugins/discovery_unix.go b/pkg/plugins/discovery_unix.go
 +	return []string{"/storage/.kodi/userdata/addon_data/service.system.docker/config/plugins", "/usr/lib/docker/plugins"}
  }
 diff -Naur a/pkg/plugins/plugins.go b/pkg/plugins/plugins.go
---- a/pkg/plugins/plugins.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/pkg/plugins/plugins.go	2025-02-20 10:29:44.413216747 +0000
+--- a/pkg/plugins/plugins.go	2025-06-20 16:22:35.000000000 +0000
++++ b/pkg/plugins/plugins.go	2025-06-25 12:49:40.526271398 +0000
 @@ -4,7 +4,7 @@
  // Docker discovers plugins by looking for them in the plugin directory whenever
  // a user or container tries to use one by name. UNIX domain socket files must
@@ -235,8 +247,8 @@ diff -Naur a/pkg/plugins/plugins.go b/pkg/plugins/plugins.go
  // its name if it exists.
  //
 diff -Naur a/registry/config_unix.go b/registry/config_unix.go
---- a/registry/config_unix.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/registry/config_unix.go	2025-02-20 10:29:44.712430143 +0000
+--- a/registry/config_unix.go	2025-06-20 16:22:35.000000000 +0000
++++ b/registry/config_unix.go	2025-06-25 12:49:40.866806097 +0000
 @@ -5,7 +5,7 @@
  // defaultCertsDir is the platform-specific default directory where certificates
  // are stored. On Linux, it may be overridden through certsDir, for example, when
@@ -247,9 +259,9 @@ diff -Naur a/registry/config_unix.go b/registry/config_unix.go
  // cleanPath is used to ensure that a directory name is valid on the target
  // platform. It will be passed in something *similar* to a URL such as
 diff -Naur a/registry/search_endpoint_v1.go b/registry/search_endpoint_v1.go
---- a/registry/search_endpoint_v1.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/registry/search_endpoint_v1.go	2025-02-20 10:29:44.712695815 +0000
-@@ -54,7 +54,7 @@
+--- a/registry/search_endpoint_v1.go	2025-06-20 16:22:35.000000000 +0000
++++ b/registry/search_endpoint_v1.go	2025-06-25 12:49:40.867087851 +0000
+@@ -58,7 +58,7 @@
  		if endpoint.IsSecure {
  			// If registry is secure and HTTPS failed, show user the error and tell them about `--insecure-registry`
  			// in case that's what they need. DO NOT accept unknown CA certificates, and DO NOT fall back to HTTP.
@@ -259,9 +271,9 @@ diff -Naur a/registry/search_endpoint_v1.go b/registry/search_endpoint_v1.go
  
  		// registry is insecure and HTTPS failed, fallback to HTTP.
 diff -Naur a/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go b/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go
---- a/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go	2025-02-19 21:53:46.000000000 +0000
-+++ b/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go	2025-02-20 10:29:44.668972179 +0000
-@@ -578,7 +578,7 @@
+--- a/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go	2025-06-20 16:22:35.000000000 +0000
++++ b/vendor/github.com/containerd/containerd/v2/core/remotes/docker/config/hosts.go	2025-06-25 12:49:40.820074314 +0000
+@@ -607,7 +607,7 @@
  	return filepath.Join(base, p)
  }
  

@@ -2,8 +2,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="unrar"
-PKG_VERSION="7.1.7"
-PKG_SHA256="e86ae4f1f33a13752146f41e961c57f12f0ee01580ac188ec8cc43da5c22ae92"
+PKG_VERSION="7.1.8"
+PKG_SHA256="9ec7765a948140758af12ed29e3e47db425df79a9c5cbb71b28769b256a7a014"
 PKG_LICENSE="free"
 PKG_SITE="https://www.rarlab.com/rar_add.htm"
 PKG_URL="https://www.rarlab.com/rar/unrarsrc-${PKG_VERSION}.tar.gz"

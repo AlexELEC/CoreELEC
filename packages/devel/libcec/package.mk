@@ -3,11 +3,11 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libcec"
-PKG_VERSION="7152c9fa07b64ea041cd693474fb409396b2377a"
-PKG_SHA256="1c7b920c27fced7b011c24bf94b55a32cbc476ad67b9cef3c5f23952f5cb7369"
+PKG_VERSION="7.1.1"
+PKG_SHA256="7f7da95a4c1e7160d42ca37a3ac80cf6f389b317e14816949e0fa5e2edf4cc64"
 PKG_LICENSE="GPL"
 PKG_SITE="http://libcec.pulse-eight.com/"
-PKG_URL="https://github.com/Pulse-Eight/libcec/archive/${PKG_VERSION}.tar.gz"
+PKG_URL="https://github.com/Pulse-Eight/libcec/archive/libcec-${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain systemd p8-platform swig:host"
 PKG_LONGDESC="libCEC is an open-source dual licensed library designed for communicating with the Pulse-Eight USB - CEC Adaptor."
 
@@ -16,7 +16,7 @@ PKG_CMAKE_OPTS_TARGET="-DBUILD_SHARED_LIBS=1 \
                        -DSKIP_PYTHON_WRAPPER=1 \
                        -DHAVE_IMX_API=0 \
                        -DHAVE_AOCEC_API=1 \
-                       -DHAVE_GIT_BIN=0 \
+                       -DGIT_BIN=0 \
                        -DHAVE_RPI_LIB=0"
 
 # libX11 and xrandr to read the sink's EDID, used to determine the PC's HDMI physical address
