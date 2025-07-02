@@ -2,8 +2,8 @@
 # Copyright (C) 2023-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="RTW88"
-PKG_VERSION="dd5df33fc26f04705acf3e8b1ac70f3db6cdc008"
-PKG_SHA256="cacbd7249fdae9d2dda354d572704e7a2666317206abe684fc976d592e5ed49b"
+PKG_VERSION="b89af8cd40d9528b0cdb9a6251efe49d8a69bfc6"
+PKG_SHA256="ac989f678d854bae5acca58b2285daf1aaebfef5987ee10b8e8f87d3109397ff"
 PKG_ARCH="arm aarch64"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/lwfinger/rtw88"
