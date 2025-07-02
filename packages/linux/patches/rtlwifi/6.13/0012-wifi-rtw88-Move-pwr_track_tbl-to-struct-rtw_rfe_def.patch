@@ -1,7 +1,7 @@
-From 67d915604e6993ff627ac001983a2de63ff71b13 Mon Sep 17 00:00:00 2001
+From 3db94ce8fc4cd44f8211f3334c65f61320c722ad Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 23 Oct 2024 17:12:39 +0300
-Subject: [PATCH] wifi: rtw88: Move pwr_track_tbl to struct rtw_rfe_def
+Subject: [PATCH 12/24] wifi: rtw88: Move pwr_track_tbl to struct rtw_rfe_def
 
 RTL8812AU uses one set of TX power tracking tables for RFE 3, and
 another set for everything else.
@@ -24,7 +24,7 @@ Link: https://patch.msgid.link/904d0ab1-c046-40cd-a3a3-d4fdcf663c9d@gmail.com
  8 files changed, 47 insertions(+), 46 deletions(-)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index ef82e60d5c19..b5aa46a44cdb 100644
+index 4d5910afaf0f..e01964db8f67 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -1099,17 +1099,20 @@ enum rtw_rfe_fem {
@@ -59,10 +59,10 @@ index ef82e60d5c19..b5aa46a44cdb 100644
  	u8 bfer_su_max_num;
  	u8 bfer_mu_max_num;
 diff --git a/drivers/net/wireless/realtek/rtw88/phy.c b/drivers/net/wireless/realtek/rtw88/phy.c
-index d7b8efbd0d3c..de491fb9caad 100644
+index 215e4af64da3..b52108f2b147 100644
 --- a/drivers/net/wireless/realtek/rtw88/phy.c
 +++ b/drivers/net/wireless/realtek/rtw88/phy.c
-@@ -2384,7 +2384,8 @@ void rtw_phy_init_tx_power(struct rtw_dev *rtwdev)
+@@ -2386,7 +2386,8 @@ void rtw_phy_init_tx_power(struct rtw_dev *rtwdev)
  void rtw_phy_config_swing_table(struct rtw_dev *rtwdev,
  				struct rtw_swing_table *swing_table)
  {
@@ -73,7 +73,7 @@ index d7b8efbd0d3c..de491fb9caad 100644
  
  	if (IS_CH_2G_BAND(channel)) {
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8703b.c b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
-index dec0cec4ca22..a19b94d022ee 100644
+index 1a41f1c31a06..1d232adbdd7e 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 @@ -493,11 +493,6 @@ static const struct rtw_pwr_seq_cmd * const card_disable_flow_8703b[] = {
@@ -210,10 +210,10 @@ index 39dc8244f744..0270225b9c20 100644
  	.bfer_su_max_num = 2,
  	.bfer_mu_max_num = 1,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822b.c b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-index 419eb14c5467..739809f4cab5 100644
+index ccabbe85be6f..6f51b613e095 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-@@ -2072,12 +2072,6 @@ static const struct rtw_intf_phy_para_table phy_para_table_8822b = {
+@@ -2074,12 +2074,6 @@ static const struct rtw_intf_phy_para_table phy_para_table_8822b = {
  	.n_gen2_para	= ARRAY_SIZE(pcie_gen2_param_8822b),
  };
  
@@ -226,7 +226,7 @@ index 419eb14c5467..739809f4cab5 100644
  static const struct rtw_hw_reg rtw8822b_dig[] = {
  	[0] = { .addr = 0xc50, .mask = 0x7f },
  	[1] = { .addr = 0xe50, .mask = 0x7f },
-@@ -2432,7 +2426,7 @@ static const u8 rtw8822b_pwrtrk_2g_cck_a_p[RTW_PWR_TRK_TBL_SZ] = {
+@@ -2434,7 +2428,7 @@ static const u8 rtw8822b_pwrtrk_2g_cck_a_p[RTW_PWR_TRK_TBL_SZ] = {
  	10, 11, 11, 12, 12, 13, 13, 14, 14, 15
  };
  
@@ -235,7 +235,7 @@ index 419eb14c5467..739809f4cab5 100644
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_1] = rtw8822b_pwrtrk_5gb_n[RTW_PWR_TRK_5G_1],
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_2] = rtw8822b_pwrtrk_5gb_n[RTW_PWR_TRK_5G_2],
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_3] = rtw8822b_pwrtrk_5gb_n[RTW_PWR_TRK_5G_3],
-@@ -2455,6 +2449,12 @@ static const struct rtw_pwr_track_tbl rtw8822b_rtw_pwr_track_tbl = {
+@@ -2457,6 +2451,12 @@ static const struct rtw_pwr_track_tbl rtw8822b_rtw_pwr_track_tbl = {
  	.pwrtrk_2g_ccka_p = rtw8822b_pwrtrk_2g_cck_a_p,
  };
  
@@ -248,7 +248,7 @@ index 419eb14c5467..739809f4cab5 100644
  static const struct rtw_reg_domain coex_info_hw_regs_8822b[] = {
  	{0xcb0, MASKDWORD, RTW_REG_DOMAIN_MAC32},
  	{0xcb4, MASKDWORD, RTW_REG_DOMAIN_MAC32},
-@@ -2535,7 +2535,6 @@ const struct rtw_chip_info rtw8822b_hw_spec = {
+@@ -2537,7 +2537,6 @@ const struct rtw_chip_info rtw8822b_hw_spec = {
  	.rf_tbl = {&rtw8822b_rf_a_tbl, &rtw8822b_rf_b_tbl},
  	.rfe_defs = rtw8822b_rfe_defs,
  	.rfe_defs_size = ARRAY_SIZE(rtw8822b_rfe_defs),
@@ -257,10 +257,10 @@ index 419eb14c5467..739809f4cab5 100644
  	.bfer_su_max_num = 2,
  	.bfer_mu_max_num = 1,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822c.c b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-index 56085f220fcd..af6b76937f1d 100644
+index 3fa72af40aa4..563a9faec556 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822c.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-@@ -4883,16 +4883,6 @@ static const struct rtw_intf_phy_para_table phy_para_table_8822c = {
+@@ -4884,16 +4884,6 @@ static const struct rtw_intf_phy_para_table phy_para_table_8822c = {
  	.n_gen2_para	= ARRAY_SIZE(pcie_gen2_param_8822c),
  };
  
@@ -277,7 +277,7 @@ index 56085f220fcd..af6b76937f1d 100644
  static const struct rtw_hw_reg rtw8822c_dig[] = {
  	[0] = { .addr = 0x1d70, .mask = 0x7f },
  	[1] = { .addr = 0x1d70, .mask = 0x7f00 },
-@@ -5238,7 +5228,7 @@ static const u8 rtw8822c_pwrtrk_2g_cck_a_p[RTW_PWR_TRK_TBL_SZ] = {
+@@ -5239,7 +5229,7 @@ static const u8 rtw8822c_pwrtrk_2g_cck_a_p[RTW_PWR_TRK_TBL_SZ] = {
  	18, 18, 19, 20, 21, 22, 23, 24, 24, 25
  };
  
@@ -286,7 +286,7 @@ index 56085f220fcd..af6b76937f1d 100644
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_1] = rtw8822c_pwrtrk_5gb_n[RTW_PWR_TRK_5G_1],
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_2] = rtw8822c_pwrtrk_5gb_n[RTW_PWR_TRK_5G_2],
  	.pwrtrk_5gb_n[RTW_PWR_TRK_5G_3] = rtw8822c_pwrtrk_5gb_n[RTW_PWR_TRK_5G_3],
-@@ -5261,6 +5251,16 @@ static const struct rtw_pwr_track_tbl rtw8822c_rtw_pwr_track_tbl = {
+@@ -5262,6 +5252,16 @@ static const struct rtw_pwr_track_tbl rtw8822c_rtw_pwr_track_tbl = {
  	.pwrtrk_2g_ccka_p = rtw8822c_pwrtrk_2g_cck_a_p,
  };
  
@@ -303,7 +303,7 @@ index 56085f220fcd..af6b76937f1d 100644
  static const struct rtw_hw_reg_offset rtw8822c_edcca_th[] = {
  	[EDCCA_TH_L2H_IDX] = {
  		{.addr = 0x84c, .mask = MASKBYTE2}, .offset = 0x80
-@@ -5360,7 +5360,6 @@ const struct rtw_chip_info rtw8822c_hw_spec = {
+@@ -5361,7 +5361,6 @@ const struct rtw_chip_info rtw8822c_hw_spec = {
  	.rfe_defs_size = ARRAY_SIZE(rtw8822c_rfe_defs),
  	.en_dis_dpd = true,
  	.dpd_ratemask = DIS_DPD_RATEALL,
@@ -312,5 +312,5 @@ index 56085f220fcd..af6b76937f1d 100644
  	.lck_threshold = 8,
  	.bfer_su_max_num = 2,
 -- 
-2.43.0
+2.39.5
 

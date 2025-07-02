@@ -1,7 +1,8 @@
-From 95a772e30b60e7954d03f3372268722475aa303f Mon Sep 17 00:00:00 2001
+From 699321b4de81b1c6e0e8973f763f4d8ef9be583d Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 23 Oct 2024 17:08:24 +0300
-Subject: [PATCH] wifi: rtw88: Extend the init table parsing for RTL8812AU
+Subject: [PATCH 06/24] wifi: rtw88: Extend the init table parsing for
+ RTL8812AU
 
 The chips supported so far only use the first condition, and so the
 parsing code ignores the second condition. RTL8812AU's init tables use
@@ -16,7 +17,7 @@ Link: https://patch.msgid.link/1bee6b74-6eab-44a3-9f40-794ca006c72d@gmail.com
  2 files changed, 69 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index 6161db5fcba6..297da821704b 100644
+index 9f474dbed965..9dd8c459b014 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -1835,6 +1835,20 @@ struct rtw_phy_cond {
@@ -49,7 +50,7 @@ index 6161db5fcba6..297da821704b 100644
  
  	u8 ps_mode;
 diff --git a/drivers/net/wireless/realtek/rtw88/phy.c b/drivers/net/wireless/realtek/rtw88/phy.c
-index 0020ff6a50f8..db36276ccabc 100644
+index d57a2aabd89b..739c619460ca 100644
 --- a/drivers/net/wireless/realtek/rtw88/phy.c
 +++ b/drivers/net/wireless/realtek/rtw88/phy.c
 @@ -18,7 +18,10 @@ struct phy_cfg_pair {
@@ -168,5 +169,5 @@ index 0020ff6a50f8..db36276ccabc 100644
  					is_skipped = true;
  				} else {
 -- 
-2.43.0
+2.39.5
 

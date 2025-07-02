@@ -1,7 +1,7 @@
-From 4f8ec8927bc292b2a71cd5a253c96ce3c6b2927f Mon Sep 17 00:00:00 2001
+From fb1567c60d2a22560353b03ae8a64d2d7c5aa536 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 30 Oct 2024 20:28:49 +0200
-Subject: [PATCH] wifi: rtw88: Add rtw8812a.{c,h}
+Subject: [PATCH 22/24] wifi: rtw88: Add rtw8812a.{c,h}
 
 These contain code specific to RTL8812AU.
 
@@ -1140,5 +1140,5 @@ index 000000000000..82dab59e341d
 +
 +#endif
 -- 
-2.43.0
+2.39.5
 

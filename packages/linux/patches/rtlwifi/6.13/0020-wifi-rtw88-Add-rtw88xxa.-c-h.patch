@@ -1,7 +1,7 @@
-From b870b9d31c9e4e6b20c410e1e017f8c87d4c2ae0 Mon Sep 17 00:00:00 2001
+From acb1602c05c12f37ca562e00ac3157ee11f52920 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 30 Oct 2024 20:27:39 +0200
-Subject: [PATCH] wifi: rtw88: Add rtw88xxa.{c,h}
+Subject: [PATCH 20/24] wifi: rtw88: Add rtw88xxa.{c,h}
 
 These contain code shared by both RTL8821AU and RTL8812AU chips.
 
@@ -2192,5 +2192,5 @@ index 000000000000..09a45c1a4129
 +
 +#endif
 -- 
-2.43.0
+2.39.5
 

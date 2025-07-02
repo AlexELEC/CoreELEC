@@ -1,7 +1,7 @@
-From c7706b1173c77185a2ef40c7d1811021566563f3 Mon Sep 17 00:00:00 2001
+From 0ced33188bdc330299c80f4d1afd67278d9c2ded Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 23 Oct 2024 17:10:32 +0300
-Subject: [PATCH] wifi: rtw88: Enable data rate fallback for older chips
+Subject: [PATCH 09/24] wifi: rtw88: Enable data rate fallback for older chips
 
 RTL8811AU fails to perform the 4-way handshake when the AP is too far
 because it transmits the EAPOL frames at MCS9 and when that doesn't
@@ -51,7 +51,7 @@ index 168e19187ba7..19de5ba555a9 100644
  
  static inline u8 rtw_len_to_page(unsigned int len, u8 page_size)
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index af4876327837..64bc43cdd209 100644
+index bf48ec42ffb9..a57680167144 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -1204,6 +1204,7 @@ struct rtw_chip_info {
@@ -63,10 +63,10 @@ index af4876327837..64bc43cdd209 100644
  	u8 default_1ss_tx_path;
  
 diff --git a/drivers/net/wireless/realtek/rtw88/pci.c b/drivers/net/wireless/realtek/rtw88/pci.c
-index f71e41d6f97c..0ecaefc4c83d 100644
+index 729b270d5851..08226b61b653 100644
 --- a/drivers/net/wireless/realtek/rtw88/pci.c
 +++ b/drivers/net/wireless/realtek/rtw88/pci.c
-@@ -824,7 +824,7 @@ static int rtw_pci_tx_write_data(struct rtw_dev *rtwdev,
+@@ -825,7 +825,7 @@ static int rtw_pci_tx_write_data(struct rtw_dev *rtwdev,
  	pkt_desc = skb_push(skb, chip->tx_pkt_desc_sz);
  	memset(pkt_desc, 0, tx_pkt_desc_sz);
  	pkt_info->qsel = rtw_pci_get_tx_qsel(skb, queue);
@@ -76,7 +76,7 @@ index f71e41d6f97c..0ecaefc4c83d 100644
  			     DMA_TO_DEVICE);
  	if (dma_mapping_error(&rtwpci->pdev->dev, dma))
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8703b.c b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
-index 97dbc77f037a..f6f6635b46e1 100644
+index f72e5042920c..bff6e8b93650 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 @@ -1964,6 +1964,7 @@ const struct rtw_chip_info rtw8703b_hw_spec = {
@@ -112,10 +112,10 @@ index e17d0193ca6f..39dc8244f744 100644
  	.vht_supported = true,
  	.lps_deep_mode_supported = BIT(LPS_DEEP_MODE_LCLK),
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822b.c b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-index 7360ce0a193e..419eb14c5467 100644
+index 9bd269319795..ccabbe85be6f 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-@@ -2513,6 +2513,7 @@ const struct rtw_chip_info rtw8822b_hw_spec = {
+@@ -2515,6 +2515,7 @@ const struct rtw_chip_info rtw8822b_hw_spec = {
  	.usb_tx_agg_desc_num = 3,
  	.hw_feature_report = true,
  	.c2h_ra_report_size = 7,
@@ -124,10 +124,10 @@ index 7360ce0a193e..419eb14c5467 100644
  	.vht_supported = true,
  	.lps_deep_mode_supported = BIT(LPS_DEEP_MODE_LCLK),
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822c.c b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-index 17d4d9bddd83..56085f220fcd 100644
+index 36733c88102a..3fa72af40aa4 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822c.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-@@ -5333,6 +5333,7 @@ const struct rtw_chip_info rtw8822c_hw_spec = {
+@@ -5334,6 +5334,7 @@ const struct rtw_chip_info rtw8822c_hw_spec = {
  	.usb_tx_agg_desc_num = 3,
  	.hw_feature_report = true,
  	.c2h_ra_report_size = 7,
@@ -136,10 +136,10 @@ index 17d4d9bddd83..56085f220fcd 100644
  	.path_div_supported = true,
  	.ht_supported = true,
 diff --git a/drivers/net/wireless/realtek/rtw88/sdio.c b/drivers/net/wireless/realtek/rtw88/sdio.c
-index f0b06ed8f76d..799230eb5f16 100644
+index fe6f14290bdd..df8b62fe4548 100644
 --- a/drivers/net/wireless/realtek/rtw88/sdio.c
 +++ b/drivers/net/wireless/realtek/rtw88/sdio.c
-@@ -864,7 +864,7 @@ static void rtw_sdio_tx_skb_prepare(struct rtw_dev *rtwdev,
+@@ -862,7 +862,7 @@ static void rtw_sdio_tx_skb_prepare(struct rtw_dev *rtwdev,
  
  	pkt_info->qsel = rtw_sdio_get_tx_qsel(rtwdev, skb, queue);
  
@@ -195,10 +195,10 @@ index 3d544fd7f60f..d34cdeca16f1 100644
  void rtw_tx_report_handle(struct rtw_dev *rtwdev, struct sk_buff *skb, int src);
  void rtw_tx_rsvd_page_pkt_info_update(struct rtw_dev *rtwdev,
 diff --git a/drivers/net/wireless/realtek/rtw88/usb.c b/drivers/net/wireless/realtek/rtw88/usb.c
-index ba314d90ab3f..a3d2b40ec67b 100644
+index 83acb96b44ed..a0ce3a306221 100644
 --- a/drivers/net/wireless/realtek/rtw88/usb.c
 +++ b/drivers/net/wireless/realtek/rtw88/usb.c
-@@ -458,7 +458,7 @@ static int rtw_usb_write_data(struct rtw_dev *rtwdev,
+@@ -512,7 +512,7 @@ static int rtw_usb_write_data(struct rtw_dev *rtwdev,
  	skb_put_data(skb, buf, size);
  	skb_push(skb, chip->tx_pkt_desc_sz);
  	memset(skb->data, 0, chip->tx_pkt_desc_sz);
@@ -207,7 +207,7 @@ index ba314d90ab3f..a3d2b40ec67b 100644
  	rtw_tx_fill_txdesc_checksum(rtwdev, pkt_info, skb->data);
  
  	ret = rtw_usb_write_port(rtwdev, qsel, skb,
-@@ -525,7 +525,7 @@ static int rtw_usb_tx_write(struct rtw_dev *rtwdev,
+@@ -579,7 +579,7 @@ static int rtw_usb_tx_write(struct rtw_dev *rtwdev,
  	pkt_desc = skb_push(skb, chip->tx_pkt_desc_sz);
  	memset(pkt_desc, 0, chip->tx_pkt_desc_sz);
  	ep = qsel_to_ep(rtwusb, pkt_info->qsel);
@@ -217,5 +217,5 @@ index ba314d90ab3f..a3d2b40ec67b 100644
  	tx_data = rtw_usb_get_tx_data(skb);
  	tx_data->sn = pkt_info->sn;
 -- 
-2.43.0
+2.39.5
 

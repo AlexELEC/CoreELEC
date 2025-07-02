@@ -1,7 +1,8 @@
-From fbb5e1b3637a720c83c91a7b1476ab0429bfc747 Mon Sep 17 00:00:00 2001
+From fc1fcada274a5c5d73178ce30982f75771773d44 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 23 Oct 2024 17:09:47 +0300
-Subject: [PATCH] wifi: rtw88: Let each driver control the power on/off process
+Subject: [PATCH 08/24] wifi: rtw88: Let each driver control the power on/off
+ process
 
 RTL8821AU and RTL8812AU have to do some things differently, so let
 them have full control.
@@ -25,7 +26,7 @@ Link: https://patch.msgid.link/98ab839f-9100-44ae-9551-9af743a4aa3a@gmail.com
  10 files changed, 36 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/coex.c b/drivers/net/wireless/realtek/rtw88/coex.c
-index 13096fa7025c..8c5aec744f3c 100644
+index 901984ec026e..3bd7f55f4b18 100644
 --- a/drivers/net/wireless/realtek/rtw88/coex.c
 +++ b/drivers/net/wireless/realtek/rtw88/coex.c
 @@ -2753,16 +2753,19 @@ void rtw_coex_power_on_setting(struct rtw_dev *rtwdev)
@@ -49,7 +50,7 @@ index 13096fa7025c..8c5aec744f3c 100644
  void rtw_coex_ips_notify(struct rtw_dev *rtwdev, u8 type)
  {
 diff --git a/drivers/net/wireless/realtek/rtw88/mac.c b/drivers/net/wireless/realtek/rtw88/mac.c
-index e5abcc20b63c..daf23ccf6378 100644
+index 5aa45592c2ac..b5a1caf13997 100644
 --- a/drivers/net/wireless/realtek/rtw88/mac.c
 +++ b/drivers/net/wireless/realtek/rtw88/mac.c
 @@ -227,8 +227,8 @@ static int rtw_sub_pwr_seq_parser(struct rtw_dev *rtwdev, u8 intf_mask,
@@ -71,7 +72,7 @@ index e5abcc20b63c..daf23ccf6378 100644
  
  static int rtw_mac_power_switch(struct rtw_dev *rtwdev, bool pwr_on)
  {
-@@ -994,6 +995,7 @@ int rtw_download_firmware(struct rtw_dev *rtwdev, struct rtw_fw_state *fw)
+@@ -999,6 +1000,7 @@ int rtw_download_firmware(struct rtw_dev *rtwdev, struct rtw_fw_state *fw)
  
  	return 0;
  }
@@ -79,7 +80,7 @@ index e5abcc20b63c..daf23ccf6378 100644
  
  static u32 get_priority_queues(struct rtw_dev *rtwdev, u32 queues)
  {
-@@ -1127,7 +1129,7 @@ static int txdma_queue_mapping(struct rtw_dev *rtwdev)
+@@ -1132,7 +1134,7 @@ static int txdma_queue_mapping(struct rtw_dev *rtwdev)
  	return 0;
  }
  
@@ -88,7 +89,7 @@ index e5abcc20b63c..daf23ccf6378 100644
  {
  	const struct rtw_chip_info *chip = rtwdev->chip;
  	struct rtw_fifo_conf *fifo = &rtwdev->fifo;
-@@ -1179,6 +1181,7 @@ static int set_trx_fifo_info(struct rtw_dev *rtwdev)
+@@ -1184,6 +1186,7 @@ static int set_trx_fifo_info(struct rtw_dev *rtwdev)
  
  	return 0;
  }
@@ -96,7 +97,7 @@ index e5abcc20b63c..daf23ccf6378 100644
  
  static int __priority_queue_cfg(struct rtw_dev *rtwdev,
  				const struct rtw_page_table *pg_tbl,
-@@ -1256,7 +1259,7 @@ static int priority_queue_cfg(struct rtw_dev *rtwdev)
+@@ -1261,7 +1264,7 @@ static int priority_queue_cfg(struct rtw_dev *rtwdev)
  	u16 pubq_num;
  	int ret;
  
@@ -106,10 +107,10 @@ index e5abcc20b63c..daf23ccf6378 100644
  		return ret;
  
 diff --git a/drivers/net/wireless/realtek/rtw88/mac.h b/drivers/net/wireless/realtek/rtw88/mac.h
-index 58c3dccc14bb..6905e2747372 100644
+index 737c6d5d8da7..e92b1483728d 100644
 --- a/drivers/net/wireless/realtek/rtw88/mac.h
 +++ b/drivers/net/wireless/realtek/rtw88/mac.h
-@@ -30,11 +30,14 @@
+@@ -30,6 +30,8 @@
  
  void rtw_set_channel_mac(struct rtw_dev *rtwdev, u8 channel, u8 bw,
  			 u8 primary_ch_idx);
@@ -117,6 +118,8 @@ index 58c3dccc14bb..6905e2747372 100644
 +		       const struct rtw_pwr_seq_cmd * const *cmd_seq);
  int rtw_mac_power_on(struct rtw_dev *rtwdev);
  void rtw_mac_power_off(struct rtw_dev *rtwdev);
+ void rtw_write_firmware_page(struct rtw_dev *rtwdev, u32 page,
+@@ -37,6 +39,7 @@ void rtw_write_firmware_page(struct rtw_dev *rtwdev, u32 page,
  int rtw_download_firmware(struct rtw_dev *rtwdev, struct rtw_fw_state *fw);
  int rtw_mac_init(struct rtw_dev *rtwdev);
  void rtw_mac_flush_queues(struct rtw_dev *rtwdev, u32 queues, bool drop);
@@ -125,7 +128,7 @@ index 58c3dccc14bb..6905e2747372 100644
  
  static inline void rtw_mac_flush_all_queues(struct rtw_dev *rtwdev, bool drop)
 diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
-index 942266324ca4..e6f985a92019 100644
+index c314b2fc06ee..0b86a0a939c3 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.c
 +++ b/drivers/net/wireless/realtek/rtw88/main.c
 @@ -1309,7 +1309,7 @@ void rtw_update_sta_info(struct rtw_dev *rtwdev, struct rtw_sta_info *si,
@@ -196,7 +199,7 @@ index 942266324ca4..e6f985a92019 100644
  
  static void rtw_init_ht_cap(struct rtw_dev *rtwdev,
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index 297da821704b..af4876327837 100644
+index 9dd8c459b014..bf48ec42ffb9 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -843,6 +843,8 @@ struct rtw_regd {
@@ -226,7 +229,7 @@ index 297da821704b..af4876327837 100644
  int rtw_dump_fw(struct rtw_dev *rtwdev, const u32 ocp_src, u32 size,
  		u32 fwcd_item);
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8703b.c b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
-index 23125a62e74f..97dbc77f037a 100644
+index e541443adb15..f72e5042920c 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 @@ -1888,6 +1888,8 @@ static const struct coex_tdma_para tdma_sant_8703b[] = {
@@ -265,10 +268,10 @@ index 6cb7e9aaa437..e17d0193ca6f 100644
  	.read_efuse		= rtw8821c_read_efuse,
  	.query_phy_status	= query_phy_status,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822b.c b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-index 48aefe3722ec..7360ce0a193e 100644
+index ca8813fdf9fb..9bd269319795 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-@@ -2132,6 +2132,8 @@ static const struct rtw_prioq_addrs prioq_addrs_8822b = {
+@@ -2134,6 +2134,8 @@ static const struct rtw_prioq_addrs prioq_addrs_8822b = {
  };
  
  static const struct rtw_chip_ops rtw8822b_ops = {
@@ -278,10 +281,10 @@ index 48aefe3722ec..7360ce0a193e 100644
  	.read_efuse		= rtw8822b_read_efuse,
  	.query_phy_status	= query_phy_status,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822c.c b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-index 25933a54e863..17d4d9bddd83 100644
+index ca98da8e4000..36733c88102a 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822c.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-@@ -4947,6 +4947,8 @@ static const struct rtw_prioq_addrs prioq_addrs_8822c = {
+@@ -4948,6 +4948,8 @@ static const struct rtw_prioq_addrs prioq_addrs_8822c = {
  };
  
  static const struct rtw_chip_ops rtw8822c_ops = {
@@ -291,5 +294,5 @@ index 25933a54e863..17d4d9bddd83 100644
  	.read_efuse		= rtw8822c_read_efuse,
  	.query_phy_status	= query_phy_status,
 -- 
-2.43.0
+2.39.5
 

@@ -1,7 +1,7 @@
-From f54ea3b5f3c12efda28da7541af17c89c66de15b Mon Sep 17 00:00:00 2001
+From e88978bf9faea656241ce9b671ce76323015c896 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Fri, 20 Sep 2024 22:27:30 +0300
-Subject: [PATCH 2/2] wifi: rtw88: Parse the RX descriptor with a single
+Subject: [PATCH 02/24] wifi: rtw88: Parse the RX descriptor with a single
  function
 
 rtw8703b_query_rx_desc(), rtw8723d_query_rx_desc(),
@@ -30,7 +30,7 @@ Signed-off-by: Bitterblue Smith <rtl8821cerfe2@gmail.com>
  11 files changed, 106 insertions(+), 271 deletions(-)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index 4f79165fdf79..7b5546284489 100644
+index 81145f8571f3..c9efe9d66954 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -848,9 +848,8 @@ struct rtw_chip_ops {
@@ -46,10 +46,10 @@ index 4f79165fdf79..7b5546284489 100644
  		       u32 addr, u32 mask);
  	bool (*write_rf)(struct rtw_dev *rtwdev, enum rtw_rf_path rf_path,
 diff --git a/drivers/net/wireless/realtek/rtw88/pci.c b/drivers/net/wireless/realtek/rtw88/pci.c
-index 0b9b8807af2c..f71e41d6f97c 100644
+index fab9bb9257dd..729b270d5851 100644
 --- a/drivers/net/wireless/realtek/rtw88/pci.c
 +++ b/drivers/net/wireless/realtek/rtw88/pci.c
-@@ -1065,7 +1065,7 @@ static u32 rtw_pci_rx_napi(struct rtw_dev *rtwdev, struct rtw_pci *rtwpci,
+@@ -1066,7 +1066,7 @@ static u32 rtw_pci_rx_napi(struct rtw_dev *rtwdev, struct rtw_pci *rtwpci,
  		dma_sync_single_for_cpu(rtwdev->dev, dma, RTK_PCI_RX_BUF_SIZE,
  					DMA_FROM_DEVICE);
  		rx_desc = skb->data;
@@ -59,7 +59,7 @@ index 0b9b8807af2c..f71e41d6f97c 100644
  		/* offset from rx_desc to payload */
  		pkt_offset = pkt_desc_sz + pkt_stat.drv_info_sz +
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8703b.c b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
-index e3ac748ad646..77399b8dd8cd 100644
+index 86904cc94d6d..fe09c23b51b5 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 @@ -29,9 +29,6 @@
@@ -262,7 +262,7 @@ index 9d21c4b1450e..66c79956e8e5 100644
  	.mac_init		= rtw8821c_mac_init,
  	.read_rf		= rtw_phy_read_rf,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822b.c b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-index 650585086e8f..24f76a36f23e 100644
+index c9e50756655c..8e1393ca3301 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 @@ -934,47 +934,6 @@ static void query_phy_status(struct rtw_dev *rtwdev, u8 *phy_status,
@@ -311,9 +311,9 @@ index 650585086e8f..24f76a36f23e 100644
 -}
 -
  static void
- rtw8822b_set_tx_power_index_by_rate(struct rtw_dev *rtwdev, u8 path, u8 rs)
- {
-@@ -2175,7 +2134,7 @@ static const struct rtw_prioq_addrs prioq_addrs_8822b = {
+ rtw8822b_set_tx_power_index_by_rate(struct rtw_dev *rtwdev, u8 path,
+ 				    u8 rs, u32 *phy_pwr_idx)
+@@ -2177,7 +2136,7 @@ static const struct rtw_prioq_addrs prioq_addrs_8822b = {
  static const struct rtw_chip_ops rtw8822b_ops = {
  	.phy_set_param		= rtw8822b_phy_set_param,
  	.read_efuse		= rtw8822b_read_efuse,
@@ -323,10 +323,10 @@ index 650585086e8f..24f76a36f23e 100644
  	.mac_init		= rtw8822b_mac_init,
  	.read_rf		= rtw_phy_read_rf,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822c.c b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-index d6c5d0a3ea20..b5046dc10990 100644
+index 9aae401722fb..11dc14db822b 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822c.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-@@ -2688,48 +2688,6 @@ static void query_phy_status(struct rtw_dev *rtwdev, u8 *phy_status,
+@@ -2690,48 +2690,6 @@ static void query_phy_status(struct rtw_dev *rtwdev, u8 *phy_status,
  	}
  }
  
@@ -375,7 +375,7 @@ index d6c5d0a3ea20..b5046dc10990 100644
  static void
  rtw8822c_set_write_tx_power_ref(struct rtw_dev *rtwdev, u8 *tx_pwr_ref_cck,
  				u8 *tx_pwr_ref_ofdm)
-@@ -4989,7 +4947,7 @@ static const struct rtw_prioq_addrs prioq_addrs_8822c = {
+@@ -4992,7 +4950,7 @@ static const struct rtw_prioq_addrs prioq_addrs_8822c = {
  static const struct rtw_chip_ops rtw8822c_ops = {
  	.phy_set_param		= rtw8822c_phy_set_param,
  	.read_efuse		= rtw8822c_read_efuse,
@@ -549,10 +549,10 @@ index 9f0019112987..6b7dee245c0a 100644
  				struct ieee80211_rx_status *rx_status,
  				struct rtw_rx_pkt_stat *pkt_stat);
 diff --git a/drivers/net/wireless/realtek/rtw88/sdio.c b/drivers/net/wireless/realtek/rtw88/sdio.c
-index 21d0754dd7f6..601b30070f53 100644
+index 787fa09fd063..fe6f14290bdd 100644
 --- a/drivers/net/wireless/realtek/rtw88/sdio.c
 +++ b/drivers/net/wireless/realtek/rtw88/sdio.c
-@@ -981,8 +981,7 @@ static void rtw_sdio_rxfifo_recv(struct rtw_dev *rtwdev, u32 rx_len)
+@@ -979,8 +979,7 @@ static void rtw_sdio_rxfifo_recv(struct rtw_dev *rtwdev, u32 rx_len)
  
  	while (true) {
  		rx_desc = skb->data;
@@ -563,10 +563,10 @@ index 21d0754dd7f6..601b30070f53 100644
  			     pkt_stat.shift;
  
 diff --git a/drivers/net/wireless/realtek/rtw88/usb.c b/drivers/net/wireless/realtek/rtw88/usb.c
-index e83ab6fb83f5..2641059d3561 100644
+index a446be45f26e..83acb96b44ed 100644
 --- a/drivers/net/wireless/realtek/rtw88/usb.c
 +++ b/drivers/net/wireless/realtek/rtw88/usb.c
-@@ -570,8 +570,8 @@ static void rtw_usb_rx_handler(struct work_struct *work)
+@@ -625,8 +625,8 @@ static void rtw_usb_rx_handler(struct work_struct *work)
  
  		do {
  			rx_desc = skb->data;
@@ -578,5 +578,5 @@ index e83ab6fb83f5..2641059d3561 100644
  				     pkt_stat.shift;
  
 -- 
-2.43.0
+2.39.5
 

@@ -1,7 +1,8 @@
-From 57289d30cd2ae315ab9b28213d63d1dbf8570cf3 Mon Sep 17 00:00:00 2001
+From 753c741b4474db92b0a4598481fca3b8120aaca9 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 23 Oct 2024 17:13:45 +0300
-Subject: [PATCH] wifi: rtw88: Detect beacon loss with chips other than 8822c
+Subject: [PATCH 14/24] wifi: rtw88: Detect beacon loss with chips other than
+ 8822c
 
 The driver is supposed to avoid entering LPS (power saving) when there
 is beacon loss, but only RTL8822C detects the beacon loss (because it
@@ -21,7 +22,7 @@ Link: https://patch.msgid.link/f52b2fcf-bf94-48bc-89bd-e55ebc3a2f2d@gmail.com
  1 file changed, 18 insertions(+)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/main.c b/drivers/net/wireless/realtek/rtw88/main.c
-index e6f985a92019..65d20ad02667 100644
+index 0b86a0a939c3..876d0b126ed7 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.c
 +++ b/drivers/net/wireless/realtek/rtw88/main.c
 @@ -202,6 +202,21 @@ static void rtw_vif_watch_dog_iter(void *data, struct ieee80211_vif *vif)
@@ -64,5 +65,5 @@ index e6f985a92019..65d20ad02667 100644
  	 * more than two stations associated to the AP, then we can not enter
  	 * lps, because fw does not handle the overlapped beacon interval
 -- 
-2.43.0
+2.39.5
 

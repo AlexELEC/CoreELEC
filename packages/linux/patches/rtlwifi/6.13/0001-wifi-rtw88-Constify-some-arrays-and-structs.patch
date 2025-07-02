@@ -1,7 +1,7 @@
-From aadcf641c25806859aae90fa4c77d34039306046 Mon Sep 17 00:00:00 2001
+From c9cd7ebfe01ff6fe41e762db6a2b0f0e53ee8567 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 18 Sep 2024 01:53:55 +0300
-Subject: [PATCH 1/2] wifi: rtw88: Constify some arrays and structs
+Subject: [PATCH 01/24] wifi: rtw88: Constify some arrays and structs
 
 These are never modified, so make them const:
 
@@ -51,7 +51,7 @@ Signed-off-by: Bitterblue Smith <rtl8821cerfe2@gmail.com>
  9 files changed, 35 insertions(+), 35 deletions(-)
 
 diff --git a/drivers/net/wireless/realtek/rtw88/fw.c b/drivers/net/wireless/realtek/rtw88/fw.c
-index ab7d414d0ba6..1b97d33b3db5 100644
+index b9b0114e253b..813c12148819 100644
 --- a/drivers/net/wireless/realtek/rtw88/fw.c
 +++ b/drivers/net/wireless/realtek/rtw88/fw.c
 @@ -267,7 +267,7 @@ static void rtw_fw_scan_result(struct rtw_dev *rtwdev, u8 *payload,
@@ -64,7 +64,7 @@ index ab7d414d0ba6..1b97d33b3db5 100644
  
  	rtw_dbg(rtwdev, RTW_DBG_ADAPTIVITY,
 diff --git a/drivers/net/wireless/realtek/rtw88/mac.c b/drivers/net/wireless/realtek/rtw88/mac.c
-index 564f5988ee82..e5abcc20b63c 100644
+index efb1da198e74..5aa45592c2ac 100644
 --- a/drivers/net/wireless/realtek/rtw88/mac.c
 +++ b/drivers/net/wireless/realtek/rtw88/mac.c
 @@ -228,7 +228,7 @@ static int rtw_sub_pwr_seq_parser(struct rtw_dev *rtwdev, u8 intf_mask,
@@ -86,7 +86,7 @@ index 564f5988ee82..e5abcc20b63c 100644
  	u8 rpwm;
  	bool cur_pwr;
 diff --git a/drivers/net/wireless/realtek/rtw88/main.h b/drivers/net/wireless/realtek/rtw88/main.h
-index 37912dded128..4f79165fdf79 100644
+index c808bb271e9d..81145f8571f3 100644
 --- a/drivers/net/wireless/realtek/rtw88/main.h
 +++ b/drivers/net/wireless/realtek/rtw88/main.h
 @@ -1167,7 +1167,7 @@ enum rtw_fwcd_item {
@@ -132,7 +132,7 @@ index 37ef80c9091d..d57a2aabd89b 100644
  	rtw_write32_mask(rtwdev,
  			 edcca_th[EDCCA_TH_L2H_IDX].hw_reg.addr,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8703b.c b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
-index 222608de33cd..e3ac748ad646 100644
+index a977aad9c650..86904cc94d6d 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8703b.c
 @@ -481,14 +481,14 @@ static const struct rtw_pwr_seq_cmd trans_act_to_lps_8703b[] = {
@@ -294,10 +294,10 @@ index 526e8de77b3e..9d21c4b1450e 100644
  	.read_efuse		= rtw8821c_read_efuse,
  	.query_rx_desc		= rtw8821c_query_rx_desc,
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822b.c b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-index 6edb17aea90e..650585086e8f 100644
+index 4a6c0a9266a0..c9e50756655c 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822b.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822b.c
-@@ -1978,13 +1978,13 @@ static const struct rtw_pwr_seq_cmd trans_cardemu_to_carddis_8822b[] = {
+@@ -1980,13 +1980,13 @@ static const struct rtw_pwr_seq_cmd trans_cardemu_to_carddis_8822b[] = {
  	 RTW_PWR_CMD_END, 0, 0},
  };
  
@@ -313,7 +313,7 @@ index 6edb17aea90e..650585086e8f 100644
  	trans_act_to_cardemu_8822b,
  	trans_cardemu_to_carddis_8822b,
  	NULL
-@@ -2156,7 +2156,7 @@ static const struct rtw_rqpn rqpn_table_8822b[] = {
+@@ -2158,7 +2158,7 @@ static const struct rtw_rqpn rqpn_table_8822b[] = {
  	 RTW_DMA_MAPPING_EXTRA, RTW_DMA_MAPPING_HIGH},
  };
  
@@ -322,7 +322,7 @@ index 6edb17aea90e..650585086e8f 100644
  	.prio[RTW_DMA_MAPPING_EXTRA] = {
  		.rsvd = REG_FIFOPAGE_INFO_4, .avail = REG_FIFOPAGE_INFO_4 + 2,
  	},
-@@ -2172,7 +2172,7 @@ static struct rtw_prioq_addrs prioq_addrs_8822b = {
+@@ -2174,7 +2174,7 @@ static struct rtw_prioq_addrs prioq_addrs_8822b = {
  	.wsize = true,
  };
  
@@ -331,7 +331,7 @@ index 6edb17aea90e..650585086e8f 100644
  	.phy_set_param		= rtw8822b_phy_set_param,
  	.read_efuse		= rtw8822b_read_efuse,
  	.query_rx_desc		= rtw8822b_query_rx_desc,
-@@ -2521,7 +2521,7 @@ static const struct rtw_reg_domain coex_info_hw_regs_8822b[] = {
+@@ -2523,7 +2523,7 @@ static const struct rtw_reg_domain coex_info_hw_regs_8822b[] = {
  	{0xc50,  MASKBYTE0, RTW_REG_DOMAIN_MAC8},
  };
  
@@ -341,10 +341,10 @@ index 6edb17aea90e..650585086e8f 100644
  	[EDCCA_TH_H2L_IDX] = {{.addr = 0x8a4, .mask = MASKBYTE1}, .offset = 0},
  };
 diff --git a/drivers/net/wireless/realtek/rtw88/rtw8822c.c b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-index 96a233079e02..d6c5d0a3ea20 100644
+index 3157cd834233..9aae401722fb 100644
 --- a/drivers/net/wireless/realtek/rtw88/rtw8822c.c
 +++ b/drivers/net/wireless/realtek/rtw88/rtw8822c.c
-@@ -4872,13 +4872,13 @@ static const struct rtw_pwr_seq_cmd trans_cardemu_to_carddis_8822c[] = {
+@@ -4875,13 +4875,13 @@ static const struct rtw_pwr_seq_cmd trans_cardemu_to_carddis_8822c[] = {
  	 RTW_PWR_CMD_END, 0, 0},
  };
  
@@ -360,7 +360,7 @@ index 96a233079e02..d6c5d0a3ea20 100644
  	trans_act_to_cardemu_8822c,
  	trans_cardemu_to_carddis_8822c,
  	NULL
-@@ -4970,7 +4970,7 @@ static const struct rtw_rqpn rqpn_table_8822c[] = {
+@@ -4973,7 +4973,7 @@ static const struct rtw_rqpn rqpn_table_8822c[] = {
  	 RTW_DMA_MAPPING_EXTRA, RTW_DMA_MAPPING_HIGH},
  };
  
@@ -369,7 +369,7 @@ index 96a233079e02..d6c5d0a3ea20 100644
  	.prio[RTW_DMA_MAPPING_EXTRA] = {
  		.rsvd = REG_FIFOPAGE_INFO_4, .avail = REG_FIFOPAGE_INFO_4 + 2,
  	},
-@@ -4986,7 +4986,7 @@ static struct rtw_prioq_addrs prioq_addrs_8822c = {
+@@ -4989,7 +4989,7 @@ static struct rtw_prioq_addrs prioq_addrs_8822c = {
  	.wsize = true,
  };
  
@@ -378,7 +378,7 @@ index 96a233079e02..d6c5d0a3ea20 100644
  	.phy_set_param		= rtw8822c_phy_set_param,
  	.read_efuse		= rtw8822c_read_efuse,
  	.query_rx_desc		= rtw8822c_query_rx_desc,
-@@ -5299,7 +5299,7 @@ static const struct rtw_pwr_track_tbl rtw8822c_rtw_pwr_track_tbl = {
+@@ -5302,7 +5302,7 @@ static const struct rtw_pwr_track_tbl rtw8822c_rtw_pwr_track_tbl = {
  	.pwrtrk_2g_ccka_p = rtw8822c_pwrtrk_2g_cck_a_p,
  };
  
@@ -388,5 +388,5 @@ index 96a233079e02..d6c5d0a3ea20 100644
  		{.addr = 0x84c, .mask = MASKBYTE2}, .offset = 0x80
  	},
 -- 
-2.43.0
+2.39.5
 

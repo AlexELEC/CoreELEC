@@ -1,7 +1,7 @@
-From 0e3e8284f8e1bf2fc0f7bf247194efe5cfc568c1 Mon Sep 17 00:00:00 2001
+From ed2463a8afecd7ca59d00256367ac0447b75d0dc Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 30 Oct 2024 20:31:28 +0200
-Subject: [PATCH] wifi: rtw88: Enable the new RTL8821AU/RTL8812AU drivers
+Subject: [PATCH 24/24] wifi: rtw88: Enable the new RTL8821AU/RTL8812AU drivers
 
 These are older Wifi 5 chips. RTL8821AU is 1x1, with or without
 Bluetooth. RTL8812AU is 2x2, without Bluetooth.
@@ -119,5 +119,5 @@ index 8f47359b4380..f0b49f5a8a5a 100644
  rtw88_pci-objs			:= pci.o
  
 -- 
-2.43.0
+2.39.5
 

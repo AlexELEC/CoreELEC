@@ -1,7 +1,7 @@
-From 4b81da5cd2b4c7231272216639bacecc818d8b51 Mon Sep 17 00:00:00 2001
+From 52e4007b9796a005fea7dc65796d43965c74d9d1 Mon Sep 17 00:00:00 2001
 From: Bitterblue Smith <rtl8821cerfe2@gmail.com>
 Date: Wed, 30 Oct 2024 20:25:16 +0200
-Subject: [PATCH] wifi: rtw88: Add rtw8821a_table.{c,h}
+Subject: [PATCH 19/24] wifi: rtw88: Add rtw8821a_table.{c,h}
 
 These contain various arrays for initialising RTL8821AU. Also TX power
 limits.
@@ -2400,5 +2400,5 @@ index 000000000000..90379ac7a817
 +
 +#endif
 -- 
-2.43.0
+2.39.5
 
