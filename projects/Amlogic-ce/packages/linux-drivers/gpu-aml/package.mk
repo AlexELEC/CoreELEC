@@ -27,6 +27,7 @@ make_target() {
     echo "building ${driver_version}"
 
     kernel_make -C ${PKG_BUILD}/${driver_version}/kernel/drivers/gpu/arm \
+      KERNEL_SRC=$(kernel_path) \
       clean
 
     if [ -n "${front_end}" ]; then
@@ -41,7 +42,8 @@ make_target() {
       CONFIG_MALI_DEVFREQ=n \
       KCFLAGS=" -DCONFIG_MALI_LOW_MEM=0"
 
-    kernel_make -C $(kernel_path) M=${PKG_BUILD}/${driver_version}/kernel/drivers/gpu/arm \
+    kernel_make -C ${PKG_BUILD}/${driver_version}/kernel/drivers/gpu/arm \
+      KERNEL_SRC=$(kernel_path) \
       INSTALL_MOD_PATH=${INSTALL}/$(get_kernel_overlay_dir) INSTALL_MOD_STRIP=1 DEPMOD=: \
       modules_install
 
