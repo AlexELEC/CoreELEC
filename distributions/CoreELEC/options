@@ -15,13 +15,13 @@
 
 # Welcome Message for SSH Server (up to 5 Lines)
   GREETING0="##############################################"
-  GREETING1="#                  CoreELEC                  #"
-  GREETING2="#            https://coreelec.org            #"
+  GREETING1="#              CoreELEC (ae-fork)            #"
+  GREETING2="#          http://alexelec.github.io         #"
   GREETING3="##############################################"
   GREETING4=""
 
 # Root password to integrate in the target system
-  ROOT_PASSWORD="coreelec"
+  ROOT_PASSWORD="mcpc"
 
 # Partition labels for USB/SD installation media
   DISTRO_BOOTLABEL="COREELEC"

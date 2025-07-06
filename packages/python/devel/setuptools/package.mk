@@ -9,5 +9,12 @@ PKG_LICENSE="OSS"
 PKG_SITE="https://pypi.org/project/setuptools"
 PKG_URL="https://files.pythonhosted.org/packages/source/${PKG_NAME:0:1}/${PKG_NAME}/${PKG_NAME,,}-${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_HOST="pybuild:host"
+PKG_DEPENDS_TARGET="toolchain Python3"
 PKG_LONGDESC="Replaces Setuptools as the standard method for working with Python module distributions."
 PKG_TOOLCHAIN="python"
+
+post_makeinstall_target() {
+  python_remove_source
+
+  rm -rf ${INSTALL}/usr/bin
+}
