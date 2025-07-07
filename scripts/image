@@ -72,7 +72,7 @@ ORIGIN_URL="$(git remote -v | awk '$1 == "origin" { print $2 }' | head -1 | sed 
 DISTRO_BUILD="ae-fork"
 
 if [ -n "${OS_STAGE}" -a ! "${OS_STAGE}${BUILD_NUM}" = "build0" ]; then
-  EXTRA_VERSION="_${OS_STAGE}${BUILD_NUM}"
+  EXTRA_VERSION="-${OS_STAGE}${BUILD_NUM}"
 fi
 
 DISTRO_VERSION="${OS_VERSION}-${OS_CODENAME}${EXTRA_VERSION}"
