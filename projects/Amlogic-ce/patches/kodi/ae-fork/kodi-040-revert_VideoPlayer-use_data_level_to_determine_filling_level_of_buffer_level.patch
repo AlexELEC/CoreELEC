@@ -1,0 +1,102 @@
+diff -Naurp kodi/system/settings/settings.xml kodi-patch/system/settings/settings.xml
+--- kodi/system/settings/settings.xml	2025-07-07 13:27:28.712067422 +0000
++++ kodi-patch/system/settings/settings.xml	2025-07-08 06:24:08.000000000 +0000
+@@ -1001,7 +1001,7 @@
+         </setting>
+         <setting id="videoplayer.queuedatasize" type="integer" label="37132" help="37133">
+           <level>2</level>
+-          <default>40</default> <!-- 40 MB -->
++          <default>128</default> <!-- 128 MB -->
+           <constraints>
+             <options>playerqueuedatasizes</options>
+           </constraints>
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2025-07-08 06:26:42.000000000 +0000
+@@ -307,7 +307,7 @@ void CDVDMessageQueue::WaitUntilEmpty()
+   }
+ }
+ 
+-int CDVDMessageQueue::GetLevel(bool data_level) const
++int CDVDMessageQueue::GetLevel() const
+ {
+   std::unique_lock lock(m_section);
+ 
+@@ -316,9 +316,9 @@ int CDVDMessageQueue::GetLevel(bool data
+   if (m_iDataSize == 0)
+     return 0;
+ 
+-  if (IsDataBased() || data_level)
++  if (IsDataBased())
+   {
+-    return std::min((uint64_t)100, 100 * m_iDataSize / m_iMaxDataSize);
++    return std::min(100, 100 * m_iDataSize / m_iMaxDataSize);
+   }
+ 
+   int level = std::min(100.0, ceil(100.0 * m_TimeSize * (m_TimeFront - m_TimeBack) / DVD_TIME_BASE ));
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h
+--- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2025-07-08 06:28:00.000000000 +0000
+@@ -80,8 +80,8 @@ public:
+   void WaitUntilEmpty();
+ 
+   // non messagequeue related functions
+-  bool IsFull() const { return GetLevel(true) == 100; }
+-  int GetLevel(bool data_level = false) const;
++  bool IsFull() const { return GetLevel() == 100; }
++  int GetLevel() const;
+ 
+   void SetMaxDataSize(int iMaxDataSize) { m_iMaxDataSize = iMaxDataSize; }
+   void SetMaxTimeSize(double sec) { m_TimeSize = 1.0 / sec; }
+@@ -102,12 +102,12 @@ private:
+   bool m_bInitialized;
+   bool m_drain = false;
+ 
+-  uint64_t m_iDataSize;
++  int m_iDataSize;
+   double m_TimeFront;
+   double m_TimeBack;
+   double m_TimeSize;
+ 
+-  uint64_t m_iMaxDataSize;
++  int m_iMaxDataSize;
+   std::string m_owner;
+ 
+   std::list<DVDMessageListItem> m_messages;
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2025-07-08 06:30:56.000000000 +0000
+@@ -65,7 +65,7 @@ CVideoPlayerAudio::CVideoPlayerAudio(CDV
+   m_maxspeedadjust = 0.0;
+ 
+   // allows max bitrate of 18 Mbit/s (TrueHD max peak) during m_messageQueueTimeSize seconds
+-  m_messageQueue.SetMaxDataSize(32 * messageQueueTimeSize / 8 * 1024 * 1024);
++  m_messageQueue.SetMaxDataSize(18 * messageQueueTimeSize / 8 * 1024 * 1024);
+   m_messageQueue.SetMaxTimeSize(messageQueueTimeSize);
+ 
+   m_disconAdjustTimeMs = processInfo.GetMaxPassthroughOffSyncDuration();
+@@ -206,8 +206,8 @@ void CVideoPlayerAudio::OnStartup()
+ void CVideoPlayerAudio::UpdatePlayerInfo()
+ {
+   std::ostringstream s;
+-  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99,m_messageQueue.GetLevel(true)) << "%)";
+-  s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
++  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel());
++  s << "% " << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
+   s << "s, Kb/s:" << std::fixed << std::setprecision(2) << m_audioStats.GetBitrate() / 1024.0;
+   s << ", ac:"   << m_processInfo.GetAudioDecoderName().c_str();
+   if (!m_info.passthrough)
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2025-07-08 06:32:15.000000000 +0000
+@@ -1047,8 +1047,8 @@ std::string CVideoPlayerVideo::GetPlayer
+   std::ostringstream s;
+   int width, height;
+   m_processInfo.GetVideoDimensions(width, height);
+-  s << "vq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99, m_messageQueue.GetLevel(true)) << "%)";
+-  s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
++  s << "vq:" << std::setw(2) << std::min(99, m_processInfo.GetLevelVQ());
++  s << "% " << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
+   s << "s, Mb/s:" << std::fixed << std::setprecision(2)
+     << static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
+   s << ", dc:"   << m_processInfo.GetVideoDecoderName().c_str();
