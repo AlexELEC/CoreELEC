@@ -1,0 +1,304 @@
+diff -Naurp CoreELEC-settings/src/defaults.py CoreELEC-settings-patch/src/defaults.py
+--- CoreELEC-settings/src/defaults.py	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/src/defaults.py	2025-07-09 08:40:15.000000000 +0000
+@@ -48,10 +48,10 @@ services = {
+     'SAMBA_SMDB': '/usr/sbin/smbd',
+     'D_SAMBA_WORKGROUP': 'WORKGROUP',
+     'D_SAMBA_SECURE': '0',
+-    'D_SAMBA_USERNAME': 'coreelec',
+-    'D_SAMBA_PASSWORD': 'coreelec',
+-    'D_SAMBA_MINPROTOCOL': 'SMB2',
+-    'D_SAMBA_MAXPROTOCOL': 'SMB3',
++    'D_SAMBA_USERNAME': 'mcpc',
++    'D_SAMBA_PASSWORD': 'mcpc',
++    'D_SAMBA_MINPROTOCOL': 'SMB1',
++    'D_SAMBA_MAXPROTOCOL': 'SMB1',
+     'D_SAMBA_AUTOSHARE': '1',
+     'SSH_DAEMON': '/usr/sbin/sshd',
+     'OPT_SSH_NOPASSWD': "-o 'PasswordAuthentication no'",
+@@ -84,14 +84,7 @@ system = {
+     'RESTORE_DIR': '/storage/.restore/',
+     }
+ 
+-updates = {
+-    'ENABLED': not os.path.exists('/dev/.update_disabled'),
+-    'UPDATE_REQUEST_URL': 'https://update.coreelec.org/updates.php',
+-    'UPDATE_DOWNLOAD_URL': 'https://%s/%s/%s',
+-    'LOCAL_UPDATE_DIR': '/storage/.update/',
+-
+-    'RPI_FLASHING_TRIGGER': '/storage/.rpi_flash_firmware',
+-    }
++tvserver = {'ENABLED': True}
+ 
+ about = {'ENABLED': True}
+ 
+@@ -111,4 +104,6 @@ _services = {
+     'crond': ['cron.service'],
+     'iptables': ['iptables.service'],
+     'tmate': ['tmate.service'],
++    'tvlink': ['tvlink.service'],
++    'hid-remote': ['hid-remote.service'],
+     }
+diff -Naurp CoreELEC-settings/src/resources/lib/modules/services.py CoreELEC-settings-patch/src/resources/lib/modules/services.py
+--- CoreELEC-settings/src/resources/lib/modules/services.py	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/src/resources/lib/modules/services.py	2025-07-09 08:53:59.000000000 +0000
+@@ -364,6 +364,20 @@ class services:
+                             },
+                         },
+                     },
++
++                'hid-remote': {
++                    'order': 5,
++                    'name': 43010,
++                    'not_supported': [],
++                    'settings': {'hidremote_autostart': {
++                        'order': 1,
++                        'name': 43011,
++                        'value': None,
++                        'action': 'initialize_hidremote',
++                        'type': 'bool',
++                        'InfoText': 4311,
++                        }},
++                    },
+                 }
+ 
+             self.oe = oeMain
+@@ -381,6 +395,7 @@ class services:
+             self.initialize_cron(service=1)
+             self.initialize_tmate(service=1)
+             self.init_bluetooth(service=1)
++            self.initialize_hidremote(service=1)
+             self.oe.dbg_log('services::start_service', 'exit_function', self.oe.LOGDEBUG)
+         except Exception as e:
+             self.oe.dbg_log('services::start_service', 'ERROR: (%s)' % repr(e))
+@@ -473,6 +488,10 @@ class services:
+             else:
+                 self.struct['cron']['hidden'] = 'true'
+ 
++            # HID-REMOTE
++
++            self.struct['hid-remote']['settings']['hidremote_autostart']['value'] = self.oe.get_service_state('hid-remote')
++
+             # TMATE
+ 
+             if os.path.isfile(self.TMATE_DAEMON):
+@@ -621,6 +640,26 @@ class services:
+             self.oe.set_busy(0)
+             self.oe.dbg_log('services::initialize_cron', 'ERROR: (%s)' % repr(e), self.oe.LOGERROR)
+ 
++    def initialize_hidremote(self, **kwargs):
++        try:
++            self.oe.dbg_log('services::initialize_hidremote', 'enter_function', self.oe.LOGDEBUG)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            if self.struct['hid-remote']['settings']['hidremote_autostart']['value'] == '1':
++                subprocess.call(['/usr/bin/systemctl', 'stop', 'eventlircd.service'], close_fds=True)
++                state = 1
++            else:
++                subprocess.call(['/usr/bin/systemctl', 'start', 'eventlircd.service'], close_fds=True)
++                state = 0
++            self.oe.set_service('hid-remote', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('services::initialize_hidremote', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('services::initialize_hidremote', 'ERROR: (%s)' % repr(e), self.oe.LOGERROR)
++
+     def initialize_tmate(self, **kwargs):
+         try:
+             self.oe.dbg_log('services::initialize_tmate', 'enter_function', self.oe.LOGDEBUG)
+@@ -847,7 +886,7 @@ class services:
+             SSHchange = False
+             newpwd = xbmcDialog.input(self.oe._(746))
+             if newpwd:
+-                if newpwd == "coreelec":
++                if newpwd == "mcpc":
+                     self.oe.execute('cp -fp /usr/cache/shadow /storage/.cache/shadow')
+                     readout3 = "Retype password"
+                 else:
+diff -Naurp CoreELEC-settings/src/resources/lib/modules/tvserver.py CoreELEC-settings-patch/src/resources/lib/modules/tvserver.py
+--- CoreELEC-settings/src/resources/lib/modules/tvserver.py	1970-01-01 00:00:00.000000000 +0000
++++ CoreELEC-settings-patch/src/resources/lib/modules/tvserver.py	2025-07-09 09:08:27.000000000 +0000
+@@ -0,0 +1,180 @@
++# SPDX-License-Identifier: GPL-2.0-or-later
++# Copyright (C) 2011-present AlexELEC (https://alexelec.github.io)
++
++import os
++import xbmcgui
++
++xbmcDialog = xbmcgui.Dialog()
++
++class tvserver:
++
++    ENABLED = False
++
++    menu = {'91': {
++        'name': 43000,
++        'menuLoader': 'load_menu',
++        'listTyp': 'list',
++        'InfoText': 4300,
++        }}
++
++    def __init__(self, oeMain):
++        try:
++            oeMain.dbg_log('tvserver::__init__', 'enter_function', oeMain.LOGDEBUG)
++
++            self.struct = {
++                'tvlink': {
++                    'order': 1,
++                    'name': 42025,
++                    'not_supported': [],
++                    'settings': {
++                        'enable_tvlink': {
++                            'order': 1,
++                            'name': 42026,
++                            'value': '0',
++                            'action': 'initialize_tvlink',
++                            'type': 'bool',
++                            'InfoText': 4226,
++                        },
++                    },
++                },
++            }
++
++            self.oe = oeMain
++
++            oeMain.dbg_log('tvserver::__init__', 'exit_function', oeMain.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::__init__', 'ERROR: (%s)' % repr(e))
++
++    def start_service(self):
++        try:
++            self.oe.dbg_log('tvserver::start_service', 'enter_function', self.oe.LOGDEBUG)
++            self.load_values()
++            self.initialize_tvlink(service=1)
++            self.oe.dbg_log('tvserver::start_service', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::start_service', 'ERROR: (%s)' % repr(e))
++
++    def stop_service(self):
++        try:
++            self.oe.dbg_log('tvserver::stop_service', 'enter_function', self.oe.LOGDEBUG)
++            self.oe.dbg_log('tvserver::stop_service', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::stop_service', 'ERROR: (' + repr(e) + ')')
++
++    def do_init(self):
++        try:
++            self.oe.dbg_log('tvserver::do_init', 'exit_function', self.oe.LOGDEBUG)
++            self.load_values()
++            self.oe.dbg_log('tvserver::do_init', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::do_init', 'ERROR: (%s)' % repr(e))
++
++    def set_value(self, listItem):
++        try:
++            self.oe.dbg_log('tvserver::set_value', 'enter_function', self.oe.LOGDEBUG)
++            self.struct[listItem.getProperty('category')]['settings'][listItem.getProperty('entry')]['value'] = listItem.getProperty('value')
++            self.oe.dbg_log('tvserver::set_value', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::set_value', 'ERROR: (' + repr(e) + ')')
++
++    def load_menu(self, focusItem):
++        try:
++            self.oe.dbg_log('tvserver::load_menu', 'enter_function', self.oe.LOGDEBUG)
++            self.oe.winOeMain.build_menu(self.struct)
++            self.oe.dbg_log('tvserver::load_menu', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::load_menu', 'ERROR: (%s)' % repr(e))
++
++    def load_values(self):
++        try:
++            self.oe.dbg_log('tvserver::load_values', 'enter_function', self.oe.LOGDEBUG)
++
++            # TVLINK
++            self.struct['tvlink']['settings']['enable_tvlink']['value'] = self.oe.get_service_state('tvlink')
++
++            self.oe.dbg_log('tvserver::load_values', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::load_values', 'ERROR: (%s)' % repr(e))
++
++    def initialize_tvlink(self, **kwargs):
++        try:
++            self.oe.dbg_log('tvserver::initialize_tvlink', 'enter_function', self.oe.LOGDEBUG)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 0
++            if self.struct['tvlink']['settings']['enable_tvlink']['value'] == '1':
++                if not os.path.exists('/storage/.config/tvlink/tvlink'):
++                    tvl_status = self.get_tvl_source()
++                    if tvl_status == 'OK':
++                        self.oe.notify(self.oe._(32363), 'Starting TVLINK...')
++                    else:
++                        self.struct['tvlink']['settings']['enable_tvlink']['value'] = '0'
++                        self.oe.set_busy(0)
++                        answer = xbmcDialog.ok('Install TVLINK',
++                            'Error: The program is not installed, try again.')
++                        return
++                state = 1
++            self.oe.set_service('tvlink', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('tvserver::initialize_tvlink', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('tvserver::initialize_tvlink', 'ERROR: (%s)' % repr(e), self.oe.LOGDEBUG)
++
++    def get_tvl_source(self):
++        import sys
++        import tarfile
++        import requests
++        from platform import machine
++        from urllib.parse import urlparse
++
++        ARCH = machine()
++        PYTHON_VER = f"{sys.version_info.major}.{sys.version_info.minor}"
++        git_url = 'https://github.com/AlexELEC/TVLINK-Releases/releases'
++
++        try:
++            # get last version
++            r = requests.get(f'{git_url}/latest', verify=False, allow_redirects=False, timeout=5)
++            last_ver_url = r.headers['Location']
++            last_ver_path = urlparse(last_ver_url).path
++            _, VER = os.path.split(last_ver_path)
++
++            # check Distibution
++            DISTRIB = '-CoreElec'
++
++            # sample: TVLINK-4.2.4-x86_64-python_3.12-LibreElec.tar.bz2
++            LAST_DNL_URL = f"{git_url}/download/{VER}/TVLINK-{VER}-{ARCH}-python_{PYTHON_VER}{DISTRIB}.tar.bz2"
++
++            # try request new version file
++            r = requests.get(LAST_DNL_URL, verify=False, timeout=10)
++            r.raise_for_status()
++        except:
++            return 'ERROR'
++
++        install_dir = "/storage/.config/tvlink"
++        if not os.path.isdir(install_dir):
++            os.makedirs(install_dir)
++
++        tvl_patch = f"{self.oe.TEMP}TVLINK-{VER}.tar.bz2"
++        downloaded = self.oe.download_file(LAST_DNL_URL, tvl_patch)
++        if not downloaded:
++            return 'ERROR'
++        self.oe.notify(self.oe._(32363), 'Install TVLINK Server...')
++
++        try:
++            with tarfile.open(tvl_patch, "r:bz2") as tar:
++                tar.extractall(install_dir)
++            os.remove(tvl_patch)
++        except:
++            return 'ERROR'
++
++        return 'OK'
++
++    def exit(self):
++        try:
++            self.oe.dbg_log('tvserver::exit', 'enter_function', self.oe.LOGDEBUG)
++            self.oe.dbg_log('tvserver::exit', 'exit_function', self.oe.LOGDEBUG)
++        except Exception as e:
++            self.oe.dbg_log('tvserver::exit', 'ERROR: (%s)' % repr(e), self.oe.LOGDEBUG)

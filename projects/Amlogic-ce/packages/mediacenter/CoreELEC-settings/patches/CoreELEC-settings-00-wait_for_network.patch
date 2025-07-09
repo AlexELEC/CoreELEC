@@ -1,0 +1,21 @@
+diff -Naurp CoreELEC-settings/src/resources/lib/modules/connman.py CoreELEC-settings-patch/src/resources/lib/modules/connman.py
+--- CoreELEC-settings/src/resources/lib/modules/connman.py	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/src/resources/lib/modules/connman.py	2025-07-09 08:35:59.000000000 +0000
+@@ -641,7 +641,7 @@ class connman:
+                         'wait_for_network_time': {
+                             'order': 2,
+                             'name': 32370,
+-                            'value': '10',
++                            'value': '20',
+                             'action': 'set_network_wait',
+                             'type': 'num',
+                             'parent': {
+@@ -703,7 +703,7 @@ class connman:
+             # Network Wait
+ 
+             self.struct['advanced']['settings']['wait_for_network']['value'] = '0'
+-            self.struct['advanced']['settings']['wait_for_network_time']['value'] = '10'
++            self.struct['advanced']['settings']['wait_for_network_time']['value'] = '20'
+             if os.path.exists(self.WAIT_CONF_FILE):
+                 wait_file = open(self.WAIT_CONF_FILE, 'r')
+                 for line in wait_file:
