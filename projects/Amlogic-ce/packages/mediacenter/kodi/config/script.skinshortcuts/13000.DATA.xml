@@ -17,11 +17,11 @@
 		</shortcut>
 	<shortcut>
 		<defaultID />
-		<label>LibreELEC</label>
+		<label>CoreELEC</label>
 		<label2>Custom item</label2>
 		<icon>DefaultShortcut.png</icon>
 		<thumb />
-		<action>RunAddOn(service.libreelec.settings)</action>
+		<action>RunAddOn(service.coreelec.settings)</action>
 		</shortcut>
 	<shortcut>
 		<defaultID>20077</defaultID>
