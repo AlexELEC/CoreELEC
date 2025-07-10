@@ -158,22 +158,23 @@ typedef struct bl30_gpios_soc {
     bl30_gpio_t gpio[256];
 } bl30_gpios_soc_t;
 
-bl30_gpios_soc_t bl30_gpios[3] = {
+bl30_gpios_soc_t bl30_gpios[] = {
 EOF
 
-  for soc_dir in $(get_build_dir bl30)/demos/amlogic/n200/include/*; do
-    if [ -d ${soc_dir} -a -e "${soc_dir}/gpio-data.h" ]; then
-      soc_type="$(basename ${soc_dir})"
-      printf "#ifdef MESON_CPU_MAJOR_ID_${soc_type^^}\n" >>common_drivers/drivers/bootloader/gpio_data.h
-      printf "  /* soc ${soc_type} */\n" >>common_drivers/drivers/bootloader/gpio_data.h
-      printf "  { MESON_CPU_MAJOR_ID_${soc_type^^},\n    {\n" >>common_drivers/drivers/bootloader/gpio_data.h
-
-      cat "${soc_dir}/gpio-data.h" | awk \
-        '/^#define\s*GPIO._/ { printf("    { \"%s\", %d },\n", $2, $3)}' \
-        >>common_drivers/drivers/bootloader/gpio_data.h
-      printf "    }\n  },\n" >>common_drivers/drivers/bootloader/gpio_data.h
-      printf "#endif\n" >>common_drivers/drivers/bootloader/gpio_data.h
-    fi
+  for bl30_folder in "src_ao/demos/amlogic/n200/include" "rtos_sdk/soc/riscv"; do
+    for soc_dir in $(get_build_dir bl30)/${bl30_folder}/*; do
+      if [ -d ${soc_dir} -a -e "${soc_dir}/gpio-data.h" ]; then
+        soc_type="$(basename ${soc_dir})"
+        if grep -q "MESON_CPU_MAJOR_ID_${soc_type^^}" common_drivers/include/linux/amlogic/media/registers/cpu_version.h; then
+          printf "  /* soc ${soc_type} */\n" >>common_drivers/drivers/bootloader/gpio_data.h
+          printf "  { MESON_CPU_MAJOR_ID_${soc_type^^}, {\n" >>common_drivers/drivers/bootloader/gpio_data.h
+          cat "${soc_dir}/gpio-data.h" | awk \
+            '/^#define\s*GPIO._/ { printf("    { \"%s\", %d },\n", $2, $3)}' \
+            >>common_drivers/drivers/bootloader/gpio_data.h
+          printf "  }},\n" >>common_drivers/drivers/bootloader/gpio_data.h
+        fi
+      fi
+    done
   done
 
   printf "};\n" >>common_drivers/drivers/bootloader/gpio_data.h
