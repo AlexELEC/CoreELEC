@@ -266,7 +266,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/tvserver.py CoreELEC-set
 +            _, VER = os.path.split(last_ver_path)
 +
 +            # check Distibution
-+            DISTRIB = '-CoreElec'
++            DISTRIB = ''
 +
 +            # sample: TVLINK-4.2.4-x86_64-python_3.12-LibreElec.tar.bz2
 +            LAST_DNL_URL = f"{git_url}/download/{VER}/TVLINK-{VER}-{ARCH}-python_{PYTHON_VER}{DISTRIB}.tar.bz2"
