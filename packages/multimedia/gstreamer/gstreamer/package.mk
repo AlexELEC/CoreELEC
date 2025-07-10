@@ -2,8 +2,8 @@
 # Copyright (C) 2022-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="gstreamer"
-PKG_VERSION="1.26.3"
-PKG_SHA256="dc661603221293dccc740862425eb54fbbed60fb29d08c801d440a6a3ff82680"
+PKG_VERSION="1.27.1"
+PKG_SHA256="ac89913f5c39c4b216515814e63b54e865953a37dacfe149afaacdfbeb39a9f1"
 PKG_LICENSE="GPL-2.1-or-later"
 PKG_SITE="https://gstreamer.freedesktop.org"
 PKG_URL="https://gstreamer.freedesktop.org/src/gstreamer/${PKG_NAME}-${PKG_VERSION}.tar.xz"
