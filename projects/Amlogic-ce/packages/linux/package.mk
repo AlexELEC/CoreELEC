@@ -149,7 +149,7 @@ makeinstall_host() {
 build_gpio_data() {
   cat << EOF > common_drivers/drivers/bootloader/gpio_data.h
 typedef struct bl30_gpio {
-    char name[16];
+    char *name;
     uint32_t number;
 } bl30_gpio_t;
 
