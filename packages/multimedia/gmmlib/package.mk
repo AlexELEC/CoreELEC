@@ -2,8 +2,8 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="gmmlib"
-PKG_VERSION="22.7.3"
-PKG_SHA256="c37d3378482ef80e1eb3eb2a8e615d4343ef0c4562e694b46f4276a797fad667"
+PKG_VERSION="22.8.0"
+PKG_SHA256="0e509edf0b7892fad210e406014b3f6a53816a2ddb80650e9e1294f55aa493aa"
 PKG_ARCH="x86_64"
 PKG_LICENSE="MIT"
 PKG_SITE="https://01.org/linuxmedia"
