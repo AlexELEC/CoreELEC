@@ -19,7 +19,7 @@ make_target() {
 
   DEBUG=${PKG_DEBUG} CROSS_COMPILE=aarch64-elf- HOSTCFLAGS="-I${TOOLCHAIN}/include" \
     HOSTLDFLAGS="${HOST_LDFLAGS}" CROSS_COMPILE_PATH="" \
-    source fip/mk_script.sh s7d_odroidc5 --disable-bl33z
+    source fip/mk_script.sh s7d_odroidc5 --disable-bl33z --build-nogit
 }
 
 makeinstall_target() {
