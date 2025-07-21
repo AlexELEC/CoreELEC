@@ -1,15 +1,16 @@
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-12 13:21:32.091930501 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-12 15:07:34.000000000 +0000
-@@ -1519,6 +1519,27 @@ void CVideoPlayer::Prepare()
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-21 08:19:13.995745526 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-21 08:39:23.000000000 +0000
+@@ -1519,6 +1519,28 @@ void CVideoPlayer::Prepare()
    UpdatePlayState(0);
  
    SetCaching(CACHESTATE_FLUSH);
 +
 +  // reset stream
-+  if (m_pInputStream->IsRealtime())
++  if (m_pInputStream->IsRealtime() &&
++      m_pInputStream->IsStreamType(DVDSTREAM_TYPE_ADDON))
 +  {
-+    CLog::Log(LOGINFO, "{} - forced Live-stream reset", __FUNCTION__);
++    CLog::Log(LOGINFO, "VideoPlayer::Prepare(): forced Live-stream reset");
 +    m_SelectionStreams.Clear(STREAM_NONE, STREAM_SOURCE_DEMUX);
 +    m_SelectionStreams.Update(m_pInputStream, m_pDemuxer.get());
 +    m_pDemuxer->GetPrograms(m_programs);
