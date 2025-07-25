@@ -2,8 +2,8 @@
 # Copyright (C) 2021-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="nvidia"
-PKG_VERSION="575.64.03"
-PKG_SHA256="b158910ec52342db8d301d32b4e2d3e5798fb5f0b7b183ad59c71e6f89778eea"
+PKG_VERSION="575.64.05"
+PKG_SHA256="f261d894c33cdd64da46c092458ca1e510dd08c0edda7458dd15c786887ccf75"
 PKG_ARCH="x86_64"
 PKG_LICENSE="nonfree"
 PKG_SITE="https://www.nvidia.com/en-us/drivers/unix/"
