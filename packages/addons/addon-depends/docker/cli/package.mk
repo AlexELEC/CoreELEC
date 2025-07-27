@@ -3,7 +3,7 @@
 
 PKG_NAME="cli"
 PKG_VERSION="$(get_pkg_version moby)"
-PKG_SHA256="ef6808574ea7a4d02ec9715feb8fea419f253fb5b9f68a98020a9e39680baf35"
+PKG_SHA256="b65cd415e63be23fcaa63107bc47a762173a06c84fb78b1575edc5443bb39867"
 PKG_LICENSE="ASL"
 PKG_SITE="https://github.com/docker/cli"
 PKG_URL="https://github.com/docker/cli/archive/v${PKG_VERSION}.tar.gz"
@@ -12,7 +12,7 @@ PKG_LONGDESC="The Docker CLI"
 PKG_TOOLCHAIN="manual"
 
 # Git commit of the matching tag https://github.com/docker/cli/tags
-export PKG_GIT_COMMIT="38b7060a218775811da953650d8df7d492653f8f"
+export PKG_GIT_COMMIT="578ccf607d24abc5270e9a4cbd5ba9b5355b042f"
 
 configure_target() {
   go_configure

@@ -2,8 +2,8 @@
 # Copyright (C) 2022-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="moby"
-PKG_VERSION="28.3.1"
-PKG_SHA256="367cf6b179fd1c476913a98b85f1dd0e06d365a4396c257d8ddab4cf7166b260"
+PKG_VERSION="28.3.2"
+PKG_SHA256="e4828e32e474cef1b78f40278211648300071399c7498252dfe0b96e789b8a31"
 PKG_LICENSE="ASL"
 PKG_SITE="https://mobyproject.org/"
 PKG_URL="https://github.com/moby/moby/archive/v${PKG_VERSION}.tar.gz"
@@ -12,7 +12,7 @@ PKG_LONGDESC="Moby is an open-source project created by Docker to enable and acc
 PKG_TOOLCHAIN="manual"
 
 # Git commit of the matching release https://github.com/moby/moby
-export PKG_GIT_COMMIT="5beb93de84f02bf7e167cbb87ce81355ddd8f560"
+export PKG_GIT_COMMIT="e77ff99ede5ee5952b3a9227863552ae6e5b6fb1"
 
 PKG_MOBY_BUILDTAGS="daemon \
                     autogen \
