@@ -56,5 +56,9 @@ makeinstall_target() {
     cp -PRv ${PKG_BUILD}/rpi-eeprom-digest ${INSTALL}/usr/bin
 
   mkdir -p ${INSTALL}/etc/default
-    cp -PRv ${PKG_DIR}/config/* ${INSTALL}/etc/default
+    cp -PRv ${PKG_DIR}/config/rpi-eeprom-update-default ${INSTALL}/etc/default/rpi-eeprom-update
+
+  mkdir -p ${INSTALL}/usr/config
+    cp -PRv ${PKG_DIR}/config/rpi-eeprom-update-config ${INSTALL}/usr/config/rpi-eeprom-update
+
 }
