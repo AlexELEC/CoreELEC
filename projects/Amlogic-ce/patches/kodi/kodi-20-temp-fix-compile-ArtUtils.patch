@@ -1,0 +1,70 @@
+[1713/1727] Building CXX object build/utils/CMakeFiles/utils.dir/ArtUtils.cpp.o
+FAILED: [code=1] build/utils/CMakeFiles/utils.dir/ArtUtils.cpp.o 
+/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/bin/aarch64-libreelec-linux-gnu-g++ -DFFMPEG_VER_SHA=7.0.0 -DFMT_SHARED -DHAS_AIRPLAY -DHAS_AIRTUNES -DHAS_ALSA -DHAS_AVAHI -DHAS_DBUS -DHAS_EGL -DHAS_FILESYSTEM_NFS -DHAS_FILESYSTEM_SMB -DHAS_GLES=3 -DHAS_ISO9660PP -DHAS_LIBAMCODEC=1 -DHAS_LIRC -DHAS_MARIADB -DHAS_NEON -DHAS_PULSEAUDIO -DHAS_PYTHON -DHAS_UDFREAD -DHAS_WEB_INTERFACE -DHAS_WEB_SERVER -DHAS_ZEROCONF -DHAVE_DRM_MODIFIER_NAME -DHAVE_HDR_OUTPUT_METADATA -DHAVE_LIBBLUETOOTH -DHAVE_LIBBLURAY -DHAVE_LIBBLURAY_BDJ -DHAVE_LIBCAP -DHAVE_LIBCEC -DHAVE_LIBDOVI -DHAVE_LIBUDEV -DHAVE_LIBXSLT -DHAVE_NEW_CROSSGUID -DPCRE2_STATIC -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -DTAGLIB_STATIC -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0 -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/lib -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/xbmc -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/xbmc/platform/linux -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/xbmc/cores/VideoPlayer -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/.aarch64-libreelec-linux-gnu/build -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/.aarch64-libreelec-linux-gnu/build/include -I/CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/xbmc/platform/posix -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/harfbuzz -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/glib-2.0 -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/lib/glib-2.0/include -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/fribidi -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/freetype2 -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/.aarch64-libreelec-linux-gnu/build/cores/RetroPlayer/messages -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/lzo -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/taglib -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/amcodec -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/libdrm -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/libxml2 -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/libcec -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/p8-platform -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/dbus-1.0 -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/lib/dbus-1.0/include -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/python3.13 -isystem /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/toolchain/aarch64-libreelec-linux-gnu/sysroot/usr/include/samba-4.0 -march=armv8-a+crc+fp+simd -mabi=lp64 -Wno-psabi -mtune=cortex-a53 -mno-outline-atomics -Wall -pipe  -O3 -fomit-frame-pointer -DNDEBUG -Wdouble-promotion -Wmissing-field-initializers -Wsign-compare -Wextra -Wno-unused-parameter -Wnon-virtual-dtor -DDUMMYOPT -std=c++20 -flto=12 -fno-fat-lto-objects -DTARGET_POSIX -DTARGET_LINUX -D_GNU_SOURCE -DHAVE_LINUX_UDMABUF=1 -DHAVE_LINUX_DMA_HEAP=1 -DHAVE_LINUX_DMA_BUF=1 -DHAVE_MKOSTEMP=1 -DHAVE_GETMNTENT_R=1 -DHAVE_LINUX_MEMFD=1 -DHAVE_STATX=1 -D__STDC_CONSTANT_MACROS -D_FILE_OFFSET_BITS=64 -DHAS_POSIX_NETWORK -DHAS_LINUX_NETWORK -DHAS_BUILTIN_SYNC_ADD_AND_FETCH=1 -DHAS_BUILTIN_SYNC_SUB_AND_FETCH=1 -DHAS_BUILTIN_SYNC_VAL_COMPARE_AND_SWAP=1 -DHAVE_INOTIFY=1 -DHAVE_POSIX_FADVISE=1 -DHAVE_LOCALTIME_R=1 -DHAVE_GMTIME_R=1 -DHAVE_INTTYPES_H=1 -DHAS_UPNP=1 -DHAS_OPTICAL_DRIVE -DHAS_CDDA_RIPPER -DBIN_INSTALL_PATH=\"/usr/lib/kodi\" -DINSTALL_PATH=\"/usr/share/kodi\" -Werror=double-promotion -Werror=missing-field-initializers -Werror=sign-compare -MD -MT build/utils/CMakeFiles/utils.dir/ArtUtils.cpp.o -MF build/utils/CMakeFiles/utils.dir/ArtUtils.cpp.o.d -o build/utils/CMakeFiles/utils.dir/ArtUtils.cpp.o -c /CoreELEC/build.CoreELEC-Amlogic-no.aarch64-22/build/kodi-f96fd3e27f6ee921f7d0e1bdea9333e9ec7641c0/xbmc/utils/ArtUtils.cpp
+In file included from ../xbmc/utils/ArtUtils.cpp:9:
+../xbmc/utils/ArtUtils.h:18:6: warning: elaborated-type-specifier for a scoped enum must not use the 'class' keyword
+   18 | enum class AdditionalIdentifiers : uint8_t
+      | ~~~~ ^~~~~
+      |      -----
+../xbmc/utils/ArtUtils.h:18:34: error: found ':' in nested-name-specifier, expected '::'
+   18 | enum class AdditionalIdentifiers : uint8_t
+      |                                  ^
+      |                                  ::
+../xbmc/utils/ArtUtils.h:18:12: error: 'AdditionalIdentifiers' has not been declared
+   18 | enum class AdditionalIdentifiers : uint8_t
+      |            ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.h:19:1: error: expected unqualified-id before '{' token
+   19 | {
+      | ^
+../xbmc/utils/ArtUtils.h:48:25: error: 'AdditionalIdentifiers' has not been declared
+   48 |                         AdditionalIdentifiers useSeasonAndEpisode = AdditionalIdentifiers::NONE);
+      |                         ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.h:48:69: error: 'AdditionalIdentifiers' has not been declared
+   48 |                         AdditionalIdentifiers useSeasonAndEpisode = AdditionalIdentifiers::NONE);
+      |                                                                     ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.h:62:5: error: 'AdditionalIdentifiers' has not been declared
+   62 |     AdditionalIdentifiers additionalIdentifiers = AdditionalIdentifiers::NONE);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.h:62:51: error: 'AdditionalIdentifiers' has not been declared
+   62 |     AdditionalIdentifiers additionalIdentifiers = AdditionalIdentifiers::NONE);
+      |                                                   ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp:185:25: error: 'AdditionalIdentifiers' has not been declared
+  185 |                         AdditionalIdentifiers additionalIdentifiers)
+      |                         ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp:212:37: error: 'AdditionalIdentifiers' has not been declared
+  212 |                                     AdditionalIdentifiers additionalIdentifiers /* = none */)
+      |                                     ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp: In function 'std::string KODI::ART::GetLocalArtBaseFilename(const CFileItem&, bool&, int)':
+../xbmc/utils/ArtUtils.cpp:249:32: error: 'AdditionalIdentifiers' has not been declared
+  249 |       additionalIdentifiers != AdditionalIdentifiers::NONE)
+      |                                ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp:251:16: error: 'AdditionalIdentifiers' has not been declared
+  251 |     using enum AdditionalIdentifiers;
+      |                ^~~~~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp:254:12: error: 'SEASON_AND_EPISODE' was not declared in this scope
+  254 |       case SEASON_AND_EPISODE:
+      |            ^~~~~~~~~~~~~~~~~~
+../xbmc/utils/ArtUtils.cpp:268:20: error: expected primary-expression before ':' token
+  268 |       case PLAYLIST:
+      |                    ^
+../xbmc/utils/ArtUtils.cpp:281:12: error: 'NONE' was not declared in this scope; did you mean 'XFILE::CacheBufferMode::NONE'?
+  281 |       case NONE:
+      |            ^~~~
+      |            XFILE::CacheBufferMode::NONE
+In file included from ../xbmc/filesystem/File.h:17,
+                 from ../xbmc/utils/ArtUtils.cpp:15:
+../xbmc/filesystem/IFileTypes.h:65:3: note: 'XFILE::CacheBufferMode::NONE' declared here
+   65 |   NONE = 3,
+      |   ^~~~
+
+
+--- a/xbmc/utils/ArtUtils.h	2025-08-03 21:22:59.862781084 +0200
++++ b/xbmc/utils/ArtUtils.h	2025-08-03 21:23:04.520813882 +0200
+@@ -9,6 +9,7 @@
+ #pragma once
+ 
+ #include <string>
++#include <cstdint>
+ 
+ class CFileItem;
+ 
