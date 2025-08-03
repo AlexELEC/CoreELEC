@@ -199,6 +199,7 @@ if [ -f ${BOOT_ROOT}/cfgload ]; then
   if [ -f /usr/share/bootloader/${DEVICE_CFGLOAD} ]; then
     echo "Updating cfgload..."
     cp -p /usr/share/bootloader/${DEVICE_CFGLOAD} ${BOOT_ROOT}/cfgload
+    cp -p /usr/share/bootloader/${DEVICE_CFGLOAD}_env ${BOOT_ROOT}/cfgload_env
   fi
 
   if [ -f /usr/share/bootloader/aml_autoscript ]; then

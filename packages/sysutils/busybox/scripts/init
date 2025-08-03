@@ -579,7 +579,7 @@ check_disks() {
           ;;
       esac
     done
-      
+
     progress "Checking disk(s): $RUN_FSCK_DISKS"
     for i in 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0; do
       /usr/sbin/fsck -T -M -p -a $RUN_FSCK_DISKS >/dev/fsck.latest 2>&1
@@ -1086,6 +1086,21 @@ check_update() {
   do_reboot
 }
 
+do_aml_autoscript() {
+  if [ -f /flash/aml_autoscript -a -e /dev/env ]; then
+    echo "Doing aml_autoscript..."
+
+    mkdir -p /var/lock
+    dd if=/flash/aml_autoscript bs=72 skip=1 status=none | \
+      while read line; do
+        cmd=$(echo ${line} | sed -n "s|^setenv \(.*\)|fw_setenv \1|gp")
+        [ -n "${cmd}" ] && eval ${cmd}
+      done
+
+    echo "Done..."
+  fi
+}
+
 prepare_sysroot() {
   progress "Preparing system"
 
@@ -1326,6 +1341,16 @@ if [ "${boot%%=*}" = "FILE" ]; then
 fi
 
 debug_msg "Unique identifier for this client: ${MACHINE_UID:-NOT AVAILABLE}"
+
+# check if 'reboot update' or 'run update' was run
+if [ -z "${boot}" -a -z "${disk}"]; then
+  # set missing variables not set in this case
+  boot="LABEL=COREELEC"
+
+  mount_flash
+  do_aml_autoscript
+  do_reboot
+fi
 
 # main boot sequence
 for BOOT_STEP in \
