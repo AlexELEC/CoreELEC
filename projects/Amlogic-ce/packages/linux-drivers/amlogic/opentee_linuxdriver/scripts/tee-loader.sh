@@ -52,8 +52,18 @@ run_tee_from_coreelec() {
   read_firmware_version ${VIDEO_UCODE_BIN_PATH} &>/dev/null
   message "Using CoreELEC ucode file '${minor}.${batch}' for ${SOC}"
 
-  tee-supplicant &
-  echo ${!} >${TEE_SUPPLICANT_PID_FILE}
+  if [ -c /dev/mmcblk0rpmb ]; then
+    message "Using real rpmb for tee-supplicant"
+    tee-supplicant &
+    echo ${!} >${TEE_SUPPLICANT_PID_FILE}
+  else
+    # intercept path and use dummy file for rpmb and cid
+    message "Using dummy rpmb for tee-supplicant"
+    LD_PRELOAD=/usr/lib/coreelec/tee-dummy-rpmb.so \
+      tee-supplicant &
+    echo ${!} >${TEE_SUPPLICANT_PID_FILE}
+  fi
+
   # wait for tee-supplicant process to start
   sleep 5
 
