@@ -60,7 +60,7 @@ make_target() {
 
   kernel_make ${KERNEL_TARGET} ${KERNEL_MAKE_EXTRACMD}
 
-  find_file_path bootloader/mkbootimg && source ${FOUND_PATH}
+  find_file_path bootloader/mkbootimg && source ${FOUND_PATH} initramfs_recovery
   mv -f arch/${TARGET_KERNEL_ARCH}/boot/boot.img arch/${TARGET_KERNEL_ARCH}/boot/${KERNEL_TARGET}
 }
 

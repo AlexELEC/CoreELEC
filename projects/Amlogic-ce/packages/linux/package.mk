@@ -290,7 +290,7 @@ make_target() {
   fi
 
   if [ "${BUILD_ANDROID_BOOTIMG}" = "yes" ]; then
-    find_file_path bootloader/mkbootimg && source ${FOUND_PATH}
+    find_file_path bootloader/mkbootimg && source ${FOUND_PATH} initramfs
     mv -f arch/${TARGET_KERNEL_ARCH}/boot/boot.img arch/${TARGET_KERNEL_ARCH}/boot/${KERNEL_TARGET}
   fi
 
