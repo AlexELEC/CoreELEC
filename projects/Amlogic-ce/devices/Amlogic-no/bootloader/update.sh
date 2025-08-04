@@ -216,6 +216,11 @@ if [ -f ${BOOT_ROOT}/cfgload ]; then
     fi
   fi
 
+  if [ -f /usr/share/bootloader/recovery.img ]; then
+    echo "Updating recovery.img..."
+    cp -p /usr/share/bootloader/recovery.img ${BOOT_ROOT}
+  fi
+
   /usr/lib/coreelec/check-bl301
   if [ ${?} = 1 ]; then
     echo "Found custom CoreELEC BL30, running inject_bl301 tool..."

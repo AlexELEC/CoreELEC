@@ -49,6 +49,9 @@ if [ -f "${RELEASE_DIR}/3rdparty/bootloader/${DEVICE_CFGLOAD}" ]; then
 
   # copy amlogic autoscript file to part1
   mcopy_file_exist "${RELEASE_DIR}/3rdparty/bootloader/aml_autoscript" "::/aml_autoscript"
+
+  # copy amlogic recovery image to part1
+  mcopy_file_exist "${RELEASE_DIR}/3rdparty/bootloader/recovery.img" "::"
 fi
 
 # copy chain u-boot to part1
