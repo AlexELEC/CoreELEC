@@ -79,10 +79,8 @@ post_patch() {
   else
     cp ${PKG_KERNEL_CFG_FILE} ${PKG_BUILD}/.config
 
-    sed -i -e "s|@INITRAMFS_SOURCE@|$(kernel_initramfs_confs) ${BUILD}/initramfs|" ${PKG_BUILD}/.config
-
     # set default hostname based on ${DISTRONAME}
-      sed -i -e "s|@DISTRONAME@|${DISTRONAME}|g" ${PKG_BUILD}/.config
+    sed -i -e "s|@DISTRONAME@|${DISTRONAME}|g" ${PKG_BUILD}/.config
 
     # disable swap support if not enabled
     if [ ! "${SWAP_SUPPORT}" = yes ]; then
