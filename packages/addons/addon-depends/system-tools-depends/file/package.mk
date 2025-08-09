@@ -3,10 +3,10 @@
 
 PKG_NAME="file"
 PKG_VERSION="5.46"
-PKG_SHA256="73c5f11a8edf0fded2fe3471b23a7fccb3f3369a13ea612529b869c8dc96aa2b"
+PKG_SHA256="c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088"
 PKG_LICENSE="BSD"
-PKG_SITE="http://www.darwinsys.com/file/"
-PKG_URL="https://github.com/file/file/archive/FILE${PKG_VERSION/./_}.tar.gz"
+PKG_SITE="https://www.darwinsys.com/file/"
+PKG_URL="http://ftp.astron.com/pub/file/file-${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_HOST="toolchain:host"
 PKG_DEPENDS_TARGET="toolchain file:host zlib"
 PKG_LONGDESC="The file utility is used to determine the types of various files."
