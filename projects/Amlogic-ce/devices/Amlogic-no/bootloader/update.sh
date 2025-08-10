@@ -199,6 +199,7 @@ if [ -f ${BOOT_ROOT}/cfgload ]; then
   if [ -f /usr/share/bootloader/${DEVICE_CFGLOAD} ]; then
     echo "Updating cfgload..."
     cp -p /usr/share/bootloader/${DEVICE_CFGLOAD} ${BOOT_ROOT}/cfgload
+    cp -p /usr/share/bootloader/${DEVICE_CFGLOAD}_env ${BOOT_ROOT}/cfgload_env
   fi
 
   if [ -f /usr/share/bootloader/aml_autoscript ]; then
@@ -213,6 +214,11 @@ if [ -f ${BOOT_ROOT}/cfgload ]; then
         [ -n "${cmd}" ] && eval ${cmd}
       done
     fi
+  fi
+
+  if [ -f /usr/share/bootloader/recovery.img ]; then
+    echo "Updating recovery.img..."
+    cp -p /usr/share/bootloader/recovery.img ${BOOT_ROOT}
   fi
 
   /usr/lib/coreelec/check-bl301
