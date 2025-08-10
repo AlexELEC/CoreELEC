@@ -1,0 +1,237 @@
+diff -Naurp kodi/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream/demux_packet.h kodi-patch/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream/demux_packet.h
+--- kodi/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream/demux_packet.h	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream/demux_packet.h	2025-07-07 12:58:52.000000000 +0000
+@@ -16,6 +16,7 @@
+ 
+ #define DEMUX_SPECIALID_STREAMINFO -10
+ #define DEMUX_SPECIALID_STREAMCHANGE -11
++#define DEMUX_SPECIALID_STREAMRESET -22
+ 
+ #ifdef __cplusplus
+ extern "C"
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2025-07-07 13:02:42.000000000 +0000
+@@ -213,6 +213,9 @@ CDVDDemuxFFmpeg::CDVDDemuxFFmpeg() : CDV
+   m_pSSIF = nullptr;
+   m_speed = DVD_PLAYSPEED_NORMAL;
+   m_program = UINT_MAX;
++  m_oldStreams = 0;
++  m_oldProgCount = 0;
++  m_bResetStream = false;
+   m_pkt.result = -1;
+   memset(&m_pkt.pkt, 0, sizeof(AVPacket));
+   m_streaminfo = true; /* set to true if we want to look for streams before playback */
+@@ -1023,16 +1026,27 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadIntern
+ 
+         if (IsProgramChange())
+         {
+-          CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read() stream change");
+-          av_dump_format(m_pFormatContext, 0, CURL::GetRedacted(m_pInput->GetFileName()).c_str(),
+-                         0);
+-
+-          // update streams
+-          CreateStreams(m_program);
+-
+-          pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
+-          pPacket->iStreamId = DMX_SPECIALID_STREAMCHANGE;
+-          pPacket->demuxerId = m_demuxerId;
++          CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): stream change");
++          av_dump_format(m_pFormatContext, 0, CURL::GetRedacted(m_pInput->GetFileName()).c_str(), 0);
++
++          if (m_bResetStream) // reset stream
++          {
++            m_bResetStream = false;
++            Reset();
++
++            CreateStreams(m_program);
++            pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
++            pPacket->iStreamId = DMX_SPECIALID_STREAMRESET;
++            pPacket->demuxerId = m_demuxerId;
++            CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): immediate STREAMRESET");
++          }
++          else // update streams
++          {
++            CreateStreams(m_program);
++            pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
++            pPacket->iStreamId = DMX_SPECIALID_STREAMCHANGE;
++            pPacket->demuxerId = m_demuxerId;
++          }
+ 
+           return pPacket;
+         }
+@@ -2252,6 +2266,29 @@ std::string CDVDDemuxFFmpeg::GetStreamCo
+ 
+ bool CDVDDemuxFFmpeg::IsProgramChange()
+ {
++  unsigned int m_newStreams = m_pFormatContext->nb_streams;
++  unsigned int m_newProgCount = m_pFormatContext->nb_programs;
++
++  if (m_oldStreams == 0)
++    m_oldStreams = m_newStreams;
++  if (m_oldProgCount == 0)
++    m_oldProgCount = m_newProgCount;
++
++  if (m_newStreams > m_oldStreams+1 || m_newProgCount > m_oldProgCount)
++  {
++    // reset streams
++    CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read() change info: old/new streams [{}/{}] | old/new programs [{}/{}]", m_oldStreams, m_newStreams, m_oldProgCount, m_newProgCount);
++    m_oldStreams = 0;
++    m_oldProgCount = 0;
++    m_bResetStream = true;
++    return true;
++  }
++  else
++  {
++    m_oldStreams = m_newStreams;
++    m_oldProgCount = m_newProgCount;
++  }
++
+   // libavformat is confused by the interleaved SSIF.
+   // disable program management for those
+   if (m_pSSIF && !m_pSSIF->IsBluRay())
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2025-07-07 13:03:34.000000000 +0000
+@@ -172,6 +172,11 @@ protected:
+     int      result;    // result from av_read_packet
+   }m_pkt;
+ 
++  // reset steram
++  bool     m_bResetStream;
++  unsigned int m_oldStreams;
++  unsigned int m_oldProgCount;
++
+   bool m_streaminfo;
+   bool m_checkTransportStream;
+   int m_displayTime = 0;
+diff -Naurp kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h
+--- kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-07-07 13:04:24.000000000 +0000
+@@ -13,6 +13,7 @@
+ 
+ #define DMX_SPECIALID_STREAMINFO DEMUX_SPECIALID_STREAMINFO
+ #define DMX_SPECIALID_STREAMCHANGE DEMUX_SPECIALID_STREAMCHANGE
++#define DMX_SPECIALID_STREAMRESET DEMUX_SPECIALID_STREAMRESET
+ 
+ #ifdef __cplusplus
+ extern "C"
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-07-07 13:10:12.000000000 +0000
+@@ -748,6 +748,7 @@ CVideoPlayer::CVideoPlayer(IPlayerCallba
+   m_HasVideo = false;
+   m_HasAudio = false;
+   m_UpdateStreamDetails = false;
++  m_lastStreamResetTime = std::chrono::steady_clock::now();
+ 
+   const int tenthsSeconds = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+       CSettings::SETTING_VIDEOPLAYER_QUEUETIMESIZE);
+@@ -1134,6 +1135,8 @@ void CVideoPlayer::OpenDefaultStreams(bo
+   }
+ }
+ 
++static int bad_packet_count = 0;
++
+ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
+ {
+ 
+@@ -1151,7 +1154,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+       stream = m_pSubtitleDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
+       if (!stream)
+       {
+-        CLog::Log(LOGERROR, "{} - Error demux packet doesn't belong to a valid stream",
++        CLog::Log(LOGERROR, "{} - Error demux Subtitle packet doesn't belong to a valid stream",
+                   __FUNCTION__);
+         return false;
+       }
+@@ -1174,6 +1177,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+     // stream changed, update and open defaults
+     if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
+     {
++      CLog::Log(LOGINFO, "VideoPlayer::ReadPacket(): received STREAMCHANGE");
+       m_SelectionStreams.Clear(STREAM_NONE, STREAM_SOURCE_DEMUX);
+       m_SelectionStreams.Update(m_pInputStream, m_pDemuxer.get());
+       m_pDemuxer->GetPrograms(m_programs);
+@@ -1188,6 +1192,27 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+ 
+       return true;
+     }
++    else if (packet->iStreamId == DMX_SPECIALID_STREAMRESET) // stream reset
++    {
++      CLog::Log(LOGINFO, "VideoPlayer::ReadPacket(): received STREAMRESET");
++      m_SelectionStreams.Clear(STREAM_NONE, STREAM_SOURCE_DEMUX);
++      m_SelectionStreams.Update(m_pInputStream, m_pDemuxer.get());
++      m_pDemuxer->GetPrograms(m_programs);
++      UpdateContent();
++
++      CloseStream(m_CurrentVideo, false);
++      m_processInfo->ResetVideoCodecInfo();
++
++      CloseStream(m_CurrentAudio, false);
++      m_processInfo->ResetAudioCodecInfo();
++
++      OpenDefaultStreams(true);
++
++      m_HasVideo = (m_CurrentVideo.id >= 0);
++      m_HasAudio = (m_CurrentAudio.id >= 0);
++
++      return true;
++    }
+ 
+     UpdateCorrection(packet, m_offset_pts);
+ 
+@@ -1199,6 +1224,32 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+       stream = m_pDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
+       if (!stream)
+       {
++        if (m_pInputStream->IsRealtime())
++        {
++          ++bad_packet_count;
++          const auto now = std::chrono::steady_clock::now();
++          const auto minResetInterval = std::chrono::milliseconds(3000); // minimum 3 seconds between resets
++
++          if (bad_packet_count > 50)
++          {
++            if (now - m_lastStreamResetTime > minResetInterval)
++            {
++              CLog::Log(LOGINFO, "VideoPlayer::ReadPacket(): Too many invalid packets, forcing stream reset");
++              m_pDemuxer->Abort();
++              m_pDemuxer->Reset();
++              m_pDemuxer->Flush();
++
++              // reset stream
++              DemuxPacket* reset = CDVDDemuxUtils::AllocateDemuxPacket(0);
++              reset->iStreamId = DMX_SPECIALID_STREAMRESET;
++              packet = reset;
++
++              bad_packet_count = 0;
++              m_lastStreamResetTime = now;
++            }
++          }
++          return true;
++        }
+         CLog::Log(LOGERROR, "{} - Error demux packet doesn't belong to a valid stream",
+                   __FUNCTION__);
+         return false;
+@@ -3713,7 +3764,7 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+   CDemuxStream* stream = NULL;
+   CDVDStreamInfo hint;
+ 
+-  CLog::Log(LOGINFO, "Opening stream: {} source: {}", iStream, source);
++  // CLog::Log(LOGINFO, "Opening stream: {} source: {}", iStream, source);
+ 
+   if(STREAM_SOURCE_MASK(source) == STREAM_SOURCE_DEMUX_SUB)
+   {
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2025-07-07 13:09:22.000000000 +0000
+@@ -592,6 +592,8 @@ protected:
+   bool m_HasVideo;
+   bool m_HasAudio;
+ 
++  std::chrono::steady_clock::time_point m_lastStreamResetTime;
++
+   bool m_UpdateStreamDetails;
+ 
+   std::atomic<bool> m_displayLost;

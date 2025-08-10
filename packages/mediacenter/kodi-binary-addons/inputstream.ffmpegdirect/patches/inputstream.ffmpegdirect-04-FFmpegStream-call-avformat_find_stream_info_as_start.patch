@@ -1,0 +1,105 @@
+diff -Naurp inputstream.ffmpegdirect/src/stream/FFmpegStream.cpp inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.cpp
+--- inputstream.ffmpegdirect/src/stream/FFmpegStream.cpp	2025-07-24 05:43:14.394581612 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.cpp	2025-07-24 13:58:04.000000000 +0000
+@@ -150,6 +150,7 @@ FFmpegStream::FFmpegStream(IManageDemuxP
+   m_oldStreams = 0;
+   m_oldProgCount = 0;
+   m_bResetStream = false;
++  m_bStreamInfo = true;
+   m_pkt.result = -1;
+   memset(&m_pkt.pkt, 0, sizeof(AVPacket));
+   m_streaminfo = true; /* set to true if we want to look for streams before playback */
+@@ -691,7 +692,7 @@ bool FFmpegStream::Open(bool fileinfo)
+ {
+   const AVInputFormat* iformat = nullptr;
+   std::string strFile;
+-  m_streaminfo = !m_isRealTimeStream && !m_reopen;;
++  m_streaminfo = !m_isRealTimeStream && !m_reopen;
+   m_currentPts = STREAM_NOPTS_VALUE;
+   m_speed = STREAM_PLAYSPEED_NORMAL;
+   m_program = UINT_MAX;
+@@ -781,6 +782,7 @@ bool FFmpegStream::Open(bool fileinfo)
+ 
+   if (m_streaminfo)
+   {
++    m_bStreamInfo = false;
+     Log(LOGLEVEL_DEBUG, "%s - avformat_find_stream_info starting", __FUNCTION__);
+     int iErr = avformat_find_stream_info(m_pFormatContext, NULL);
+     if (iErr < 0)
+@@ -811,9 +813,62 @@ bool FFmpegStream::Open(bool fileinfo)
+   }
+   else
+   {
+-    m_program = 0;
+-    m_checkTransportStream = true;
+-    skipCreateStreams = true;
++    if (m_bStreamInfo)
++    {
++      m_bStreamInfo = false;
++      int ret = avformat_find_stream_info(m_pFormatContext, NULL);
++
++      /*if (ret >= 0)
++      {
++        for (unsigned int i = 0; i < m_pFormatContext->nb_streams; ++i)
++        {
++            AVStream* st = m_pFormatContext->streams[i];
++            AVCodecParameters* cp = st->codecpar;
++            Log(LOGLEVEL_INFO, "=== STREAM %u ===", i);
++            Log(LOGLEVEL_INFO, "  codec_type: %d (%s)", cp->codec_type,
++                (cp->codec_type == AVMEDIA_TYPE_VIDEO ? "VIDEO" :
++                 cp->codec_type == AVMEDIA_TYPE_AUDIO ? "AUDIO" :
++                 cp->codec_type == AVMEDIA_TYPE_SUBTITLE ? "SUBTITLE" : "OTHER"));
++            Log(LOGLEVEL_INFO, "  codec_id: %d", cp->codec_id);
++            Log(LOGLEVEL_INFO, "  extradata_size: %d", cp->extradata_size);
++            // Video
++            Log(LOGLEVEL_INFO, "  width: %d", cp->width);
++            Log(LOGLEVEL_INFO, "  height: %d", cp->height);
++            Log(LOGLEVEL_INFO, "  format: %d", cp->format);
++            Log(LOGLEVEL_INFO, "  profile: %d", cp->profile);
++            Log(LOGLEVEL_INFO, "  level: %d", cp->level);
++            // Audio
++            Log(LOGLEVEL_INFO, "  sample_rate: %d", cp->sample_rate);
++            Log(LOGLEVEL_INFO, "  channels: %d", cp->ch_layout.nb_channels);
++            Log(LOGLEVEL_INFO, "  channel_layout: 0x%" PRIx64, cp->ch_layout.u.mask);
++            Log(LOGLEVEL_INFO, "  bits_per_coded_sample: %d", cp->bits_per_coded_sample);
++            Log(LOGLEVEL_INFO, "  frame_size: %d", cp->frame_size);
++            // Timebase, duration, start_time
++            Log(LOGLEVEL_INFO, "  time_base: %d/%d", st->time_base.num, st->time_base.den);
++            Log(LOGLEVEL_INFO, "  start_time: %" PRId64, st->start_time);
++            Log(LOGLEVEL_INFO, "  duration: %" PRId64, st->duration);
++            Log(LOGLEVEL_INFO, "  nb_frames: %" PRId64, st->nb_frames);
++            // Frame rate
++            Log(LOGLEVEL_INFO, "  avg_frame_rate: %d/%d", st->avg_frame_rate.num, st->avg_frame_rate.den);
++            Log(LOGLEVEL_INFO, "  r_frame_rate: %d/%d", st->r_frame_rate.num, st->r_frame_rate.den);
++            // Disposition
++            Log(LOGLEVEL_INFO, "  disposition: 0x%x", st->disposition);
++        }
++        Log(LOGLEVEL_INFO, "--- FORMAT ---");
++        Log(LOGLEVEL_INFO, "nb_streams: %d", m_pFormatContext->nb_streams);
++        Log(LOGLEVEL_INFO, "duration: %" PRId64, m_pFormatContext->duration);
++        Log(LOGLEVEL_INFO, "bit_rate: %" PRId64, m_pFormatContext->bit_rate);
++        Log(LOGLEVEL_INFO, "start_time: %" PRId64, m_pFormatContext->start_time);
++        Log(LOGLEVEL_INFO, "iformat: %s", m_pFormatContext->iformat ? m_pFormatContext->iformat->name : "(null)");
++        Log(LOGLEVEL_INFO, "filename: %s", m_pFormatContext->url ? m_pFormatContext->url : "(null)");
++      }*/
++    }
++    else
++    {
++      m_program = 0;
++      m_checkTransportStream = true;
++      skipCreateStreams = true;
++    }
+   }
+ 
+   // reset any timeout
+diff -Naurp inputstream.ffmpegdirect/src/stream/FFmpegStream.h inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.h
+--- inputstream.ffmpegdirect/src/stream/FFmpegStream.h	2025-07-24 05:43:14.386581699 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.h	2025-07-24 12:08:23.000000000 +0000
+@@ -197,6 +197,7 @@ private:
+   bool m_opened;
+ 
+   bool m_bResetStream;
++  bool m_bStreamInfo;
+   unsigned int m_oldStreams;
+   unsigned int m_oldProgCount;
+ 

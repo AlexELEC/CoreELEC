@@ -1,0 +1,12 @@
+diff -Naurp inputstream.ffmpegdirect/inputstream.ffmpegdirect/addon.xml.in inputstream.ffmpegdirect-patch/inputstream.ffmpegdirect/addon.xml.in
+--- inputstream.ffmpegdirect/inputstream.ffmpegdirect/addon.xml.in	2025-04-01 16:11:20.000000000 +0000
++++ inputstream.ffmpegdirect-patch/inputstream.ffmpegdirect/addon.xml.in	2025-06-11 15:07:24.000000000 +0000
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <addon
+   id="inputstream.ffmpegdirect"
+-  version="22.1.2"
++  version="22.10.3"
+   name="Inputstream FFmpeg Direct"
+   provider-name="Ross Nicholson">
+   <requires>@ADDON_DEPENDS@</requires>
