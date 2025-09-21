@@ -4,8 +4,8 @@
 # Copyright (C) 2024-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="linux"
-PKG_VERSION="1e7550ee6bec1d5f6f0ed116d19069b842f9ad70"
-PKG_SHA256="d263cf3e895d55abba74df81b48577be67091aff814afc1ed5e5e84b9f64cd9e"
+PKG_VERSION="2c3e329b7dec94edae5e9fb5f33669239c384436"
+PKG_SHA256="0d6256fa1406ab0ac5990d8ae27a15c23ca1cae86f07d3c6dca600a13c7f130e"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kernel.org"
 PKG_URL="https://github.com/CoreELEC/linux-amlogic/archive/${PKG_VERSION}.tar.gz"
@@ -95,15 +95,6 @@ post_patch() {
     # disable cifs support if not enabled
     if [ ! "${SAMBA_SUPPORT}" = yes ]; then
       sed -i -e "s|^CONFIG_CIFS=.*$|# CONFIG_CIFS is not set|" ${PKG_BUILD}/.config
-    fi
-
-    # disable iscsi support if not enabled
-    if [ ! "${ISCSI_SUPPORT}" = yes ]; then
-      sed -i -e "s|^CONFIG_SCSI_ISCSI_ATTRS=.*$|# CONFIG_SCSI_ISCSI_ATTRS is not set|" ${PKG_BUILD}/.config
-      sed -i -e "s|^CONFIG_ISCSI_TCP=.*$|# CONFIG_ISCSI_TCP is not set|" ${PKG_BUILD}/.config
-      sed -i -e "s|^CONFIG_ISCSI_BOOT_SYSFS=.*$|# CONFIG_ISCSI_BOOT_SYSFS is not set|" ${PKG_BUILD}/.config
-      sed -i -e "s|^CONFIG_ISCSI_IBFT_FIND=.*$|# CONFIG_ISCSI_IBFT_FIND is not set|" ${PKG_BUILD}/.config
-      sed -i -e "s|^CONFIG_ISCSI_IBFT=.*$|# CONFIG_ISCSI_IBFT is not set|" ${PKG_BUILD}/.config
     fi
 
     # disable lima/panfrost if libmali is configured

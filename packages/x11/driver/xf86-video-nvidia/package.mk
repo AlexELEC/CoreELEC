@@ -3,8 +3,8 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="xf86-video-nvidia"
-PKG_VERSION="580.76.05"
-PKG_SHA256="9087b1b6faa84a91c9ad10601a67165849797f83563d2addaed73a7a81a4173f"
+PKG_VERSION="580.82.09"
+PKG_SHA256="f8a7881c129cd20c99d90ca48eb4ad46856d14392a9d91dfb0a8399d6c695329"
 PKG_ARCH="x86_64"
 PKG_LICENSE="nonfree"
 PKG_SITE="https://www.nvidia.com/en-us/drivers/unix/"
