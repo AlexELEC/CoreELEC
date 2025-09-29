@@ -10,6 +10,7 @@ PKG_SITE="http://www.freedesktop.org/wiki/Software/systemd"
 PKG_URL="https://github.com/systemd/systemd/archive/v${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="meson:host ninja:host gcc:host libcap kmod util-linux entropy libidn2 wait-time-sync Jinja2:host"
 PKG_LONGDESC="A system and session manager for Linux, compatible with SysV and LSB init scripts."
+PKG_BUILD_FLAGS="+lto"
 
 PKG_MESON_OPTS_TARGET="--libdir=/usr/lib \
                        -Dsplit-bin=true \
@@ -199,6 +200,9 @@ post_makeinstall_target() {
   safe_remove ${INSTALL}/usr/lib/systemd/system/systemd-time-wait-sync.service
   safe_remove ${INSTALL}/usr/lib/systemd/systemd-time-wait-sync
 
+  # remove the userdbctl load-credentials script - no service (addon) require the creation of static users
+  safe_remove ${INSTALL}/usr/lib/systemd/system/systemd-userdb-load-credentials.service
+
   # tune journald.conf
   sed -e "s,^.*Compress=.*$,Compress=no,g" -i ${INSTALL}/etc/systemd/journald.conf
   sed -e "s,^.*MaxFileSec=.*$,MaxFileSec=0,g" -i ${INSTALL}/etc/systemd/journald.conf
@@ -270,6 +274,8 @@ post_makeinstall_target() {
   ln -sf /storage/.config/hwdb.d ${INSTALL}/etc/udev/hwdb.d
   safe_remove ${INSTALL}/etc/udev/rules.d
   ln -sf /storage/.config/udev.rules.d ${INSTALL}/etc/udev/rules.d
+
+  ln -sf /storage/.cache/userdb ${INSTALL}/etc/userdb
 
   # journald
   ln -sf /storage/.cache/journald.conf.d ${INSTALL}/usr/lib/systemd/journald.conf.d
