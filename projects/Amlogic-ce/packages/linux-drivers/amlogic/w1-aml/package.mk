@@ -2,7 +2,7 @@
 # Copyright (C) 2022-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="w1-aml"
-PKG_VERSION="e8a82e1e4bc931361d5497c7f5f902484f454f5b"
+PKG_VERSION="1a979d834799ffdd9f67a3856171b19f0b9fd3e3"
 PKG_SHA256=""
 PKG_ARCH="arm aarch64"
 PKG_LICENSE="GPL"
@@ -15,17 +15,7 @@ PKG_IS_KERNEL_PKG="yes"
 PKG_TOOLCHAIN="manual"
 
 make_target() {
-  if [ "${TARGET_KERNEL_ARCH}" = "arm" ]; then
-    kernel_make -C $(kernel_path) M=${PKG_BUILD}/project_w1/vmac
-  else
-    ccflags="-mno-outline-atomics
-             -Wno-unused-variable
-             -Wno-unused-but-set-variable
-             -Wno-strict-prototypes"
-
-    kernel_make -C $(kernel_path) M=${PKG_BUILD}/project_w1/vmac \
-      subdir-ccflags-y="${ccflags}"
-  fi
+  kernel_make -C $(kernel_path) M=${PKG_BUILD}/project_w1/vmac
 }
 
 makeinstall_target() {

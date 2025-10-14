@@ -2,7 +2,7 @@
 # Copyright (C) 2025-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="aml_bt"
-PKG_VERSION="710c8112a41b228c4519a232d04633ad8ec634ce"
+PKG_VERSION="4673a7293cf78fed7cc5c0f7d0378a513dd0e70d"
 PKG_SHA256=""
 PKG_ARCH="aarch64"
 PKG_LICENSE="GPL"
@@ -24,8 +24,9 @@ make_target() {
   echo "build sdio_driver_bt"
   kernel_make -C ${PKG_BUILD}/aml_bt/sdio_driver_bt \
     M=${PKG_BUILD}/aml_bt/sdio_driver_bt \
-    KERNEL_SRC=$(kernel_path)
-    
+    KERNEL_SRC=$(kernel_path) \
+    EXTRA_SYMBOLS_PATH=$(get_build_dir w1-aml)/project_w1/vmac/Module.symvers
+
   echo
   echo "build w2"
   kernel_make -C ${PKG_BUILD}/aml_bt/w2 \
