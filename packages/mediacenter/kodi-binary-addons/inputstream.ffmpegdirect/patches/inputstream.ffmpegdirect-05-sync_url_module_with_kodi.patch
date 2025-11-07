@@ -1,0 +1,119 @@
+diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.cpp inputstream.ffmpegdirect-patch/src/stream/url/URL.cpp
+--- inputstream.ffmpegdirect/src/stream/url/URL.cpp	2025-08-13 04:33:49.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/url/URL.cpp	2025-09-03 06:56:17.000000000 +0000
+@@ -120,7 +120,10 @@ std::string URIGetFileName(const CURL& u
+ 
+ bool HasSlashAtEnd(const std::string& strFile)
+ {
+-  return HasSlashAtEnd(strFile);
++  if (strFile.empty())
++    return false;
++  char c = strFile.back();
++  return c == '/' || c == '\\';
+ }
+ 
+ bool HasSlashAtEnd(const std::string& strFile, bool checkURL /* = false */)
+@@ -163,7 +166,25 @@ void RemoveSlashAtEnd(std::string& strFo
+ 
+ } // unnames namespace
+ 
+-CURL::~CURL() = default;
++CURL::CURL(std::string strURL)
++{
++  Parse(std::move(strURL));
++}
++
++bool CURL::operator==(const CURL& url) const
++{
++  return Get() == url.Get();
++}
++
++bool operator==(const CURL& url, const std::string& str)
++{
++  return url.Get() == str;
++}
++
++bool operator==(const std::string& str, const CURL& url)
++{
++  return str == url.Get();
++}
+ 
+ void CURL::Reset()
+ {
+@@ -182,7 +203,7 @@ void CURL::Reset()
+   m_iPort = 0;
+ }
+ 
+-void CURL::Parse(const std::string& strURL1)
++void CURL::Parse(std::string strURL1)
+ {
+   Reset();
+   // start by validating the path
+@@ -456,9 +477,9 @@ void CURL::Parse(const std::string& strU
+   m_strPassword = Decode(m_strPassword);
+ }
+ 
+-void CURL::SetFileName(const std::string& strFileName)
++void CURL::SetFileName(std::string strFileName)
+ {
+-  m_strFileName = strFileName;
++  m_strFileName = std::move(strFileName);
+ 
+   size_t slash = m_strFileName.find_last_of(GetDirectorySeparator());
+   size_t period = m_strFileName.find_last_of('.');
+@@ -760,9 +781,9 @@ std::string CURL::GetRedacted() const
+   return GetWithoutUserDetails(true);
+ }
+ 
+-std::string CURL::GetRedacted(const std::string& path)
++std::string CURL::GetRedacted(std::string path)
+ {
+-  return CURL(path).GetRedacted();
++  return CURL(std::move(path)).GetRedacted();
+ }
+ 
+ // bool CURL::IsLocal() const
+diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.h inputstream.ffmpegdirect-patch/src/stream/url/URL.h
+--- inputstream.ffmpegdirect/src/stream/url/URL.h	2025-08-13 04:33:49.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/url/URL.h	2025-09-03 06:38:57.000000000 +0000
+@@ -16,23 +16,21 @@
+ #undef SetPort // WIN32INCLUDES this is defined as SetPortA in WinSpool.h which is being included _somewhere_
+ #endif
+ 
+-class CURL
++class CURL final
+ {
+ public:
+-  explicit CURL(const std::string& strURL)
+-  {
+-    Parse(strURL);
+-  }
+-
+   CURL() = default;
+-  virtual ~CURL(void);
++  explicit CURL(std::string strURL);
++
++  bool operator==(const CURL& url) const;
++  friend bool operator==(const CURL& url, const std::string& str);
++  friend bool operator==(const std::string& str, const CURL& url);
+ 
+-  // explicit equals operator for std::string comparison
+   bool operator==(const std::string &url) const { return Get() == url; }
+ 
+   void Reset();
+-  void Parse(const std::string& strURL);
+-  void SetFileName(const std::string& strFileName);
++  void Parse(std::string strURL);
++  void SetFileName(std::string strFileName);
+   void SetHostName(const std::string& strHostName)
+   {
+     m_strHostName = strHostName;
+@@ -132,7 +130,7 @@ public:
+   std::string GetWithoutUserDetails(bool redact = false) const;
+   std::string GetWithoutFilename() const;
+   std::string GetRedacted() const;
+-  static std::string GetRedacted(const std::string& path);
++  static std::string GetRedacted(std::string path);
+   bool IsLocal() const;
+   bool IsLocalHost() const;
+   static bool IsFileOnly(const std::string &url); ///< return true if there are no directories in the url.

@@ -1,0 +1,99 @@
+diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.xml
+--- kodi/system/keymaps/keyboard.xml	2025-07-06 11:06:16.000000000 +0000
++++ kodi-patch/system/keymaps/keyboard.xml	2025-07-07 12:39:43.000000000 +0000
+@@ -52,6 +52,7 @@
+       <m>Menu</m>
+       <n mod="ctrl">ActivateWindow(PlayerControls)</n>
+       <s>ActivateWindow(ShutdownMenu)</s>
++      <s mod="longpress">ShutDown()</s>
+       <s mod="alt">ActivateWindow(Settings)</s>
+       <escape>Back</escape>
+       <escape mod="longpress">Back</escape>
+@@ -105,6 +106,11 @@
+       <j>ActivateWindow(RadioChannels)</j>
+       <k>ActivateWindow(TVRecordings)</k>
+       <b>ActivateWindow(TVTimers)</b>
++      <f1>ActivateWindow(TVChannels)</f1>
++      <f2>ActivateWindow(Videos)</f2>
++      <f3>ActivateWindow(Music)</f3>
++      <f4>ActivateWindow(Pictures)</f4>
++      <f5>ActivateWindow(Favourites)</f5>
+       <!-- PVR -->
+       <red>ActivateWindow(TVChannels)</red>
+       <green>ActivateWindow(Videos)</green>
+@@ -124,8 +130,10 @@
+       <volume_mute>Mute</volume_mute>
+       <volume_down>VolumeDown</volume_down>
+       <volume_up>VolumeUp</volume_up>
+-      <next_track>SkipNext</next_track>
+-      <prev_track>SkipPrevious</prev_track>
++      <!-- <next_track>SkipNext</next_track> -->
++      <!-- <prev_track>SkipPrevious</prev_track> -->
++      <next_track></next_track>
++      <prev_track></prev_track>
+       <stop>Stop</stop>
+       <play_pause>PlayPause</play_pause>
+       <play_pause mod="longpress">Info</play_pause>
+@@ -169,6 +177,7 @@
+       <k mod="ctrl,shift">ReloadKeymaps</k>
+       <d mod="ctrl,shift">ToggleDebug</d>
+       <r mod="ctrl,shift">ToggleDirtyRegionVisualization</r>
++      <escape mod="ctrl">RunAddon(script.key.layout)</escape>
+       <f11>HDRToggle</f11>
+     </keyboard>
+   </global>
+@@ -369,6 +378,7 @@
+       <o>PlayerProcessInfo</o>
+       <o mod="ctrl,shift">PlayerDebug</o>
+       <o mod="alt">PlayerDebugVideo</o>
++      <o mod="longpress">PlayerDebug</o>
+       <z>AspectRatio</z>
+       <zoom>AspectRatio</zoom>
+       <t>ShowSubtitles</t>
+@@ -382,7 +392,8 @@
+       <down mod="longpress">NextSubtitle</down>
+       <left mod="alt">PlayerControl(tempodown)</left>
+       <right mod="alt">PlayerControl(tempoup)</right>
+-      <a>AudioDelay</a>
++      <a>AudioNextLanguage</a>
++      <a mod="longpress">AudioDelay</a>
+       <a mod="ctrl">DialogSelectAudio</a>
+       <leftquote>DialogSelectAudio</leftquote>
+       <escape>Fullscreen</escape>
+@@ -587,7 +598,7 @@
+       <zoom>AspectRatio</zoom>
+       <t>ShowSubtitles</t>
+       <l>DialogSelectSubtitle</l>
+-      <a>AudioDelay</a>
++      <a>AudioNextLanguage</a>
+       <escape>Fullscreen</escape>
+       <return>Select</return>
+       <enter>Select</enter>      <!-- backspace>Fullscreen</backspace -->
+@@ -691,10 +702,10 @@
+   </NumericInput>
+   <FullscreenLiveTV>
+     <keyboard>
+-      <left>StepBack</left>
+-      <right>StepForward</right>
+-      <up>Up</up>
+-      <down>Down</down>
++      <left>ActivateWindow(PVROSDChannels)</left>
++      <right>ActivateWindow(PVRChannelGuide)</right>
++      <up>StepForward</up>
++      <down>StepBack</down>
+       <return>OSD</return>
+       <enter>OSD</enter>
+       <g>ActivateWindow(PVRChannelGuide)</g>
+@@ -702,10 +713,12 @@
+       <return mod="longpress">ActivateWindow(PVROSDChannels)</return>
+       <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
+       <leftquote>DialogSelectAudio</leftquote>
++      <a>AudioNextLanguage</a>
+       <pageup>ChannelUp</pageup>
+       <pagedown>ChannelDown</pagedown>
+       <period mod="longpress">ChannelNumberSeparator</period>
+       <numpadperiod>ChannelNumberSeparator</numpadperiod>
++      <i mod="longpress">RunAddon(script.tvlink.conrol)</i>
+     </keyboard>
+   </FullscreenLiveTV>
+   <FullscreenRadio>

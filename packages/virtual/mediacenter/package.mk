@@ -46,4 +46,7 @@ if [ "${MEDIACENTER}" = "kodi" ]; then
   if listcontains "${GRAPHIC_DRIVERS}" "nvidia-ng"; then
     PKG_DEPENDS_TARGET+=" nvidia-vaapi-driver"
   fi
+
+  # PVR TVLINK Client
+  PKG_DEPENDS_TARGET+=" pvr.tvlink inputstream.ffmpegdirect"
 fi
