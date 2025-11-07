@@ -1,6 +1,6 @@
 diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.cpp inputstream.ffmpegdirect-patch/src/stream/url/URL.cpp
---- inputstream.ffmpegdirect/src/stream/url/URL.cpp	2025-08-13 04:33:49.000000000 +0000
-+++ inputstream.ffmpegdirect-patch/src/stream/url/URL.cpp	2025-09-03 06:56:17.000000000 +0000
+--- inputstream.ffmpegdirect/src/stream/url/URL.cpp	2025-10-26 06:39:21.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/url/URL.cpp	2025-11-07 06:11:20.000000000 +0000
 @@ -120,7 +120,10 @@ std::string URIGetFileName(const CURL& u
  
  bool HasSlashAtEnd(const std::string& strFile)
@@ -74,12 +74,12 @@ diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.cpp inputstream.ffmpegdi
  
  // bool CURL::IsLocal() const
 diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.h inputstream.ffmpegdirect-patch/src/stream/url/URL.h
---- inputstream.ffmpegdirect/src/stream/url/URL.h	2025-08-13 04:33:49.000000000 +0000
-+++ inputstream.ffmpegdirect-patch/src/stream/url/URL.h	2025-09-03 06:38:57.000000000 +0000
-@@ -16,23 +16,21 @@
- #undef SetPort // WIN32INCLUDES this is defined as SetPortA in WinSpool.h which is being included _somewhere_
- #endif
+--- inputstream.ffmpegdirect/src/stream/url/URL.h	2025-10-26 06:39:21.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/url/URL.h	2025-11-07 06:13:17.000000000 +0000
+@@ -18,23 +18,20 @@
  
+ namespace ffmpegdirect
+ {
 -class CURL
 +class CURL final
  {
@@ -92,12 +92,11 @@ diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.h inputstream.ffmpegdire
    CURL() = default;
 -  virtual ~CURL(void);
 +  explicit CURL(std::string strURL);
-+
+ 
+-  // explicit equals operator for std::string comparison
 +  bool operator==(const CURL& url) const;
 +  friend bool operator==(const CURL& url, const std::string& str);
 +  friend bool operator==(const std::string& str, const CURL& url);
- 
--  // explicit equals operator for std::string comparison
    bool operator==(const std::string &url) const { return Get() == url; }
  
    void Reset();
@@ -108,7 +107,7 @@ diff -Naurp inputstream.ffmpegdirect/src/stream/url/URL.h inputstream.ffmpegdire
    void SetHostName(const std::string& strHostName)
    {
      m_strHostName = strHostName;
-@@ -132,7 +130,7 @@ public:
+@@ -134,7 +131,7 @@ public:
    std::string GetWithoutUserDetails(bool redact = false) const;
    std::string GetWithoutFilename() const;
    std::string GetRedacted() const;
