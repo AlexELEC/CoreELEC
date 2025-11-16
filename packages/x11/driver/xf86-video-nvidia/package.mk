@@ -3,13 +3,13 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="xf86-video-nvidia"
-PKG_VERSION="580.95.05"
-PKG_SHA256="482130b27454864f3873729debbffa9e317badd1c56271dd811219c2385da575"
+PKG_VERSION="580.105.08"
+PKG_SHA256="80b6a015c6eefdf24f81f76cddb0eb6ce4bcf09b43331130892588c9713300ec"
 PKG_ARCH="x86_64"
 PKG_LICENSE="nonfree"
 PKG_SITE="https://www.nvidia.com/en-us/drivers/unix/"
 PKG_URL="http://us.download.nvidia.com/XFree86/Linux-x86_64/${PKG_VERSION}/NVIDIA-Linux-x86_64-${PKG_VERSION}-no-compat32.run"
-PKG_DEPENDS_TARGET="util-macros xorg-server libvdpau libglvnd"
+PKG_DEPENDS_TARGET="util-macros xorg-server libglvnd"
 PKG_LONGDESC="The Xorg driver for NVIDIA GPUs supporting the GeForce 600 Series & above."
 PKG_TOOLCHAIN="manual"
 
@@ -109,11 +109,17 @@ makeinstall_target() {
     ln -s /var/lib/nvidia-xconfig ${INSTALL}/usr/bin/nvidia-xconfig
     cp nvidia-xconfig ${INSTALL}/usr/bin/nvidia-main-xconfig
 
-  # VDPAU
-  mkdir -p ${INSTALL}/usr/lib/vdpau
-    cp libvdpau_nvidia.so* ${INSTALL}/usr/lib/vdpau/libvdpau_nvidia-main.so.1
-    ln -sf /var/lib/libvdpau_nvidia.so ${INSTALL}/usr/lib/vdpau/libvdpau_nvidia.so
-    ln -sf /var/lib/libvdpau_nvidia.so.1 ${INSTALL}/usr/lib/vdpau/libvdpau_nvidia.so.1
+  # CUDA
+  mkdir -p ${INSTALL}/usr/lib
+    cp -P libcuda.so.${PKG_VERSION}  ${INSTALL}/usr/lib/
+    ln -sf libcuda.so.${PKG_VERSION} ${INSTALL}/usr/lib/libcuda.so.1
+    ln -sf libcuda.so.1              ${INSTALL}/usr/lib/libcuda.so
+
+  # nvcuvid
+  mkdir -p ${INSTALL}/usr/lib
+    cp -P libnvcuvid.so.${PKG_VERSION}  ${INSTALL}/usr/lib/
+    ln -sf libnvcuvid.so.${PKG_VERSION} ${INSTALL}/usr/lib/libnvcuvid.so.1
+    ln -sf libnvcuvid.so.1              ${INSTALL}/usr/lib/libnvcuvid.so
 
   # App profiles
   mkdir -p ${INSTALL}/usr/share/nvidia
