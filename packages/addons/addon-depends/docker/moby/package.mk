@@ -7,7 +7,7 @@ PKG_SHA256="e028e04310493c903eb70f5fa36178940f16e38cf8bfcf97ae525d60dbd5f8af"
 PKG_LICENSE="ASL"
 PKG_SITE="https://mobyproject.org/"
 PKG_URL="https://github.com/moby/moby/archive/docker-v${PKG_VERSION}.tar.gz"
-PKG_DEPENDS_TARGET="toolchain go:host systemd"
+PKG_DEPENDS_TARGET="toolchain go:host nftables systemd"
 PKG_LONGDESC="Moby is an open-source project created by Docker to enable and accelerate software containerization."
 PKG_TOOLCHAIN="manual"
 
@@ -41,6 +41,9 @@ make_target() {
   mkdir -p bin
   ${GOLANG} build -mod=mod -modfile=go.mod -v -o bin/docker-proxy -a -ldflags "${LDFLAGS}" ./cmd/docker-proxy
   ${GOLANG} build -mod=mod -modfile=go.mod -v -o bin/dockerd -a -tags "${PKG_MOBY_BUILDTAGS}" -ldflags "${LDFLAGS}" ./cmd/dockerd
+
+  # fix permissions of .gopath to allow clean during CI build
+  chmod -R u+w .gopath
 }
 
 makeinstall_target() {
