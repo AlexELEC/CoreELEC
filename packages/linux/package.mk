@@ -30,15 +30,15 @@ case "${LINUX}" in
     PKG_PATCH_DIRS="raspberrypi"
     ;;
   rockchip)
-    PKG_VERSION="e5f0a698b34ed76002dc5cff3804a61c80233a7a" # 6.17.0
-    PKG_SHA256="78282d8f57cb0efef15cd8f3e9838615f2ffc8a913f5b5a90321eb6669dfd568"
+    PKG_VERSION="78d82960b939df64cf7d26ca5ed34eb87f44c9e5" # 6.18.2
+    PKG_SHA256="a11985db0126ba0e80e34a97d4a6e3b77cf13c89a3af76733a44b8c4f8d5b767"
     PKG_URL="https://github.com/chewitt/linux/archive/${PKG_VERSION}.tar.gz"
     PKG_SOURCE_NAME="linux-${LINUX}-${PKG_VERSION}.tar.gz"
-    PKG_PATCH_DIRS="default rockchip rtlwifi/6.18"
+    PKG_PATCH_DIRS="default rockchip"
     ;;
   *)
-    PKG_VERSION="6.18"
-    PKG_SHA256="9106a4605da9e31ff17659d958782b815f9591ab308d03b0ee21aad6c7dced4b"
+    PKG_VERSION="6.18.2"
+    PKG_SHA256="558c6bbab749492b34f99827fe807b0039a744693c21d3a7e03b3a48edaab96a"
     PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
     PKG_PATCH_DIRS="default"
     case ${DEVICE} in
