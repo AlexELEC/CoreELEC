@@ -119,10 +119,10 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h kodi-patch/xbmc/
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-08-09 18:50:36.000000000 +0000
 +++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-08-10 06:40:56.000000000 +0000
-@@ -748,6 +748,7 @@ CVideoPlayer::CVideoPlayer(IPlayerCallba
+@@ -747,6 +747,7 @@ CVideoPlayer::CVideoPlayer(IPlayerCallba
+   m_caching = CACHESTATE_DONE;
    m_HasVideo = false;
    m_HasAudio = false;
-   m_UpdateStreamDetails = false;
 +  m_lastStreamResetTime = std::chrono::steady_clock::now();
  
    const int tenthsSeconds = CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
@@ -261,6 +261,6 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/Vide
  
 +  std::chrono::steady_clock::time_point m_lastStreamResetTime;
 +
-   bool m_UpdateStreamDetails;
+   bool m_updateStreamDetails{false};
  
    std::atomic<bool> m_displayLost;
