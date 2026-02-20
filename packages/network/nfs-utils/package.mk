@@ -3,8 +3,8 @@
 # Copyright (C) 2024-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="nfs-utils"
-PKG_VERSION="2.8.4"
-PKG_SHA256="11c4cc598a434d7d340bad3e072a373ba1dcc2c49f855d44b202222b78ecdbf5"
+PKG_VERSION="2.8.5"
+PKG_SHA256="b13ca4a9df44186bdbe107514b22732d4243f785f95daf2fb86afc1edba15bbb"
 PKG_LICENSE="GPL-2.0-or-later"
 PKG_SITE="http://www.linux-nfs.org/"
 PKG_URL="https://www.kernel.org/pub/linux/utils/nfs-utils/${PKG_VERSION}/nfs-utils-${PKG_VERSION}.tar.xz"
@@ -13,9 +13,6 @@ PKG_DEPENDS_TARGET="toolchain keyutils libevent libnl libtirpc libxml2 rpcbind s
 PKG_LONGDESC="Linux NFS userland utility package"
 
 post_unpack() {
-  # we use own proc-fs-nfsd.mount file to also load nfsd module
-  cp ${PKG_DIR}/system.d/* ${PKG_BUILD}/systemd
-
   # move path /var/lib/nfs -> /run/nfs
   #   nfsdcld[3268]: cld_inotify_setup: inotify_add_watch failed: No such file or directory
   find ${PKG_BUILD} -type f -exec sed -i \
