@@ -1,0 +1,30 @@
+diff -Naurp inputstream.ffmpegdirect/src/stream/FFmpegStream.cpp inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.cpp
+--- inputstream.ffmpegdirect/src/stream/FFmpegStream.cpp	2025-06-21 06:47:53.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/FFmpegStream.cpp	2025-07-09 12:01:11.000000000 +0000
+@@ -178,8 +179,7 @@ bool FFmpegStream::Open(const std::strin
+ 
+   if (m_openMode == OpenMode::CURL)
+     m_curlInput->Open(m_streamUrl, m_mimeType, ADDON_READ_TRUNCATED |
+-                                               ADDON_READ_BITRATE |
+-                                               ADDON_READ_CHUNKED);
++                                               ADDON_READ_BITRATE);
+ 
+   m_opened = Open(false);
+   if (m_opened)
+@@ -892,16 +892,6 @@ bool FFmpegStream::Open(bool fileinfo)
+   m_startTime = 0;
+   m_seekStream = -1;
+ 
+-  if (m_checkTransportStream && m_streaminfo)
+-  {
+-    int64_t duration = m_pFormatContext->duration;
+-    Dispose();
+-    m_reopen = true;
+-    if (!Open(false))
+-      return false;
+-    m_pFormatContext->duration = duration;
+-  }
+-
+   return true;
+ }
+ 
