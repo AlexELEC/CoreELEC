@@ -68,6 +68,7 @@ function edid_to_xml() {
 
   # read value from xml, this returns error code on empty node
   xml_file_hex=$(xmlstarlet sel -t -v '/dtb-settings/custom_edid/edid/cmd/value' ${xml_file})
+  cmd_path=$(xmlstarlet sel -t -v '/dtb-settings/custom_edid/edid/cmd/@path' ${xml_file})
 
   if [ -f ${edid_bin_file} ]; then
     # read binary file edid.bin to hex string
@@ -85,10 +86,13 @@ function edid_to_xml() {
     edid_bin_hex=""
   fi
 
+  act_value=$(fdtget $amlogic_dt_id "-t s" $dtb_file $cmd_path 2>/dev/null)
+
   # compare value from file and xml
-  if [ "${edid_bin_hex}" != "${xml_file_hex}" ]; then
+  if [ "${edid_bin_hex}" != "${xml_file_hex}" -o "${edid_bin_hex}" != "${act_value}" ]; then
     log "Update 'custom_edid' with '${edid_bin_hex}'"
     xmlstarlet ed -L -u '/dtb-settings/custom_edid/edid/cmd/value' -v "${edid_bin_hex}" ${xml_file}
+    xmlstarlet ed -L -u '/dtb-settings/custom_edid/@status' -v "custom" ${xml_file}
     ret=1
   fi
 
@@ -321,9 +325,9 @@ function migrate_dtb_to_xml() {
     done
     # if the option is not available in dtb.img set option status to 'migrated' with current dtb.img value
     if [ "$name_option_available" == 0 ]; then
-      xmlstarlet ed -L -s "//$node" -t elem -n "${node}_migrated" $xml_file
+      xmlstarlet ed -L -s "//$node[not(${node}_migrated)]" -t elem -n "${node}_migrated" $xml_file
       xmlstarlet ed -L -u "//$node/@status" -v "migrated" $xml_file
-      xmlstarlet ed -L -i "//${node}_migrated" -t attr -n "name" -v "migrated" $xml_file
+      xmlstarlet ed -L -i "//${node}_migrated[not(@name)]" -t attr -n "name" -v "migrated" $xml_file
       log " option not applicable by default dtb.xml, migrate to '${node}_migrated'"
     fi
   done
