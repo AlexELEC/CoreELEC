@@ -21,7 +21,7 @@ HOST_CFLAGS="$HOST_CFLAGS -Wno-format-security"
 HOST_CXXFLAGS="$HOST_CXXFLAGS -Wno-format-security" 
 
 # lto flags
-FLAGS_OPTIM_LTO="-flto -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing"
+FLAGS_OPTIM_LTO="-flto=${CONCURRENCY_MAKE_LEVEL} -Werror=odr -Werror=lto-type-mismatch -Werror=strict-aliasing"
 FLAGS_OPTIM_LTO_NO_FAT="-fno-fat-lto-objects"
 FLAGS_OPTIM_LTO_FAT="-ffat-lto-objects"
 FLAGS_OPTIM_LTO_OFF="-fno-lto"
@@ -42,9 +42,9 @@ CXXFLAGS_OPTIM_SPEED="$CFLAGS_OPTIM_SPEED"
 CFLAGS_OPTIM_SIZE="-Os -fomit-frame-pointer"
 CXXFLAGS_OPTIM_SIZE="$CFLAGS_OPTIM_SIZE"
 # debug settings
-CFLAGS_OPTIM_DEBUG="-ggdb -Og"
+CFLAGS_OPTIM_DEBUG="-ggdb -Og ${DEBUG_SANITIZER_CFLAGS}"
 CXXFLAGS_OPTIM_DEBUG="$CFLAGS_OPTIM_DEBUG"
-LDFLAGS_OPTIM_DEBUG="-ggdb"
+LDFLAGS_OPTIM_DEBUG="-ggdb ${DEBUG_SANITIZER_LDFLAGS}"
 # split debug settings (requires gold)
 CFLAGS_OPTIM_DEBUG_SPLIT="-gdwarf-4 -gsplit-dwarf -Og"
 CXXFLAGS_OPTIM_DEBUG_SPLIT="$CFLAGS_OPTIM_DEBUG_SPLIT"
