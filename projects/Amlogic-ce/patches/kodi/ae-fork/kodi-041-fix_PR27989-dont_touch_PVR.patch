@@ -1,0 +1,23 @@
+diff -Naurp kodi/xbmc/filesystem/DirectoryFactory.cpp kodi-patch/xbmc/filesystem/DirectoryFactory.cpp
+--- kodi/xbmc/filesystem/DirectoryFactory.cpp	2026-03-25 14:06:00.000000000 +0000
++++ kodi-patch/xbmc/filesystem/DirectoryFactory.cpp	2026-03-27 08:57:34.000000000 +0000
+@@ -131,11 +131,15 @@ IDirectory* CDirectoryFactory::Create(co
+   // attempt to use a file-directory loader.
+   bool canBeFileDirectory = true;
+ 
+-  struct __stat64 st = {};
+-  if (CFile::Stat(URIUtils::SubstitutePath(url), &st) == 0)
++  // Do not perform a blocking Stat() on PVR or network streams to avoid delays
++  if (!url.IsProtocol("pvr") && !url.IsProtocol("http") && !url.IsProtocol("https") && !url.IsProtocol("udp"))
+   {
+-    item.SetFolder(S_ISDIR(st.st_mode));
+-    canBeFileDirectory = !item.IsFolder();
++    struct __stat64 st = {};
++    if (CFile::Stat(URIUtils::SubstitutePath(url), &st) == 0)
++    {
++      item.SetFolder(S_ISDIR(st.st_mode));
++      canBeFileDirectory = !item.IsFolder();
++    }
+   }
+ 
+   IFileDirectory* pDir = nullptr;
