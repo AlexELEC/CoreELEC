@@ -1,0 +1,102 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 9e87a8b..cb22f00 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -791,6 +791,23 @@ bool CVideoPlayer::OpenFile(const CFileItem& file, const CPlayerOptions &options
+ 
+   if (IsRunning())
+   {
++    CLog::Log(LOGINFO, "VideoPlayer::OpenFile - requesting async switch to: {}",
++              CURL::GetRedacted(file.GetPath()));
++
++    m_pendingOpenFile = true;
++
++    // Wake the player thread up if it is blocked in demux/input I/O so the queued
++    // PLAYER_OPENFILE message can be handled immediately instead of waiting for the
++    // current source to time out on its own.
++    if (m_pDemuxer)
++      m_pDemuxer->Abort();
++
++    if (m_pSubtitleDemuxer)
++      m_pSubtitleDemuxer->Abort();
++
++    if (m_pInputStream)
++      m_pInputStream->Abort();
++
+     CDVDMsgOpenFile::FileParams params;
+     params.m_item = file;
+     params.m_options = options;
+@@ -1377,6 +1394,9 @@ void CVideoPlayer::Prepare()
+ 
+   if (!OpenInputStream())
+   {
++    if (m_pendingOpenFile)
++      return;
++
+     m_bAbortRequest = true;
+     m_error = true;
+     return;
+@@ -1403,6 +1423,9 @@ void CVideoPlayer::Prepare()
+ 
+   if (!OpenDemuxStream())
+   {
++    if (m_pendingOpenFile)
++      return;
++
+     m_bAbortRequest = true;
+     m_error = true;
+     return;
+@@ -1540,6 +1563,9 @@ void CVideoPlayer::Process()
+     {
+       if (OpenInputStream() == false)
+       {
++        if (m_pendingOpenFile)
++          continue;
++
+         m_bAbortRequest = true;
+         break;
+       }
+@@ -1556,6 +1582,9 @@ void CVideoPlayer::Process()
+ 
+       if (OpenDemuxStream() == false)
+       {
++        if (m_pendingOpenFile)
++          continue;
++
+         m_bAbortRequest = true;
+         break;
+       }
+@@ -1633,6 +1662,12 @@ void CVideoPlayer::Process()
+ 
+     if (!pPacket)
+     {
++      if (m_pendingOpenFile)
++      {
++        CLog::Log(LOGDEBUG, "CVideoPlayer::Process - continuing with pending async open request");
++        continue;
++      }
++
+       // when paused, demuxer could be be returning empty
+       if (m_playSpeed == DVD_PLAYSPEED_PAUSE)
+         continue;
+@@ -2782,6 +2817,8 @@ void CVideoPlayer::HandleMessages()
+     {
+       CDVDMsgOpenFile& msg(*std::static_pointer_cast<CDVDMsgOpenFile>(pMsg));
+ 
++      m_pendingOpenFile = false;
++
+       IPlayerCallback *cb = &m_callback;
+       CFileItem fileItem(m_item);
+       UpdateFileItemStreamDetails(fileItem, UpdateStreamDetails::UPDATE_IF_FLAGGED);
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 971604b..3dc15ed 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -511,6 +511,7 @@ protected:
+   bool m_bAbortRequest;
+   bool m_error;
+   bool m_bCloseRequest;
++  std::atomic<bool> m_pendingOpenFile{false};
+ 
+   ECacheState  m_caching;
+   XbmcThreads::EndTime<> m_cachingTimer;
