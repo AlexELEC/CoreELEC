@@ -1,0 +1,15 @@
+diff --git a/xbmc/filesystem/DirectoryFactory.cpp b/xbmc/filesystem/DirectoryFactory.cpp
+--- a/xbmc/filesystem/DirectoryFactory.cpp
++++ b/xbmc/filesystem/DirectoryFactory.cpp
+@@ -134,8 +134,9 @@ IDirectory* CDirectoryFactory::Create(const CURL& url)
+   bool canBeFileDirectory = true;
+ 
+   struct __stat64 st = {};
+-  static constexpr auto excludedProtocols =
+-      make_set<std::string_view>({"upnp", "special", "addons", "favourites", "sources"});
++  static constexpr auto excludedProtocols = make_set<std::string_view>({
++      "upnp", "special", "addons", "favourites", "sources", "pvr", "http", "https",
++      "udp"});
+   const bool exclude{excludedProtocols.contains(url.GetProtocol())};
+   if (!exclude && CFile::Stat(URIUtils::SubstitutePath(url), &st) == 0)
+   {
