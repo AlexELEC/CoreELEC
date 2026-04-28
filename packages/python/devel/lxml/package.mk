@@ -8,5 +8,10 @@ PKG_LICENSE="BSD-3-Clause"
 PKG_SITE="https://lxml.de"
 PKG_URL="https://github.com/lxml/lxml/releases/download/${PKG_NAME}-${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_HOST="Python3:host libxml2:host libxslt:host setuptools:host"
+PKG_DEPENDS_TARGET="toolchain Python3 setuptools:host cython:host libxslt:host libxml2 libxslt"
 PKG_LONGDESC="The lxml XML toolkit for Python"
 PKG_TOOLCHAIN="python"
+
+post_makeinstall_target() {
+  python_remove_source
+}

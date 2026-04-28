@@ -1,0 +1,113 @@
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-04-13 05:31:40.356739498 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-04-13 05:35:58.000000000 +0000
+@@ -790,10 +790,25 @@ CVideoPlayer::~CVideoPlayer()
+ 
+ bool CVideoPlayer::OpenFile(const CFileItem& file, const CPlayerOptions &options)
+ {
+-  CLog::Log(LOGINFO, "VideoPlayer::OpenFile: {}", CURL::GetRedacted(file.GetPath()));
+-
+   if (IsRunning())
+   {
++    CLog::Log(LOGINFO, "VideoPlayer::OpenFile: requesting async switch to: {}",
++              CURL::GetRedacted(file.GetPath()));
++
++    m_pendingOpenFile = true;
++
++    // Wake the player thread up if it is blocked in demux/input I/O so the queued
++    // PLAYER_OPENFILE message can be handled immediately instead of waiting for the
++    // current source to time out on its own.
++    if (m_pDemuxer)
++      m_pDemuxer->Abort();
++
++    if (m_pSubtitleDemuxer)
++      m_pSubtitleDemuxer->Abort();
++
++    if (m_pInputStream)
++      m_pInputStream->Abort();
++
+     CDVDMsgOpenFile::FileParams params;
+     params.m_item = file;
+     params.m_options = options;
+@@ -803,6 +818,8 @@ bool CVideoPlayer::OpenFile(const CFileI
+     return true;
+   }
+ 
++  CLog::Log(LOGINFO, "VideoPlayer::OpenFile: {}", CURL::GetRedacted(file.GetPath()));
++
+   m_item = file;
+   m_playerOptions = options;
+ 
+@@ -1430,6 +1447,9 @@ void CVideoPlayer::Prepare()
+ 
+   if (!OpenInputStream())
+   {
++    if (m_pendingOpenFile)
++      return;
++
+     m_bAbortRequest = true;
+     m_error = true;
+     return;
+@@ -1456,6 +1476,9 @@ void CVideoPlayer::Prepare()
+ 
+   if (!OpenDemuxStream())
+   {
++    if (m_pendingOpenFile)
++      return;
++
+     m_bAbortRequest = true;
+     m_error = true;
+     return;
+@@ -1612,6 +1635,9 @@ void CVideoPlayer::Process()
+     {
+       if (OpenInputStream() == false)
+       {
++        if (m_pendingOpenFile)
++          continue;
++
+         m_bAbortRequest = true;
+         break;
+       }
+@@ -1628,6 +1654,9 @@ void CVideoPlayer::Process()
+ 
+       if (OpenDemuxStream() == false)
+       {
++        if (m_pendingOpenFile)
++          continue;
++
+         m_bAbortRequest = true;
+         break;
+       }
+@@ -1705,6 +1734,12 @@ void CVideoPlayer::Process()
+ 
+     if (!pPacket)
+     {
++      if (m_pendingOpenFile)
++      {
++        CLog::Log(LOGDEBUG, "CVideoPlayer::Process: continuing with pending async open request");
++        continue;
++      }
++
+       // when paused, demuxer could be be returning empty
+       if (m_playSpeed == DVD_PLAYSPEED_PAUSE)
+         continue;
+@@ -2875,6 +2910,8 @@ void CVideoPlayer::HandleMessages()
+     {
+       CDVDMsgOpenFile& msg(*std::static_pointer_cast<CDVDMsgOpenFile>(pMsg));
+ 
++      m_pendingOpenFile = false;
++
+       IPlayerCallback *cb = &m_callback;
+       CFileItem fileItem(m_item);
+       UpdateFileItemStreamDetails(fileItem, UpdateStreamDetails::UPDATE_IF_FLAGGED);
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-04-13 05:31:40.356739498 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-04-13 05:32:30.980818413 +0000
+@@ -511,6 +511,7 @@ protected:
+   bool m_bAbortRequest;
+   bool m_error;
+   bool m_bCloseRequest;
++  std::atomic<bool> m_pendingOpenFile{false};
+ 
+   ECacheState  m_caching;
+   XbmcThreads::EndTime<> m_cachingTimer;
