@@ -1,0 +1,181 @@
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-04-28 05:22:30.267152634 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-04-28 06:44:33.000000000 +0000
+@@ -899,6 +899,10 @@ bool CVideoPlayer::OpenInputStream()
+ {
+   if (m_pInputStream.use_count() > 1)
+     throw std::runtime_error("m_pInputStream reference count is greater than 1");
++
++  m_realtimePlaybackStarted = false;
++  m_realtimePlaybackStartTime = {};
++
+   m_pInputStream.reset();
+ 
+   CLog::Log(LOGINFO, "Creating InputStream");
+@@ -2141,6 +2145,17 @@ void CVideoPlayer::HandlePlaySpeed()
+   const bool isInMenu = IsInMenuInternal();
+   const bool tolerateStall =
+       isInMenu || (m_CurrentVideo.hint.flags & StreamFlags::FLAG_STILL_IMAGES);
++  const bool isRealtime = m_pInputStream && m_pInputStream->IsRealtime();
++  const auto now = std::chrono::steady_clock::now();
++  const bool realtimePlaybackStarted = m_realtimePlaybackStarted.load();
++
++  // Keep the original fast startup/channel-switch behaviour. The stricter live
++  // rebuffer mode is enabled only after playback has already been running for a
++  // short grace period, so it does not delay initial open/switch time.
++  const bool realtimeRebufferEnabled =
++      isRealtime && realtimePlaybackStarted &&
++      m_realtimePlaybackStartTime != std::chrono::time_point<std::chrono::steady_clock>{} &&
++      now - m_realtimePlaybackStartTime >= 3s;
+ 
+   if (tolerateStall && m_caching != CACHESTATE_DONE)
+     SetCaching(CACHESTATE_DONE);
+@@ -2158,21 +2173,34 @@ void CVideoPlayer::HandlePlaySpeed()
+       // Note: Previously used cache.level >= 1 would keep video stalled
+       // event after cache was full
+       // Talk link: https://github.com/xbmc/xbmc/pull/23760
+-      if (cache.time > m_messageQueueTimeSize)
++      if ((!isRealtime || !realtimeRebufferEnabled) && cache.time > m_messageQueueTimeSize)
+         SetCaching(CACHESTATE_INIT);
+     }
+-    else
++    else if (!isRealtime || !realtimeRebufferEnabled)
+     {
+       if ((!m_VideoPlayerAudio->AcceptsData() && m_CurrentAudio.id >= 0) ||
+           (!m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0))
+         SetCaching(CACHESTATE_INIT);
+     }
+ 
+-    // if audio stream stalled, wait until demux queue filled 10%
+-    if (m_pInputStream->IsRealtime() &&
+-        (m_CurrentAudio.id < 0 || m_VideoPlayerAudio->GetLevel() > 10))
++    if (isRealtime)
+     {
+-      SetCaching(CACHESTATE_INIT);
++      const int audioLevel = m_CurrentAudio.id < 0 ? 100 : m_VideoPlayerAudio->GetLevel();
++      const int videoLevel = m_CurrentVideo.id < 0 ? 100 : m_processInfo->GetLevelVQ();
++
++      if (!realtimeRebufferEnabled)
++      {
++        // Startup/channel switching path: preserve Kodi's existing quick resume
++        // threshold for realtime streams.
++        if (m_CurrentAudio.id < 0 || audioLevel > 10)
++          SetCaching(CACHESTATE_INIT);
++      }
++      else if (audioLevel >= 50 && videoLevel >= 10)
++      {
++        CLog::Log(LOGINFO, "VideoPlayer::HandlePlaySpeed(): Realtime stream buffering done. Audio: {} - Video: {}", audioLevel,
++                  videoLevel);
++        SetCaching(CACHESTATE_INIT);
++      }
+     }
+   }
+ 
+@@ -2205,6 +2233,25 @@ void CVideoPlayer::HandlePlaySpeed()
+ 
+   if (m_caching == CACHESTATE_DONE)
+   {
++    if (isRealtime && !realtimePlaybackStarted)
++    {
++      const bool audioReady =
++          m_CurrentAudio.id < 0 ||
++          (m_CurrentAudio.inited && m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
++           !m_VideoPlayerAudio->IsStalled());
++      const bool videoReady =
++          m_CurrentVideo.id < 0 ||
++          (m_CurrentVideo.inited && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
++           !m_VideoPlayerVideo->IsStalled());
++
++      if ((m_CurrentAudio.id >= 0 || m_CurrentVideo.id >= 0) && audioReady && videoReady)
++      {
++        m_realtimePlaybackStarted = true;
++        m_realtimePlaybackStartTime = now;
++        CLog::Log(LOGINFO, "VideoPlayer::HandlePlaySpeed(): Realtime playback reached running state");
++      }
++    }
++
+     if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
+     {
+       // take action if audio or video stream is stalled
+@@ -2212,7 +2259,7 @@ void CVideoPlayer::HandlePlaySpeed()
+            (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
+           m_syncTimer.IsTimePast())
+       {
+-        if (m_pInputStream->IsRealtime())
++        if (isRealtime)
+         {
+           if ((m_CurrentAudio.id >= 0 && m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+                m_VideoPlayerAudio->IsStalled()) ||
+@@ -2252,7 +2299,7 @@ void CVideoPlayer::HandlePlaySpeed()
+         }
+       }
+       // care for live streams
+-      else if (m_pInputStream->IsRealtime())
++      else if (isRealtime)
+       {
+         // Skip SpeedAdjust for passthrough: the message queue level metric is
+         // meaningless because passthrough packets are tiny and drain instantly,
+@@ -2261,18 +2308,38 @@ void CVideoPlayer::HandlePlaySpeed()
+         // drift at -50ms/s and persistent A/V sync oscillation.
+         if (m_CurrentAudio.id >= 0 && !IsPassthrough() && m_clock.GetClock() > DVD_MSEC_TO_TIME(1000))
+         {
+-          double adjust = -1.0; // a unique value
+-          if (m_clock.GetSpeedAdjust() >= 0 && m_VideoPlayerAudio->GetLevel() < 1) {
+-            CLog::Log(LOGDEBUG, "VideoPlayer:Speed adjust:-0.05 aq:{:d}", m_VideoPlayerAudio->GetLevel());
+-             adjust = -0.05;
+-          }
+-          if (m_clock.GetSpeedAdjust() < 0 && m_VideoPlayerAudio->GetLevel() > 4) {
+-            CLog::Log(LOGDEBUG, "VideoPlayer:Speed adjust:0.0 aq:{:d}", m_VideoPlayerAudio->GetLevel());
+-            adjust = 0.0;
++          const int audioLevel = m_VideoPlayerAudio->GetLevel();
++
++          if (realtimeRebufferEnabled)
++          {
++            // After playback is already running, prefer a real internal rebuffer
++            // over playing tiny bursts of video while audio is empty.
++            if (m_clock.GetSpeedAdjust() != 0.0)
++              m_clock.SetSpeedAdjust(0.0);
++
++            if (audioLevel < 5)
++            {
++              CLog::Log(LOGINFO,
++                        "VideoPlayer::HandlePlaySpeed(): Realtime audio queue underrun, start buffering. Audio: {} - Video: {}",
++                        audioLevel, m_processInfo->GetLevelVQ());
++
++              if (m_VideoPlayerAudio->AcceptsData() &&
++                  (m_CurrentVideo.id < 0 || m_VideoPlayerVideo->AcceptsData()))
++                SetCaching(CACHESTATE_FULL);
++            }
+           }
+-          if (adjust != -1.0)
++          else
+           {
+-            m_clock.SetSpeedAdjust(adjust);
++            // Initial startup/channel switching path: keep existing Kodi behaviour.
++            double adjust = -1.0; // a unique value
++            if (m_clock.GetSpeedAdjust() >= 0 && audioLevel < 1)
++              adjust = -0.05;
++
++            if (m_clock.GetSpeedAdjust() < 0 && audioLevel > 4)
++              adjust = 0.0;
++
++            if (adjust != -1.0)
++              m_clock.SetSpeedAdjust(adjust);
+           }
+         }
+       }
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-04-28 05:22:30.267152634 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-04-28 05:26:51.000000000 +0000
+@@ -619,6 +619,11 @@ protected:
+ 
+   bool m_updateStreamDetails{false};
+ 
++  // Realtime/live rebuffer protection must not affect initial channel startup.
++  // It becomes active only after playback has reached a stable running state.
++  std::atomic<bool> m_realtimePlaybackStarted{false};
++  std::chrono::time_point<std::chrono::steady_clock> m_realtimePlaybackStartTime{};
++
+   std::atomic<bool> m_displayLost;
+ 
+   double m_messageQueueTimeSize{0.0};
