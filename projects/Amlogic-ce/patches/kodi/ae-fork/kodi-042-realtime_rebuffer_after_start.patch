@@ -1,18 +1,19 @@
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-02 06:30:49.186767091 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-02 08:17:20.000000000 +0000
-@@ -78,6 +78,10 @@
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-02 15:35:38.000000000 +0000
+@@ -78,6 +78,11 @@
  using namespace KODI;
  using namespace std::chrono_literals;
  
 +// --- Realtime watchdog ---
 +static constexpr auto REALTIME_BUFFERING_TIMEOUT = 5s;
 +static constexpr auto REALTIME_RESET_COOLDOWN = 10s;
++static constexpr auto REALTIME_POST_RESET_BUFFER_TIME = 3s;
 +
  //------------------------------------------------------------------------------
  // selection streams
  //------------------------------------------------------------------------------
-@@ -899,6 +903,17 @@ bool CVideoPlayer::OpenInputStream()
+@@ -899,6 +904,18 @@ bool CVideoPlayer::OpenInputStream()
  {
    if (m_pInputStream.use_count() > 1)
      throw std::runtime_error("m_pInputStream reference count is greater than 1");
@@ -26,11 +27,12 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  m_realtimeBufferingStreamReset = false;
 +  m_realtimeBufferingStartTime = {};
 +  m_lastRealtimeResetTime = {};
++  m_realtimePostResetBufferUntil = {};
 +
    m_pInputStream.reset();
  
    CLog::Log(LOGINFO, "Creating InputStream");
-@@ -1184,9 +1199,24 @@ static int bad_packet_count = 0;
+@@ -1184,9 +1201,24 @@ static int bad_packet_count = 0;
  
  bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  {
@@ -56,7 +58,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    {
      packet = m_pSubtitleDemuxer->Read();
  
-@@ -1214,7 +1244,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1214,7 +1246,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
    }
  
    // read a data frame from stream.
@@ -65,7 +67,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      packet = m_pDemuxer->Read();
  
    if (packet)
-@@ -1222,7 +1252,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1222,7 +1254,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      // stream changed, update and open defaults
      if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
      {
@@ -74,7 +76,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_SelectionStreams.Clear(StreamType::NONE, STREAM_SOURCE_DEMUX);
        m_SelectionStreams.Update(m_pInputStream, m_pDemuxer.get());
        m_pDemuxer->GetPrograms(m_programs);
-@@ -1239,7 +1269,19 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1239,7 +1271,19 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      }
      else if (packet->iStreamId == DMX_SPECIALID_STREAMRESET) // stream reset
      {
@@ -95,17 +97,28 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_SelectionStreams.Clear(StreamType::NONE, STREAM_SOURCE_DEMUX);
        m_SelectionStreams.Update(m_pInputStream, m_pDemuxer.get());
        m_pDemuxer->GetPrograms(m_programs);
-@@ -1256,6 +1298,9 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1256,6 +1300,20 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
        m_HasVideo = (m_CurrentVideo.id >= 0);
        m_HasAudio = (m_CurrentAudio.id >= 0);
  
 +      m_realtimeBufferingActive = false;
 +      m_realtimeBufferingTimeoutTriggered = false;
 +
++      if (watchdogStreamReset)
++      {
++        m_realtimePostResetBufferUntil =
++            std::chrono::steady_clock::now() + REALTIME_POST_RESET_BUFFER_TIME;
++        CLog::Log(LOGINFO, "VideoPlayer: Watchdog post-reset buffering hold for {} ms",
++                  std::chrono::duration_cast<std::chrono::milliseconds>(
++                      REALTIME_POST_RESET_BUFFER_TIME)
++                      .count());
++        SetCaching(CACHESTATE_FULL);
++      }
++
        return true;
      }
  
-@@ -1279,24 +1324,15 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1279,24 +1337,15 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
            {
              if (now - m_lastStreamResetTime > minResetInterval)
              {
@@ -133,7 +146,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          return false;
        }
        if(stream->source == STREAM_SOURCE_NONE)
-@@ -2141,6 +2177,17 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2141,6 +2190,17 @@ void CVideoPlayer::HandlePlaySpeed()
    const bool isInMenu = IsInMenuInternal();
    const bool tolerateStall =
        isInMenu || (m_CurrentVideo.hint.flags & StreamFlags::FLAG_STILL_IMAGES);
@@ -151,7 +164,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
-@@ -2158,21 +2205,34 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2158,21 +2218,49 @@ void CVideoPlayer::HandlePlaySpeed()
        // Note: Previously used cache.level >= 1 would keep video stalled
        // event after cache was full
        // Talk link: https://github.com/xbmc/xbmc/pull/23760
@@ -185,14 +198,29 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +      }
 +      else if (audioLevel >= 50 && videoLevel >= 10)
 +      {
-+        CLog::Log(LOGINFO, "VideoPlayer: Realtime stream buffering done. Audio: {} - Video: {}", audioLevel,
-+                  videoLevel);
-+        SetCaching(CACHESTATE_INIT);
++        const bool postResetHoldActive =
++            m_realtimePostResetBufferUntil !=
++                std::chrono::time_point<std::chrono::steady_clock>{} &&
++            now < m_realtimePostResetBufferUntil;
++
++        if (!postResetHoldActive)
++        {
++          if (m_realtimePostResetBufferUntil !=
++              std::chrono::time_point<std::chrono::steady_clock>{})
++          {
++            CLog::Log(LOGINFO, "VideoPlayer: Watchdog post-reset buffering hold finished");
++            m_realtimePostResetBufferUntil = {};
++          }
++
++          CLog::Log(LOGINFO, "VideoPlayer: Realtime stream buffering done. Audio: {} - Video: {}", audioLevel,
++                    videoLevel);
++          SetCaching(CACHESTATE_INIT);
++        }
 +      }
      }
    }
  
-@@ -2205,6 +2265,25 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2205,6 +2293,25 @@ void CVideoPlayer::HandlePlaySpeed()
  
    if (m_caching == CACHESTATE_DONE)
    {
@@ -218,7 +246,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
      {
        // take action if audio or video stream is stalled
-@@ -2212,7 +2291,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2212,7 +2319,7 @@ void CVideoPlayer::HandlePlaySpeed()
             (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
            m_syncTimer.IsTimePast())
        {
@@ -227,7 +255,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          {
            if ((m_CurrentAudio.id >= 0 && m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
                 m_VideoPlayerAudio->IsStalled()) ||
-@@ -2252,7 +2331,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2252,7 +2359,7 @@ void CVideoPlayer::HandlePlaySpeed()
          }
        }
        // care for live streams
@@ -236,7 +264,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        {
          // Skip SpeedAdjust for passthrough: the message queue level metric is
          // meaningless because passthrough packets are tiny and drain instantly,
-@@ -2261,24 +2340,103 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2261,24 +2368,125 @@ void CVideoPlayer::HandlePlaySpeed()
          // drift at -50ms/s and persistent A/V sync oscillation.
          if (m_CurrentAudio.id >= 0 && !IsPassthrough() && m_clock.GetClock() > DVD_MSEC_TO_TIME(1000))
          {
@@ -295,23 +323,45 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +    const int audioLevel = m_CurrentAudio.id < 0 ? -1 : m_VideoPlayerAudio->GetLevel();
 +    const int videoLevel = m_CurrentVideo.id < 0 ? -1 : m_processInfo->GetLevelVQ();
 +
-+    const bool queuesEmpty =
-+        !noActiveStreams &&
-+        (m_CurrentAudio.id < 0 || audioLevel == 0) &&
-+        (m_CurrentVideo.id < 0 || videoLevel == 0);
-+    const bool stalled = noActiveStreams || queuesEmpty;
++    // Do not wait until both queues are exactly zero.  After a long live underrun
++    // the queues may briefly bounce from 0 to 1 and then back again; treating that
++    // as "recovered" lets the player resume with a stale audio clock, which shows
++    // up as ActiveAE "large audio sync error" and fast video catch-up.
++    const bool audioCritical = (m_CurrentAudio.id >= 0 && audioLevel < 5);
++    const bool videoCritical = (m_CurrentVideo.id >= 0 && videoLevel < 5);
++    const bool audioStalled =
++        (m_CurrentAudio.id >= 0 && m_CurrentAudio.inited && m_VideoPlayerAudio->IsStalled());
++    const bool videoStalled =
++        (m_CurrentVideo.id >= 0 && m_CurrentVideo.inited && m_VideoPlayerVideo->IsStalled());
++    const bool buffering = (m_caching == CACHESTATE_FULL);
++
++    const bool stalled = noActiveStreams || buffering || audioCritical || videoCritical ||
++                         audioStalled || videoStalled;
 +
 +    if (stalled)
 +    {
-+      if (!m_realtimeBufferingActive)
++      const bool postResetHoldActive =
++          m_realtimePostResetBufferUntil !=
++              std::chrono::time_point<std::chrono::steady_clock>{} &&
++          now < m_realtimePostResetBufferUntil;
++
++      if (postResetHoldActive)
++      {
++        // This is an intentional post-reset buffering window, not a new stall.
++        // Keep playback paused and do not start the watchdog timeout until the
++        // hold period has elapsed.
++        m_realtimeBufferingActive = false;
++        m_realtimeBufferingTimeoutTriggered = false;
++      }
++      else if (!m_realtimeBufferingActive)
 +      {
 +        m_realtimeBufferingStartTime = now;
 +        m_realtimeBufferingActive = true;
 +        m_realtimeBufferingTimeoutTriggered = false;
 +
 +        CLog::Log(LOGINFO,
-+                  "VideoPlayer: Watchdog START (stall detected). Audio: {} Video: {}",
-+                  audioLevel, videoLevel);
++                  "VideoPlayer: Watchdog START (stall detected). Audio: {} | Video: {} | Buffering: {} | AudioStalled: {} | VideoStalled: {} | NoStreams: {}",
++                  audioLevel, videoLevel, buffering, audioStalled, videoStalled, noActiveStreams);
 +      }
 +
 +      if (!m_realtimeBufferingTimeoutTriggered &&
@@ -322,8 +372,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +        if (now - m_lastRealtimeResetTime > REALTIME_RESET_COOLDOWN)
 +        {
 +          CLog::Log(LOGINFO,
-+                    "VideoPlayer: Watchdog - request stream reset. Audio: {} Video: {} NoStreams: {}",
-+                    audioLevel, videoLevel, noActiveStreams);
++                    "VideoPlayer: Watchdog - request stream reset. Audio: {} | Video: {} | Buffering: {} | AudioStalled: {} | VideoStalled: {} | NoStreams: {}",
++                    audioLevel, videoLevel, buffering, audioStalled, videoStalled, noActiveStreams);
 +
 +          m_lastRealtimeResetTime = now;
 +          m_realtimeBufferingStreamReset = true;
@@ -352,8 +402,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC))
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-02 06:30:49.190767071 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-02 05:14:32.000000000 +0000
-@@ -619,6 +619,18 @@ protected:
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-02 15:13:51.000000000 +0000
+@@ -619,6 +619,19 @@ protected:
  
    bool m_updateStreamDetails{false};
  
@@ -368,6 +418,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/Vide
 +  bool m_realtimeBufferingStreamReset{false};
 +  std::chrono::time_point<std::chrono::steady_clock> m_realtimeBufferingStartTime{};
 +  std::chrono::time_point<std::chrono::steady_clock> m_lastRealtimeResetTime{};
++  std::chrono::time_point<std::chrono::steady_clock> m_realtimePostResetBufferUntil{};
 +
    std::atomic<bool> m_displayLost;
  
