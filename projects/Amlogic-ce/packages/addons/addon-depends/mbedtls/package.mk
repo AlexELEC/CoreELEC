@@ -2,11 +2,11 @@
 # Copyright (C) 2023-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="mbedtls"
-PKG_VERSION="3.6.3.1"
-PKG_SHA256="243ed496d5f88a5b3791021be2800aac821b9a4cc16e7134aa413c58b4c20e0c"
+PKG_VERSION="4.1.0"
+PKG_SHA256="377a09cf8eb81b5fb2707045e5522d5489d3309fed5006c9874e60558fc81d10"
 PKG_LICENSE="Apache 2.0"
 PKG_SITE="https://github.com/Mbed-TLS/mbedtls"
-PKG_URL="https://github.com/Mbed-TLS/mbedtls/releases/download/v${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.bz2"
+PKG_URL="https://github.com/Mbed-TLS/mbedtls/releases/download/${PKG_NAME}-${PKG_VERSION}/${PKG_NAME}-${PKG_VERSION}.tar.bz2"
 PKG_DEPENDS_TARGET="toolchain jsonschema:host Jinja2:host"
 PKG_DEPENDS_UNPACK="mbedtls-framework"
 PKG_LONGDESC="Mbed TLS is a C library that implements cryptographic primitives, X.509 certificate manipulation and the SSL/TLS and DTLS protocols."
