@@ -1,6 +1,6 @@
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-02 06:30:49.186767091 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-06 06:09:50.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-09 12:31:58.000000000 +0000
 @@ -1222,7 +1222,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      // stream changed, update and open defaults
      if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
@@ -139,7 +139,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        if (m_CurrentVideo.inited)
        {
          m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::VIDEO_DRAIN));
-@@ -2145,8 +2191,93 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2145,8 +2191,98 @@ void CVideoPlayer::HandlePlaySpeed()
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
  
@@ -150,6 +150,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  constexpr int realtimeAudioCriticalLevel = 1;
 +  constexpr int realtimeVideoCriticalLevel = 1;
 +  constexpr auto realtimeBufferStableTime = 250ms;
++  constexpr auto realtimeBufferStalledGraceTime = 1000ms;
 +  constexpr auto realtimeBufferMaxHoldTime = 1500ms;
 +
 +  const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
@@ -199,20 +200,24 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +
 +        if (now - m_realtimeBufferReadySince >= realtimeBufferStableTime)
 +        {
-+          // If a stalled flag is still set and active queues are not buffered enough,
-+          // keep CACHESTATE_FULL a bit longer. Do not wait forever: max-hold releases
-+          // playback even if a stale stalled flag never clears.
++          // If a stalled flag is still set, do not resume immediately just because
++          // the queues are already buffered. Give the audio/video threads a short
++          // extra window to clear their stalled state before releasing playback.
++          // Max-hold is still kept as a safety net against stale stalled flags.
++          const bool stalledGracePassed =
++              now - m_realtimeBufferReadySince >= realtimeBufferStalledGraceTime;
 +          const bool maxHoldPassed =
 +              now - m_realtimeBufferReadySince >= realtimeBufferMaxHoldTime;
-+          const bool releaseBuffering =
-+              !realtimeStalled || realtimeQueuesBuffered || maxHoldPassed;
++          const bool releaseBuffering = !realtimeStalled ||
++                                        (realtimeQueuesBuffered && stalledGracePassed) ||
++                                        maxHoldPassed;
 +
 +          if (releaseBuffering)
 +          {
 +            CLog::Log(LOGINFO,
-+                      "VideoPlayer: realtime buffering done. Audio: {} | Video: {} | AudioStalled: {} | VideoStalled: {} | NoStreams: {} | QueuesBuffered: {} | MaxHold: {}",
++                      "VideoPlayer: realtime buffering done. Audio: {} | Video: {} | AudioStalled: {} | VideoStalled: {} | NoStreams: {} | QueuesBuffered: {} | StalledGrace: {} | MaxHold: {}",
 +                      audioLevel, videoLevel, audioStalled, videoStalled, noActiveStreams,
-+                      realtimeQueuesBuffered, maxHoldPassed);
++                      realtimeQueuesBuffered, stalledGracePassed, maxHoldPassed);
 +            m_realtimeBufferReadySince = {};
 +            SetCaching(CACHESTATE_INIT);
 +          }
@@ -233,7 +238,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      CacheInfo cache = GetCachingTimes();
      if (cache.valid)
      {
-@@ -2207,6 +2338,19 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2207,6 +2343,19 @@ void CVideoPlayer::HandlePlaySpeed()
    {
      if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
      {
@@ -253,7 +258,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // take action if audio or video stream is stalled
        if (((m_VideoPlayerAudio->IsStalled() && m_CurrentAudio.inited) ||
             (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
-@@ -2219,13 +2363,12 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2219,13 +2368,12 @@ void CVideoPlayer::HandlePlaySpeed()
                (m_CurrentVideo.id >= 0 && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
                 m_processInfo->GetLevelVQ() == 0))
            {
@@ -271,7 +276,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            }
          }
          else
-@@ -2252,28 +2395,16 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2252,28 +2400,16 @@ void CVideoPlayer::HandlePlaySpeed()
          }
        }
        // care for live streams
