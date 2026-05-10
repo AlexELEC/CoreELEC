@@ -1,6 +1,6 @@
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-02 06:30:49.186767091 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-09 12:31:58.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-10 10:27:29.000000000 +0000
 @@ -1222,7 +1222,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      // stream changed, update and open defaults
      if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
@@ -114,20 +114,22 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-@@ -1791,6 +1819,24 @@ void CVideoPlayer::Process()
+@@ -1784,6 +1812,26 @@ void CVideoPlayer::Process()
          continue;
        }
  
++      // A realtime live stream may temporarily produce no demux packets while the
++      // upstream IPTV source is stalled or being replaced. Treat this as a buffering
++      // condition, not as EOF/retry: do not drain/clear the already-open stream players
++      // and do not leave Process(), otherwise Kodi can close the client HTTP socket and
++      // TVLINK stops the channel. User stop/channel switch still exits through
++      // m_bAbortRequest/pending open handling above. Do this before NEXTSTREAM_RETRY,
++      // because retry loops can otherwise bypass HandlePlaySpeed() long enough for the
++      // TVLINK socket to fail after audio/video have already stalled.
 +      const bool realtimePlaybackStarted = m_pInputStream && m_pInputStream->IsRealtime() &&
 +                                           m_State.streamsReady;
 +      const bool noActiveStreams = (m_CurrentAudio.id < 0 && m_CurrentVideo.id < 0);
 +
-+      // A realtime live stream may temporarily produce no demux packets while the
-+      // upstream IPTV source is stalled or being replaced. Treat this as a buffering
-+      // condition, not as EOF: do not drain/clear the already-open stream players and
-+      // do not leave Process(), otherwise Kodi closes the client HTTP socket and
-+      // TVLINK stops the channel. User stop/channel switch still exits through
-+      // m_bAbortRequest/pending open handling above.
 +      if (realtimePlaybackStarted && !noActiveStreams)
 +      {
 +        m_realtimeBufferReadySince = {};
@@ -136,10 +138,10 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +        continue;
 +      }
 +
-       if (m_CurrentVideo.inited)
+       // input stream asked us to just retry
+       if(next == CDVDInputStream::NEXTSTREAM_RETRY)
        {
-         m_VideoPlayerVideo->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::VIDEO_DRAIN));
-@@ -2145,8 +2191,98 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2145,8 +2193,98 @@ void CVideoPlayer::HandlePlaySpeed()
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
  
@@ -238,7 +240,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      CacheInfo cache = GetCachingTimes();
      if (cache.valid)
      {
-@@ -2207,6 +2343,19 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2207,6 +2345,19 @@ void CVideoPlayer::HandlePlaySpeed()
    {
      if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
      {
@@ -258,7 +260,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // take action if audio or video stream is stalled
        if (((m_VideoPlayerAudio->IsStalled() && m_CurrentAudio.inited) ||
             (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
-@@ -2219,13 +2368,12 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2219,13 +2370,12 @@ void CVideoPlayer::HandlePlaySpeed()
                (m_CurrentVideo.id >= 0 && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
                 m_processInfo->GetLevelVQ() == 0))
            {
@@ -276,7 +278,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            }
          }
          else
-@@ -2252,28 +2400,16 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2252,28 +2402,16 @@ void CVideoPlayer::HandlePlaySpeed()
          }
        }
        // care for live streams
