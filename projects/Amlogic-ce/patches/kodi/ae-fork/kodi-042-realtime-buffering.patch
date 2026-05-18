@@ -32,7 +32,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp k
      UpdateStreamMap();
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-14 07:02:57.688416444 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-18 11:11:13.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-18 12:32:55.000000000 +0000
 @@ -1190,6 +1190,120 @@ void CVideoPlayer::OpenDefaultStreams(bo
  
  static int bad_packet_count = 0;
@@ -295,7 +295,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
      }
  
-@@ -1693,11 +1792,26 @@ void CVideoPlayer::Process()
+@@ -1693,11 +1792,34 @@ void CVideoPlayer::Process()
        int audioLevel = 90;
        int videoLevel = 90;
        bool fillBuffer = false;
@@ -308,7 +308,15 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          videoLevel = m_processInfo->GetLevelVQ();
 -      if (videoLevel < 85 && audioLevel < 85)
 +
-+      if (realtimeBuffering)
++      if (m_realtimeStreamResetPending)
++      {
++        // A pending STREAMRESET means the one-shot reset marker was already consumed,
++        // but the stream map was not usable yet. Keep the demuxer actively reading so
++        // it can see the following PAT/PMT/PES data instead of idling the TVLINK socket
++        // while the old audio/video queues still look full.
++        fillBuffer = true;
++      }
++      else if (realtimeBuffering)
 +      {
 +        constexpr int realtimeAudioBufferedLevel = 90;
 +        constexpr int realtimeVideoBufferedLevel = 90;
@@ -323,7 +331,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        {
          fillBuffer = true;
        }
-@@ -1705,9 +1819,16 @@ void CVideoPlayer::Process()
+@@ -1705,9 +1827,22 @@ void CVideoPlayer::Process()
          m_pDemuxer->FillBuffer(fillBuffer);
      }
  
@@ -334,16 +342,22 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +    const bool videoQueueFull = !m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0;
 +    const bool realtimeBuffering = m_pInputStream && m_pInputStream->IsRealtime() &&
 +                                   m_caching == CACHESTATE_FULL && m_State.streamsReady;
++    const bool realtimeLiveTransition =
++        m_pInputStream && m_pInputStream->IsRealtime() &&
++        (m_realtimeStreamResetPending || (m_caching == CACHESTATE_FULL && m_State.streamsReady));
 +
-+    // If both queues are full there is no room for more packets. For realtime buffering,
-+    // do not stop reading just because one queue is full: the other queue may still need
-+    // data before playback can safely resume.
-+    if ((!realtimeBuffering && (audioQueueFull || videoQueueFull)) ||
-+        (realtimeBuffering && audioQueueFull && videoQueueFull))
++    // If queues are full there is normally no room for more packets. But while a realtime
++    // live stream is buffering or completing a pending STREAMRESET, blocking here can stop
++    // ReadPacket() long enough for TVLINK's client socket write to fail before Kodi reaches
++    // the reset marker/new stream metadata. Keep reading during that transition; normal
++    // non-buffering playback still keeps the original backpressure behavior.
++    if (!realtimeLiveTransition &&
++        ((!realtimeBuffering && (audioQueueFull || videoQueueFull)) ||
++         (realtimeBuffering && audioQueueFull && videoQueueFull)))
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-@@ -1733,6 +1854,29 @@ void CVideoPlayer::Process()
+@@ -1733,6 +1868,29 @@ void CVideoPlayer::Process()
      DemuxPacket* pPacket = NULL;
      CDemuxStream *pStream = NULL;
      ReadPacket(pPacket, pStream);
@@ -373,7 +387,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      if (pPacket && !pStream)
      {
        /* probably a empty packet, just free it and move on */
-@@ -1792,6 +1936,66 @@ void CVideoPlayer::Process()
+@@ -1792,6 +1950,66 @@ void CVideoPlayer::Process()
          continue;
        }
  
@@ -440,7 +454,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // input stream asked us to just retry
        if(next == CDVDInputStream::NEXTSTREAM_RETRY)
        {
-@@ -2153,139 +2357,50 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2153,139 +2371,50 @@ void CVideoPlayer::HandlePlaySpeed()
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
  
@@ -624,7 +638,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    // sync streams to clock
    if ((m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC) ||
-@@ -2324,7 +2439,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2324,7 +2453,7 @@ void CVideoPlayer::HandlePlaySpeed()
      }
      else if (video && audio)
      {
@@ -633,7 +647,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
          CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                               m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
-@@ -2368,6 +2483,17 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2368,6 +2497,17 @@ void CVideoPlayer::HandlePlaySpeed()
          clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
        }
  
@@ -651,7 +665,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_clock.Discontinuity(clock);
        m_CurrentAudio.syncState = IDVDStreamPlayer::SYNC_INSYNC;
        m_CurrentAudio.avsync = CCurrentStream::AV_SYNC_NONE;
-@@ -2417,6 +2543,242 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2417,6 +2557,242 @@ void CVideoPlayer::HandlePlaySpeed()
        }
      }
    }
