@@ -32,8 +32,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp k
      UpdateStreamMap();
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-14 07:02:57.688416444 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-18 05:30:44.000000000 +0000
-@@ -1190,6 +1190,113 @@ void CVideoPlayer::OpenDefaultStreams(bo
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-18 11:11:13.000000000 +0000
+@@ -1190,6 +1190,120 @@ void CVideoPlayer::OpenDefaultStreams(bo
  
  static int bad_packet_count = 0;
  
@@ -53,6 +53,18 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  const bool wasPending = m_realtimeStreamResetPending;
 +  m_realtimeStreamResetLastTry = now;
 +
++  auto markPending = [&](bool restartTimer)
++  {
++    if (!m_realtimeStreamResetPending ||
++        m_realtimeStreamResetPendingSince == std::chrono::steady_clock::time_point{} ||
++        restartTimer)
++      m_realtimeStreamResetPendingSince = now;
++
++    m_realtimeStreamResetPending = true;
++    m_realtimeBufferReadySince = {};
++    SetCaching(CACHESTATE_FULL);
++  };
++
 +  if (!m_pDemuxer)
 +  {
 +    if (realtime && !m_bAbortRequest && !m_pendingOpenFile)
@@ -64,9 +76,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +      // STREAMRESET is a one-shot marker. If it arrives while the demuxer is
 +      // temporarily unavailable, remember it and complete it after the demuxer
 +      // is recreated or the stream map is updated.
-+      m_realtimeStreamResetPending = true;
-+      m_realtimeBufferReadySince = {};
-+      SetCaching(CACHESTATE_FULL);
++      markPending(resetDemuxer);
 +    }
 +    return false;
 +  }
@@ -97,9 +107,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +    // Do not close the currently opened players until there is something usable
 +    // to open instead. STREAMRESET will not be sent again, so keep a pending
 +    // reset and retry after stream-map changes or later demux packets.
-+    m_realtimeStreamResetPending = true;
-+    m_realtimeBufferReadySince = {};
-+    SetCaching(CACHESTATE_FULL);
++    markPending(resetDemuxer);
 +    return false;
 +  }
 +
@@ -129,14 +137,13 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +                audioStreams, videoStreams);
 +    }
 +
-+    m_realtimeStreamResetPending = true;
-+    m_realtimeBufferReadySince = {};
-+    SetCaching(CACHESTATE_FULL);
++    markPending(resetDemuxer);
 +    return false;
 +  }
 +
 +  m_realtimeStreamResetPending = false;
 +  m_realtimeStreamResetLastTry = {};
++  m_realtimeStreamResetPendingSince = {};
 +  bad_packet_count = 0;
 +  CLog::Log(LOGINFO,
 +            "VideoPlayer: [STREAM RESET] done! Demux A/V streams: {}/{} | Current A/V IDs: {}/{}",
@@ -147,7 +154,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  {
  
-@@ -1230,12 +1337,16 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1230,12 +1344,16 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      // stream changed, update and open defaults
      if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
      {
@@ -166,7 +173,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
        // reevaluate HasVideo/Audio, we may have switched from/to a radio channel
        if(m_CurrentVideo.id < 0)
-@@ -1245,25 +1356,11 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1245,25 +1363,11 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
  
        return true;
      }
@@ -196,7 +203,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        return true;
      }
  
-@@ -1287,31 +1384,31 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1287,31 +1391,31 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
            {
              if (now - m_lastStreamResetTime > minResetInterval)
              {
@@ -240,7 +247,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        }
      }
      return true;
-@@ -1446,6 +1543,11 @@ void CVideoPlayer::Prepare()
+@@ -1446,6 +1550,12 @@ void CVideoPlayer::Prepare()
    m_offset_pts = 0;
    m_CurrentAudio.lastdts = DVD_NOPTS_VALUE;
    m_CurrentVideo.lastdts = DVD_NOPTS_VALUE;
@@ -249,10 +256,11 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  m_realtimeNoStreamsSince = {};
 +  m_realtimeStreamResetPending = false;
 +  m_realtimeStreamResetLastTry = {};
++  m_realtimeStreamResetPendingSince = {};
  
    IPlayerCallback *cb = &m_callback;
    CFileItem fileItem = m_item;
-@@ -1590,22 +1692,8 @@ void CVideoPlayer::Prepare()
+@@ -1590,22 +1700,8 @@ void CVideoPlayer::Prepare()
    if (m_pInputStream->IsRealtime() &&
        m_pInputStream->IsStreamType(DVDSTREAM_TYPE_ADDON))
    {
@@ -277,7 +285,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    }
  }
  
-@@ -1675,6 +1763,9 @@ void CVideoPlayer::Process()
+@@ -1675,6 +1771,9 @@ void CVideoPlayer::Process()
            !m_SelectionStreams.m_Streams.empty())
          OpenDefaultStreams();
  
@@ -287,7 +295,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
      }
  
-@@ -1693,11 +1784,26 @@ void CVideoPlayer::Process()
+@@ -1693,11 +1792,26 @@ void CVideoPlayer::Process()
        int audioLevel = 90;
        int videoLevel = 90;
        bool fillBuffer = false;
@@ -315,7 +323,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        {
          fillBuffer = true;
        }
-@@ -1705,9 +1811,16 @@ void CVideoPlayer::Process()
+@@ -1705,9 +1819,16 @@ void CVideoPlayer::Process()
          m_pDemuxer->FillBuffer(fillBuffer);
      }
  
@@ -335,17 +343,29 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-@@ -1733,6 +1846,17 @@ void CVideoPlayer::Process()
+@@ -1733,6 +1854,29 @@ void CVideoPlayer::Process()
      DemuxPacket* pPacket = NULL;
      CDemuxStream *pStream = NULL;
      ReadPacket(pPacket, pStream);
 +
 +    if (m_realtimeStreamResetPending && pPacket && pPacket->iStreamId >= 0)
 +    {
++      constexpr auto pendingResetDemuxerRetryTime = 5s;
++      const auto now = std::chrono::steady_clock::now();
++      const bool demuxerResetRetry =
++          m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
++          now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
++
++      if (demuxerResetRetry)
++      {
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++      }
++
 +      // A normal demux packet means the demuxer had another chance to expose
 +      // its updated stream map. Try to complete the one-shot STREAMRESET now,
 +      // but do not feed this transition packet to the old/current players.
-+      HandleStreamReset(false, true);
++      HandleStreamReset(demuxerResetRetry, true);
 +      CDVDDemuxUtils::FreeDemuxPacket(pPacket);
 +      continue;
 +    }
@@ -353,10 +373,32 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      if (pPacket && !pStream)
      {
        /* probably a empty packet, just free it and move on */
-@@ -1792,6 +1916,44 @@ void CVideoPlayer::Process()
+@@ -1792,6 +1936,66 @@ void CVideoPlayer::Process()
          continue;
        }
  
++      if (m_realtimeStreamResetPending && m_pInputStream && m_pInputStream->IsRealtime() &&
++          !m_pInputStream->IsEOF())
++      {
++        constexpr auto pendingResetDemuxerRetryTime = 5s;
++        const auto now = std::chrono::steady_clock::now();
++        const bool demuxerResetRetry =
++            m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
++            now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
++
++        if (demuxerResetRetry)
++        {
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++        }
++
++        HandleStreamReset(demuxerResetRetry, true);
++        m_realtimeBufferReadySince = {};
++        SetCaching(CACHESTATE_FULL);
++        CThread::Sleep(100ms);
++        continue;
++      }
++
 +      // A realtime live stream may temporarily produce no demux packets while the
 +      // upstream IPTV source is stalled or being replaced. Treat this as a buffering
 +      // condition, not as EOF/retry: do not drain/clear the already-open stream players
@@ -398,7 +440,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // input stream asked us to just retry
        if(next == CDVDInputStream::NEXTSTREAM_RETRY)
        {
-@@ -2153,139 +2315,50 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2153,139 +2357,50 @@ void CVideoPlayer::HandlePlaySpeed()
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
  
@@ -582,7 +624,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    // sync streams to clock
    if ((m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC) ||
-@@ -2324,7 +2397,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2324,7 +2439,7 @@ void CVideoPlayer::HandlePlaySpeed()
      }
      else if (video && audio)
      {
@@ -591,7 +633,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
          CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                               m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
-@@ -2368,6 +2441,17 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2368,6 +2483,17 @@ void CVideoPlayer::HandlePlaySpeed()
          clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
        }
  
@@ -609,7 +651,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_clock.Discontinuity(clock);
        m_CurrentAudio.syncState = IDVDStreamPlayer::SYNC_INSYNC;
        m_CurrentAudio.avsync = CCurrentStream::AV_SYNC_NONE;
-@@ -2417,6 +2501,242 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2417,6 +2543,242 @@ void CVideoPlayer::HandlePlaySpeed()
        }
      }
    }
@@ -854,7 +896,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    if (m_playSpeed != DVD_PLAYSPEED_NORMAL && m_playSpeed != DVD_PLAYSPEED_PAUSE)
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-14 07:02:57.688416444 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-17 18:50:12.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-18 10:59:49.000000000 +0000
 @@ -480,6 +480,7 @@ protected:
    void SendPlayerMessage(std::shared_ptr<CDVDMsg> pMsg, unsigned int target);
  
@@ -863,13 +905,14 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/Vide
    bool IsValidStream(const CCurrentStream& stream);
    bool IsBetterStream(const CCurrentStream& current, CDemuxStream* stream);
    void CheckBetterStream(CCurrentStream& current, CDemuxStream* stream);
-@@ -616,6 +617,11 @@ protected:
+@@ -616,6 +617,12 @@ protected:
    bool m_HasAudio;
  
    std::chrono::steady_clock::time_point m_lastStreamResetTime;
 +  std::chrono::steady_clock::time_point m_realtimeBufferReadySince{};
 +  std::chrono::steady_clock::time_point m_realtimeNoStreamsSince{};
 +  std::chrono::steady_clock::time_point m_realtimeStreamResetLastTry{};
++  std::chrono::steady_clock::time_point m_realtimeStreamResetPendingSince{};
 +  bool m_realtimeStreamResetPending{false};
 +  bool m_realtimeBufferMaxHoldLogged{false};
  
