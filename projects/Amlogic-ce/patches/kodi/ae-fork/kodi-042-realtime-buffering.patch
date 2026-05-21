@@ -32,7 +32,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp k
      UpdateStreamMap();
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-14 07:02:57.688416444 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-20 13:23:58.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-21 05:49:28.523999327 +0000
 @@ -1025,22 +1025,24 @@ void CVideoPlayer::CloseDemuxer()
    CServiceBroker::GetDataCacheCore().SignalSubtitleInfoChange();
  }
@@ -110,7 +110,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    }
  
    // enable or disable subtitles
-@@ -1186,10 +1201,178 @@ void CVideoPlayer::OpenDefaultStreams(bo
+@@ -1186,10 +1201,188 @@ void CVideoPlayer::OpenDefaultStreams(bo
  
    if (noBlurayMenu)
      SynchronizeDemuxer();
@@ -229,6 +229,10 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +    m_realtimeBufferReadySince = {};
 +    m_realtimeBufferMaxHoldLogged = false;
 +    m_realtimeAudioStallHoldLogged = false;
++    m_realtimeVideoStallHoldLogged = false;
++    m_realtimePostTransitionVideoGraceUntil = {};
++    m_realtimePostTransitionVideoDropSince = {};
++    m_realtimePostTransitionVideoDropLogged = false;
 +
 +    CLog::Log(LOGINFO,
 +              "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
@@ -258,6 +262,9 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  m_realtimeFailedStreamChangeLogged = false;
 +  m_realtimeAudioStallHoldLogged = false;
 +  m_realtimeVideoStallHoldLogged = false;
++  m_realtimePostTransitionVideoGraceUntil = {};
++  m_realtimePostTransitionVideoDropSince = {};
++  m_realtimePostTransitionVideoDropLogged = false;
 +
 +  // Keep the aggressive post-transition read window only for in-place realtime
 +  // stream switches after playback has already started. The forced STREAMRESET
@@ -277,6 +284,9 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  {
 +    m_realtimeStreamTransitionReadUntil = {};
 +    m_realtimeStreamTransitionReadLogged = false;
++    m_realtimePostTransitionVideoGraceUntil = {};
++    m_realtimePostTransitionVideoDropSince = {};
++    m_realtimePostTransitionVideoDropLogged = false;
 +  }
 +
 +  bad_packet_count = 0;
@@ -289,7 +299,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  {
  
-@@ -1230,12 +1413,54 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1230,12 +1423,54 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
      // stream changed, update and open defaults
      if (packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
      {
@@ -346,7 +356,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
        // reevaluate HasVideo/Audio, we may have switched from/to a radio channel
        if(m_CurrentVideo.id < 0)
-@@ -1245,25 +1470,11 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1245,25 +1480,11 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
  
        return true;
      }
@@ -376,7 +386,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        return true;
      }
  
-@@ -1287,31 +1498,37 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1287,31 +1508,37 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
            {
              if (now - m_lastStreamResetTime > minResetInterval)
              {
@@ -426,7 +436,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        }
      }
      return true;
-@@ -1446,6 +1663,17 @@ void CVideoPlayer::Prepare()
+@@ -1446,6 +1673,20 @@ void CVideoPlayer::Prepare()
    m_offset_pts = 0;
    m_CurrentAudio.lastdts = DVD_NOPTS_VALUE;
    m_CurrentVideo.lastdts = DVD_NOPTS_VALUE;
@@ -436,6 +446,9 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  m_realtimeAudioStallHoldLogged = false;
 +  m_realtimeVideoStallHoldLogged = false;
 +  m_realtimeStreamTransitionReadLogged = false;
++  m_realtimePostTransitionVideoGraceUntil = {};
++  m_realtimePostTransitionVideoDropSince = {};
++  m_realtimePostTransitionVideoDropLogged = false;
 +  m_realtimeNoStreamsSince = {};
 +  m_realtimeStreamTransitionReadUntil = {};
 +  m_realtimeStreamResetPending = false;
@@ -444,7 +457,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    IPlayerCallback *cb = &m_callback;
    CFileItem fileItem = m_item;
-@@ -1590,22 +1818,8 @@ void CVideoPlayer::Prepare()
+@@ -1590,22 +1831,8 @@ void CVideoPlayer::Prepare()
    if (m_pInputStream->IsRealtime() &&
        m_pInputStream->IsStreamType(DVDSTREAM_TYPE_ADDON))
    {
@@ -469,7 +482,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    }
  }
  
-@@ -1675,6 +1889,9 @@ void CVideoPlayer::Process()
+@@ -1675,6 +1902,9 @@ void CVideoPlayer::Process()
            !m_SelectionStreams.m_Streams.empty())
          OpenDefaultStreams();
  
@@ -479,7 +492,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
      }
  
-@@ -1693,11 +1910,73 @@ void CVideoPlayer::Process()
+@@ -1693,11 +1923,81 @@ void CVideoPlayer::Process()
        int audioLevel = 90;
        int videoLevel = 90;
        bool fillBuffer = false;
@@ -494,12 +507,20 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +        // from the previous input returns.
 +        m_realtimeStreamTransitionReadUntil = {};
 +        m_realtimeStreamTransitionReadLogged = false;
++        m_realtimePostTransitionVideoGraceUntil = {};
++        m_realtimePostTransitionVideoDropSince = {};
++        m_realtimePostTransitionVideoDropLogged = false;
 +      }
 +      else if (m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{} &&
 +               now >= m_realtimeStreamTransitionReadUntil)
 +      {
 +        m_realtimeStreamTransitionReadUntil = {};
 +        m_realtimeStreamTransitionReadLogged = false;
++        if (m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
++        {
++          m_realtimePostTransitionVideoGraceUntil = {};
++          m_realtimePostTransitionVideoDropLogged = false;
++        }
 +      }
 +      const bool realtimeBuffering =
 +          realtime && m_caching == CACHESTATE_FULL && m_State.streamsReady;
@@ -554,7 +575,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        {
          fillBuffer = true;
        }
-@@ -1705,9 +1984,53 @@ void CVideoPlayer::Process()
+@@ -1705,9 +2005,61 @@ void CVideoPlayer::Process()
          m_pDemuxer->FillBuffer(fillBuffer);
      }
  
@@ -570,12 +591,20 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +    {
 +      m_realtimeStreamTransitionReadUntil = {};
 +      m_realtimeStreamTransitionReadLogged = false;
++      m_realtimePostTransitionVideoGraceUntil = {};
++      m_realtimePostTransitionVideoDropSince = {};
++      m_realtimePostTransitionVideoDropLogged = false;
 +    }
 +    else if (m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{} &&
 +             now >= m_realtimeStreamTransitionReadUntil)
 +    {
 +      m_realtimeStreamTransitionReadUntil = {};
 +      m_realtimeStreamTransitionReadLogged = false;
++      if (m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
++      {
++        m_realtimePostTransitionVideoGraceUntil = {};
++        m_realtimePostTransitionVideoDropLogged = false;
++      }
 +    }
 +    const bool realtimeBuffering = realtime && m_caching == CACHESTATE_FULL && m_State.streamsReady;
 +    const bool realtimeTransitionRead =
@@ -611,7 +640,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-@@ -1733,6 +2056,29 @@ void CVideoPlayer::Process()
+@@ -1733,6 +2085,29 @@ void CVideoPlayer::Process()
      DemuxPacket* pPacket = NULL;
      CDemuxStream *pStream = NULL;
      ReadPacket(pPacket, pStream);
@@ -641,7 +670,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      if (pPacket && !pStream)
      {
        /* probably a empty packet, just free it and move on */
-@@ -1792,6 +2138,66 @@ void CVideoPlayer::Process()
+@@ -1792,6 +2167,66 @@ void CVideoPlayer::Process()
          continue;
        }
  
@@ -708,7 +737,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // input stream asked us to just retry
        if(next == CDVDInputStream::NEXTSTREAM_RETRY)
        {
-@@ -2153,139 +2559,51 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2153,139 +2588,53 @@ void CVideoPlayer::HandlePlaySpeed()
    if (tolerateStall && m_caching != CACHESTATE_DONE)
      SetCaching(CACHESTATE_DONE);
  
@@ -855,6 +884,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  constexpr auto realtimeBufferMaxHoldTime = 5000ms;
 +  constexpr auto realtimeBufferEmergencyResetTime = 10000ms;
 +  constexpr auto realtimePostTransitionReadTime = 20s;
++  constexpr auto realtimePostTransitionVideoGraceTime = 3s;
++
 +
 +  const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
 +  const bool realtimePlaybackStarted = realtime && m_State.streamsReady;
@@ -893,7 +924,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    // sync streams to clock
    if ((m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC) ||
-@@ -2324,7 +2642,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2324,7 +2673,7 @@ void CVideoPlayer::HandlePlaySpeed()
      }
      else if (video && audio)
      {
@@ -902,7 +933,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
          CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                               m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
-@@ -2368,6 +2686,17 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2368,6 +2717,17 @@ void CVideoPlayer::HandlePlaySpeed()
          clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
        }
  
@@ -920,7 +951,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_clock.Discontinuity(clock);
        m_CurrentAudio.syncState = IDVDStreamPlayer::SYNC_INSYNC;
        m_CurrentAudio.avsync = CCurrentStream::AV_SYNC_NONE;
-@@ -2377,7 +2706,34 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2377,7 +2737,34 @@ void CVideoPlayer::HandlePlaySpeed()
            std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
        m_VideoPlayerVideo->SendMessage(
            std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
@@ -956,7 +987,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
  
        m_syncTimer.Set(3000ms);
-@@ -2418,6 +2774,303 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2418,6 +2805,377 @@ void CVideoPlayer::HandlePlaySpeed()
      }
    }
  
@@ -1030,8 +1061,20 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +            {
 +              m_realtimeStreamTransitionReadUntil = now + realtimePostTransitionReadTime;
 +              m_realtimeStreamTransitionReadLogged = false;
++              m_realtimePostTransitionVideoGraceUntil =
++                  now + realtimePostTransitionVideoGraceTime;
++              m_realtimePostTransitionVideoDropSince = {};
++              m_realtimePostTransitionVideoDropLogged = false;
 +              CLog::Log(LOGINFO,
 +                        "VideoPlayer: realtime transition read window extended after buffering recovery (20s guard)");
++              CLog::Log(LOGINFO,
++                        "VideoPlayer: realtime post-transition video grace armed (3s guard)");
++            }
++            else
++            {
++              m_realtimePostTransitionVideoGraceUntil = {};
++              m_realtimePostTransitionVideoDropSince = {};
++              m_realtimePostTransitionVideoDropLogged = false;
 +            }
 +
 +            SetCaching(CACHESTATE_INIT);
@@ -1174,6 +1217,68 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +  {
 +    if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
 +    {
++      const auto now = std::chrono::steady_clock::now();
++      if (m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
++          now >= m_realtimePostTransitionVideoGraceUntil &&
++          m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
++      {
++        m_realtimePostTransitionVideoGraceUntil = {};
++        m_realtimePostTransitionVideoDropLogged = false;
++      }
++
++      const bool realtimePostTransitionVideoGrace =
++          realtime && !m_pendingOpenFile &&
++          m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
++          (now < m_realtimePostTransitionVideoGraceUntil ||
++           m_realtimePostTransitionVideoDropSince != std::chrono::steady_clock::time_point{});
++
++      const bool videoOnlyCriticalAfterTransition =
++          realtimePostTransitionVideoGrace && videoCritical && !audioCritical &&
++          !audioStalled && !videoStalled;
++
++      if (videoOnlyCriticalAfterTransition)
++      {
++        if (m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
++          m_realtimePostTransitionVideoDropSince = now;
++
++        const bool dropTimeout =
++            now - m_realtimePostTransitionVideoDropSince >= realtimePostTransitionVideoGraceTime;
++
++        if (!dropTimeout)
++        {
++          if (!m_realtimePostTransitionVideoDropLogged)
++          {
++            CLog::Log(LOGWARNING,
++                      "VideoPlayer: realtime post-transition video queue dipped, give renderer grace before buffering. A/V levels: {}/{}",
++                      audioLevel, videoLevel);
++            m_realtimePostTransitionVideoDropLogged = true;
++          }
++          return;
++        }
++
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime post-transition video queue did not recover, request stream reset. A/V levels: {}/{}",
++                  audioLevel, videoLevel);
++        m_realtimePostTransitionVideoGraceUntil = {};
++        m_realtimePostTransitionVideoDropSince = {};
++        m_realtimePostTransitionVideoDropLogged = false;
++        m_realtimeBufferReadySince = {};
++        m_realtimeBufferMaxHoldLogged = false;
++        HandleStreamReset(true);
++        return;
++      }
++      else if (!videoCritical &&
++               m_realtimePostTransitionVideoDropSince != std::chrono::steady_clock::time_point{})
++      {
++        CLog::Log(LOGINFO,
++                  "VideoPlayer: realtime post-transition video queue recovered. A/V levels: {}/{}",
++                  audioLevel, videoLevel);
++        m_realtimePostTransitionVideoDropSince = {};
++        m_realtimePostTransitionVideoDropLogged = false;
++        if (now >= m_realtimePostTransitionVideoGraceUntil)
++          m_realtimePostTransitionVideoGraceUntil = {};
++      }
++
 +      if (realtimePlaybackStarted && !noActiveStreams &&
 +          (audioCritical || videoCritical || audioStalled || videoStalled))
 +      {
@@ -1260,7 +1365,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    // handle ff/rw
    if (m_playSpeed != DVD_PLAYSPEED_NORMAL && m_playSpeed != DVD_PLAYSPEED_PAUSE)
    {
-@@ -4151,34 +4804,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4151,34 +4909,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
    if (hint.flags & AV_DISPOSITION_ATTACHED_PIC)
      return false;
  
@@ -1295,7 +1400,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    IDVDStreamPlayer* player = GetStreamPlayer(m_CurrentVideo.player);
    if(player == nullptr)
      return false;
-@@ -4192,6 +4817,37 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4192,6 +4922,37 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
      if (!player->OpenStream(hint))
        return false;
  
@@ -1335,7 +1440,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      const std::shared_ptr<CDVDInputStream::IExtentionStream>  pExt = std::dynamic_pointer_cast<CDVDInputStream::IExtentionStream>(m_pInputStream);
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-14 07:02:57.688416444 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-20 06:46:18.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-21 05:49:28.523999327 +0000
 @@ -480,6 +480,7 @@ protected:
    void SendPlayerMessage(std::shared_ptr<CDVDMsg> pMsg, unsigned int target);
  
@@ -1353,7 +1458,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/Vide
  
    void UpdatePlayState(double timeout);
    void GetGeneralInfo(std::string& strVideoInfo);
-@@ -616,6 +617,17 @@ protected:
+@@ -616,6 +617,20 @@ protected:
    bool m_HasAudio;
  
    std::chrono::steady_clock::time_point m_lastStreamResetTime;
@@ -1368,6 +1473,9 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/Vide
 +  bool m_realtimeAudioStallHoldLogged{false};
 +  bool m_realtimeVideoStallHoldLogged{false};
 +  bool m_realtimeStreamTransitionReadLogged{false};
++  std::chrono::steady_clock::time_point m_realtimePostTransitionVideoGraceUntil{};
++  std::chrono::steady_clock::time_point m_realtimePostTransitionVideoDropSince{};
++  bool m_realtimePostTransitionVideoDropLogged{false};
  
    bool m_updateStreamDetails{false};
  
