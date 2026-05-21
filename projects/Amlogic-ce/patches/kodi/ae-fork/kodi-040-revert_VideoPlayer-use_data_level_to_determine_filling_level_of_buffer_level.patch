@@ -87,14 +87,16 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cor
    s << ", ac:"   << m_processInfo.GetAudioDecoderName().c_str();
    if (!m_info.passthrough)
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2025-07-06 11:06:16.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2025-07-08 06:32:15.000000000 +0000
-@@ -1047,8 +1047,8 @@ std::string CVideoPlayerVideo::GetPlayer
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2026-05-21 10:52:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2026-05-21 12:22:47.000000000 +0000
+@@ -1093,10 +1093,8 @@ std::string CVideoPlayerVideo::GetPlayer
    std::ostringstream s;
    int width, height;
    m_processInfo.GetVideoDimensions(width, height);
--  s << "vq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99, m_messageQueue.GetLevel(true)) << "%)";
--  s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
+-  s << "vq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99, m_messageQueue.GetLevel(true));
+-  if (m_pVideoCodec && m_processInfo.IsVideoHwDecoder())
+-    s << "%/" << std::setw(2) << std::min(99, m_pVideoCodec->GetDataLevel());
+-  s << "%)" << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
 +  s << "vq:" << std::setw(2) << std::min(99, m_processInfo.GetLevelVQ());
 +  s << "% " << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
    s << "s, Mb/s:" << std::fixed << std::setprecision(2)
