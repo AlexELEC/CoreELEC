@@ -1,38 +1,6 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
---- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-05-21 10:52:16.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-05-21 12:30:23.239975084 +0000
-@@ -333,8 +333,14 @@ DemuxPacket* CDVDDemuxClient::Read()
-     CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
-     return CDVDDemuxUtils::AllocateDemuxPacket(0);
-   }
--  else if (m_packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
-+  else if (m_packet->iStreamId == DMX_SPECIALID_STREAMCHANGE ||
-+           m_packet->iStreamId == DMX_SPECIALID_STREAMRESET)
-   {
-+    // TVLINK uses this DMX_SPECIALID_STREAMRESET marker to force VideoPlayer to reopen
-+    // the selected streams after the inputstream add-on reports a live stream
-+    // layout change. Keep the marker packet for VideoPlayer::ReadPacket(), but
-+    // refresh CDVDDemuxClient's stream map first so OpenDefaultStreams() does
-+    // not request stale/invalid stream ids from the old layout.
-     RequestStreams();
-   }
-   else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
-diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp
---- kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp	2026-05-21 10:52:16.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp	2026-05-21 12:30:23.239975084 +0000
-@@ -166,7 +166,8 @@ DemuxPacket* CInputStreamPVRBase::ReadDe
-     m_client->GetStreamProperties(m_StreamProps.get());
-     return pPacket;
-   }
--  else if (pPacket->iStreamId == DMX_SPECIALID_STREAMCHANGE)
-+  else if (pPacket->iStreamId == DMX_SPECIALID_STREAMCHANGE ||
-+           pPacket->iStreamId == DMX_SPECIALID_STREAMRESET)
-   {
-     m_client->GetStreamProperties(m_StreamProps.get());
-     UpdateStreamMap();
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-21 12:28:25.541124976 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-21 12:30:23.239975084 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 05:30:50.112331348 +0000
 @@ -1030,22 +1030,24 @@ void CVideoPlayer::CloseDemuxer()
    CServiceBroker::GetDataCacheCore().SignalSubtitleInfoChange();
  }
@@ -1440,7 +1408,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      const std::shared_ptr<CDVDInputStream::IExtentionStream>  pExt = std::dynamic_pointer_cast<CDVDInputStream::IExtentionStream>(m_pInputStream);
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-21 12:28:25.541124976 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-21 12:30:23.239975084 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 05:30:50.112331348 +0000
 @@ -481,6 +481,7 @@ protected:
    void SendPlayerMessage(std::shared_ptr<CDVDMsg> pMsg, unsigned int target);
  

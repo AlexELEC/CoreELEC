@@ -9,6 +9,49 @@ diff -Naurp kodi/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inpu
  
  #ifdef __cplusplus
  extern "C"
+diff -Naurp kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h
+--- kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-08-09 18:50:36.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-08-10 06:26:43.000000000 +0000
+@@ -13,6 +13,7 @@
+ 
+ #define DMX_SPECIALID_STREAMINFO DEMUX_SPECIALID_STREAMINFO
+ #define DMX_SPECIALID_STREAMCHANGE DEMUX_SPECIALID_STREAMCHANGE
++#define DMX_SPECIALID_STREAMRESET DEMUX_SPECIALID_STREAMRESET
+ 
+ #ifdef __cplusplus
+ extern "C"
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-05-21 10:52:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-05-21 12:30:23.239975084 +0000
+@@ -333,8 +333,14 @@ DemuxPacket* CDVDDemuxClient::Read()
+     CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
+     return CDVDDemuxUtils::AllocateDemuxPacket(0);
+   }
+-  else if (m_packet->iStreamId == DMX_SPECIALID_STREAMCHANGE)
++  else if (m_packet->iStreamId == DMX_SPECIALID_STREAMCHANGE ||
++           m_packet->iStreamId == DMX_SPECIALID_STREAMRESET)
+   {
++    // TVLINK uses this DMX_SPECIALID_STREAMRESET marker to force VideoPlayer to reopen
++    // the selected streams after the inputstream add-on reports a live stream
++    // layout change. Keep the marker packet for VideoPlayer::ReadPacket(), but
++    // refresh CDVDDemuxClient's stream map first so OpenDefaultStreams() does
++    // not request stale/invalid stream ids from the old layout.
+     RequestStreams();
+   }
+   else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp	2026-05-21 10:52:16.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamPVRBase.cpp	2026-05-21 12:30:23.239975084 +0000
+@@ -166,7 +166,8 @@ DemuxPacket* CInputStreamPVRBase::ReadDe
+     m_client->GetStreamProperties(m_StreamProps.get());
+     return pPacket;
+   }
+-  else if (pPacket->iStreamId == DMX_SPECIALID_STREAMCHANGE)
++  else if (pPacket->iStreamId == DMX_SPECIALID_STREAMCHANGE ||
++           pPacket->iStreamId == DMX_SPECIALID_STREAMRESET)
+   {
+     m_client->GetStreamProperties(m_StreamProps.get());
+     UpdateStreamMap();
 diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
 --- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2025-08-09 18:50:36.000000000 +0000
 +++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2025-08-10 06:25:18.000000000 +0000
@@ -105,17 +148,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h kodi-patch/
    bool m_streaminfo;
    bool m_checkTransportStream;
    int m_displayTime = 0;
-diff -Naurp kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h
---- kodi/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-08-09 18:50:36.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/Interface/DemuxPacket.h	2025-08-10 06:26:43.000000000 +0000
-@@ -13,6 +13,7 @@
- 
- #define DMX_SPECIALID_STREAMINFO DEMUX_SPECIALID_STREAMINFO
- #define DMX_SPECIALID_STREAMCHANGE DEMUX_SPECIALID_STREAMCHANGE
-+#define DMX_SPECIALID_STREAMRESET DEMUX_SPECIALID_STREAMRESET
- 
- #ifdef __cplusplus
- extern "C"
+
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-08-09 18:50:36.000000000 +0000
 +++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2025-08-10 06:40:56.000000000 +0000
