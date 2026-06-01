@@ -1,0 +1,230 @@
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 10:15:56.278416206 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 10:16:01.684730278 +0000
+@@ -1030,7 +1030,7 @@ void CVideoPlayer::CloseDemuxer()
+   CServiceBroker::GetDataCacheCore().SignalSubtitleInfoChange();
+ }
+ 
+-bool CVideoPlayer::OpenDefaultStreams(bool reset, bool keepCurrentOnFailure)
++bool CVideoPlayer::OpenDefaultStreams(bool reset, bool keepCurrentOnFailure, bool requireVideo)
+ {
+   // if input stream dictate, we will open later
+   // unless we are loading a bluray playlist directly in which case set now
+@@ -1065,6 +1065,12 @@ bool CVideoPlayer::OpenDefaultStreams(bo
+       CloseStream(m_CurrentVideo, true);
+       m_processInfo->ResetVideoCodecInfo();
+     }
++
++    // During realtime video recovery never open audio-only on top of a failed
++    // video switch. Keep the current input/socket alive and retry when a usable
++    // video stream/extradata appears.
++    if (requireVideo)
++      return false;
+   }
+ 
+   // open audio stream
+@@ -1230,6 +1236,7 @@ bool CVideoPlayer::HandleStreamReset(boo
+ 
+   const bool wasPending = m_realtimeStreamResetPending;
+   const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
++  const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
+   m_realtimeStreamResetLastTry = now;
+   m_realtimeQueuesFullSleepSince = {};
+   m_realtimeQueuesFullLastSoftRecovery = {};
+@@ -1297,15 +1304,42 @@ bool CVideoPlayer::HandleStreamReset(boo
+     return false;
+   }
+ 
+-  CloseStream(m_CurrentVideo, false);
+-  m_processInfo->ResetVideoCodecInfo();
++  if (expectedRealtimeVideo && videoStreams == 0)
++  {
++    if (!wasPending)
++    {
++      CLog::Log(LOGWARNING,
++                "VideoPlayer: [STREAM RESET] pending... Video stream is not available yet. Demux A/V streams: {}/{}",
++                audioStreams, videoStreams);
++    }
+ 
+-  CloseStream(m_CurrentAudio, false);
+-  m_processInfo->ResetAudioCodecInfo();
++    // Amlogic HEVC live transitions can expose temporary audio-only maps while
++    // ffmpegdirect is catching up with the next HLS item. Do not accept that as
++    // a completed reset for a video session: keep the current input/socket alive
++    // and retry until video is available again. Stop the old audio, otherwise the
++    // user can hear the previous Empty Channel while waiting for real video.
++    if (m_CurrentAudio.id >= 0)
++    {
++      CloseStream(m_CurrentAudio, false);
++      m_processInfo->ResetAudioCodecInfo();
++    }
++
++    markPending(resetDemuxer);
++    return false;
++  }
+ 
+-  // Closing the old stream players can leave PLAYER_STARTED messages in the
+-  // VideoPlayer queue. Do not let stale timestamps from the old timeline drive
+-  // the next A/V sync after a realtime stream reset.
++  if (!expectedRealtimeVideo)
++  {
++    CloseStream(m_CurrentVideo, false);
++    m_processInfo->ResetVideoCodecInfo();
++
++    CloseStream(m_CurrentAudio, false);
++    m_processInfo->ResetAudioCodecInfo();
++  }
++
++  // Closing or switching the old stream players can leave PLAYER_STARTED messages
++  // in the VideoPlayer queue. Do not let stale timestamps from the old timeline
++  // drive the next A/V sync after a realtime stream reset.
+   // Purge any pending PLAYER_STARTED messages.
+   m_messenger.Flush(CDVDMsg::PLAYER_STARTED);
+ 
+@@ -1343,11 +1377,34 @@ bool CVideoPlayer::HandleStreamReset(boo
+               "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
+   }
+ 
+-  OpenDefaultStreams(true);
++  if (expectedRealtimeVideo && m_CurrentAudio.id >= 0)
++  {
++    // The new video stream must be opened before audio is committed. Until then,
++    // keep the last video frame on screen but stop old audio to avoid mixing the
++    // previous placeholder/channel with the new source.
++    CloseStream(m_CurrentAudio, false);
++    m_processInfo->ResetAudioCodecInfo();
++  }
++
++  const bool openedDefaultStreams =
++      OpenDefaultStreams(true, expectedRealtimeVideo, expectedRealtimeVideo);
+ 
+   m_HasVideo = (m_CurrentVideo.id >= 0);
+   m_HasAudio = (m_CurrentAudio.id >= 0);
+ 
++  if (expectedRealtimeVideo && (!openedDefaultStreams || !m_HasVideo))
++  {
++    if (!wasPending)
++    {
++      CLog::Log(LOGWARNING,
++                "VideoPlayer: [STREAM RESET] pending... Failed to reopen video stream for realtime video session. Demux A/V streams: {}/{}",
++                audioStreams, videoStreams);
++    }
++
++    markPending(resetDemuxer);
++    return false;
++  }
++
+   if (!m_HasVideo && !m_HasAudio)
+   {
+     if (!wasPending)
+@@ -1447,16 +1504,45 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+       m_pDemuxer->GetPrograms(m_programs);
+       UpdateContent();
+ 
++      const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++      const bool realtimePlaybackStarted = realtime && m_State.streamsReady;
++      const bool incomingHevcVideo = std::ranges::any_of(
++          m_SelectionStreams.Get(StreamType::VIDEO),
++          [](const SelectionStream& ss) { return ss.codecId == AV_CODEC_ID_HEVC; });
++      const bool forceInternalReset =
++          realtimePlaybackStarted && (m_realtimeExpectVideoStream || m_CurrentVideo.id >= 0) &&
++          (incomingHevcVideo || m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC);
++
+       if (m_realtimeStreamResetPending)
+       {
+-        HandleStreamReset(false, true);
++        constexpr auto pendingResetDemuxerRetryTime = 5s;
++        const auto now = std::chrono::steady_clock::now();
++        const bool demuxerResetRetry =
++            m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
++            now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
++
++        if (demuxerResetRetry)
++        {
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++        }
++
++        HandleStreamReset(demuxerResetRetry, true);
++      }
++      else if (forceInternalReset)
++      {
++        // In-place H.265 episode boundaries on Amlogic can expose a new stream
++        // before HEVC extradata is usable. Do a full internal stream reset, but
++        // keep the current inputstream/socket alive.
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime HEVC stream change, force internal stream reset without closing input socket");
++        HandleStreamReset(true);
+       }
+       else
+       {
+-        const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
+         const bool opened = OpenDefaultStreams(false, realtime);
+ 
+-        if (realtime && m_State.streamsReady)
++        if (realtimePlaybackStarted)
+         {
+           // A realtime STREAMCHANGE can arrive in the middle of an in-place TVLINK
+           // live source transition. Keep demux reads active only after playback is
+@@ -1703,6 +1789,7 @@ void CVideoPlayer::Prepare()
+   m_realtimeStartupBufferingAllowed = true;
+   m_realtimeStartupAudioStallGraceUntil = {};
+   m_realtimeStartupAudioStallGraceLogged = false;
++  m_realtimeExpectVideoStream = false;
+   m_realtimeNoStreamsSince = {};
+   m_realtimeStreamTransitionReadUntil = {};
+   m_realtimeStreamResetPending = false;
+@@ -5081,7 +5168,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+   }
+   else
+   {
+-    if(stream)
++    const bool keepRealtimeHevcRetry =
++        m_pInputStream && m_pInputStream->IsRealtime() && current.type == StreamType::VIDEO &&
++        hint.codec == AV_CODEC_ID_HEVC && hint.extradata.GetSize() == 0;
++
++    if (stream && !keepRealtimeHevcRetry)
+     {
+       /* mark stream as disabled, to disallow further attempts*/
+       CLog::Log(LOGWARNING, "{} - Unsupported stream {}. Stream disabled.", __FUNCTION__,
+@@ -5094,6 +5185,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+       failedStream.source = source;
+       SetEnableStream(failedStream, false);
+     }
++    else if (stream)
++    {
++      CLog::Log(LOGWARNING,
++                "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");
++    }
+   }
+ 
+   UpdateContentState();
+@@ -5235,6 +5331,8 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+     player->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::GENERAL_RESET), 0);
+ 
+   m_HasVideo = true;
++  if (m_pInputStream && m_pInputStream->IsRealtime())
++    m_realtimeExpectVideoStream = true;
+ 
+   static_cast<IDVDStreamPlayerVideo*>(player)->SendMessage(
+       std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_REQUEST_STATE), 1);
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 10:15:56.298257539 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 10:16:01.686247096 +0000
+@@ -490,7 +490,7 @@ protected:
+   bool OpenInputStream();
+   bool OpenDemuxStream();
+   void CloseDemuxer();
+-  bool OpenDefaultStreams(bool reset = true, bool keepCurrentOnFailure = false);
++  bool OpenDefaultStreams(bool reset = true, bool keepCurrentOnFailure = false, bool requireVideo = false);
+ 
+   void UpdatePlayState(double timeout);
+   void GetGeneralInfo(std::string& strVideoInfo);
+@@ -636,6 +636,7 @@ protected:
+   std::chrono::steady_clock::time_point m_realtimePostTransitionVideoDropSince{};
+   bool m_realtimePostTransitionVideoDropLogged{false};
+   bool m_realtimeStartupBufferingAllowed{true};
++  bool m_realtimeExpectVideoStream{false};
+   std::chrono::steady_clock::time_point m_realtimeStartupAudioStallGraceUntil{};
+   bool m_realtimeStartupAudioStallGraceLogged{false};
+ 
