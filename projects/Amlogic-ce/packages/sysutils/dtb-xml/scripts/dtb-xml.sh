@@ -258,7 +258,7 @@ function migrate_dtb_to_xml() {
 
     for option in $option_nodes; do
       cmd_count=$(xmlstarlet sel -t -c "count(//$node/$option/cmd)" $xml_file)
-      cmd_remove_exist=$(xmlstarlet sel -t -m "//$node/$option/cmd" -i '@option="d"' -o "1" -b -i '@option="r"' -o "1" $xml_file)
+      cmd_remove_exist=$(xmlstarlet sel -t -i "//$node/$option/cmd[@option='d' or @option='r']" -o "1" $xml_file)
       # check all commands for this current node of BOOT_ROOT dtb.xml if all commands are equal to dtb.img
       for cnt in $(seq 1 $cmd_count); do
         cmd_path=$(xmlstarlet sel -t -v "//$node/$option/cmd[$cnt]/@path" $xml_file)
@@ -396,7 +396,7 @@ function update_dtb_by_dtb_xml() {
 
     # check if node does include commands to be executed
     cmd_count=$(xmlstarlet sel -t -c "count(//$node/node()[@name='$node_status']/cmd)" $xml_file)
-    cmd_remove_exist=$(xmlstarlet sel -t -m "//$node/*/cmd" -i '@option="d"' -o "1" -b -i '@option="r"' -o "1" $xml_file)
+    cmd_remove_exist=$(xmlstarlet sel -t -i "//$node/$option/cmd[@option='d' or @option='r']" -o "1" $xml_file)
 
     if [ "$cmd_count" == 0 ]; then
       log " no cmd for node status '$node_status' found"
@@ -416,13 +416,13 @@ function update_dtb_by_dtb_xml() {
           t)
             act_value=$(fdtget $amlogic_dt_id $cmd_type $dtb_file $cmd_path 2>/dev/null)
             if [ "$?" == "0" -o -z "$act_value" -a -n "$cmd_remove_exist" ]; then
-              cmd_value=$(xmlstarlet sel -t -m "//$node/node()[@name='$node_status']" -m "cmd[$cnt]/value" -v "concat('\"', .,'\" ')" $xml_file)
+              cmd_value=$(xmlstarlet sel -t -m "//$node/node()[@name='$node_status']/cmd[$cnt]/value" -i ". != ''" -v "concat('\"', ., '\" ')" -b "$xml_file")
               [ -n "$cmd_value" ] && cmd_value=${cmd_value::-1}
               cmd="fdtput $amlogic_dt_id $cmd_type $dtb_file $cmd_path $cmd_value"
               cmd_value="${cmd_value//\"}"
               [ -n "$cmd_value" ] && cmd_value=${cmd_value#"0x"}
               # check if dtb.img value does match with current BOOT_ROOT dtb.xml status
-              if [ "$act_value" != "$cmd_value" ]; then
+              if [ "$act_value" != "$cmd_value" -o -z "$act_value" -a -z "$cmd_value" ]; then
                 eval $cmd
                 log " cmd[$cnt]: changed, $cmd_path: '$act_value' -> '$cmd_value', result: $?"
                 changed=1
@@ -435,8 +435,15 @@ function update_dtb_by_dtb_xml() {
               continue 2
             fi
             ;;
+          c)
+            cmd="fdtput $amlogic_dt_id $dtb_file $cmd_path"
+            eval $cmd
+            log " cmd[$cnt]: created, $cmd_path: run option '$fdt_option', result: $?"
+            changed=1
+            ;;
           d|r)
-            if [ -z "$(fdtget $amlogic_dt_id $dtb_file $cmd_path 2>/dev/null)" ]; then
+            prop_exist=$(fdtget $amlogic_dt_id $dtb_file $cmd_path 2>/dev/null)
+            if [ "$?" == "1" -a -z "$prop_exist" ]; then
               log " cmd[$cnt]: unchanged, still not exist"
             else
               cmd="fdtput $amlogic_dt_id $cmd_type $dtb_file $cmd_path"

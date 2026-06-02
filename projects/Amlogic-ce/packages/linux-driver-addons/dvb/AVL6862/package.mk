@@ -2,9 +2,9 @@
 # Copyright (C) 2024-present Team CoreELEC (https://coreelec.org)
 
 PKG_NAME="AVL6862"
-PKG_VERSION="0adc5cbaed2de91dbfddf2ffb7a3a043e3c629ca"
+PKG_VERSION="2f1fce8c80e817517fe9b921244926f5660355f6"
 PKG_SHA256=""
-PKG_REV="4"
+PKG_REV="6"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/CoreELEC"
 PKG_URL="https://github.com/CoreELEC/media_tree_aml/archive/${PKG_VERSION}.tar.gz"
@@ -29,4 +29,7 @@ make_target() {
 
 makeinstall_target() {
   install_driver_addon_files "${PKG_BUILD}"
+
+  mkdir -p ${INSTALL}/$(get_full_firmware_dir $PKG_ADDON_ID)
+  cp -r ${PKG_BUILD}/firmware/* ${INSTALL}/$(get_full_firmware_dir $PKG_ADDON_ID)/
 }
