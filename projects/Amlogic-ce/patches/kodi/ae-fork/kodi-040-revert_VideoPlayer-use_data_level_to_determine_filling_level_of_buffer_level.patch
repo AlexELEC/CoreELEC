@@ -1,27 +1,3 @@
-diff -Naurp kodi/system/settings/settings.xml kodi-patch/system/settings/settings.xml
---- kodi/system/settings/settings.xml	2026-06-21 08:02:50.531997527 +0000
-+++ kodi-patch/system/settings/settings.xml	2026-06-21 08:07:36.000000000 +0000
-@@ -1005,7 +1005,7 @@
-         </setting>
-         <setting id="videoplayer.queuedatasize" type="integer" label="37132" help="37133">
-           <level>2</level>
--          <default>40</default> <!-- 40 MB -->
-+          <default>128</default> <!-- 128 MB -->
-           <constraints>
-             <options>playerqueuedatasizes</options>
-           </constraints>
-diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp
---- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2026-06-21 10:46:54.000000000 +0000
-@@ -318,7 +318,7 @@ int CDVDMessageQueue::GetLevel(bool data
- 
-   if (IsDataBased() || dataLevel)
-   {
--    return std::min((uint64_t)100, 100 * m_iDataSize / m_iMaxDataSize);
-+    return std::min(100, 100 * m_iDataSize / m_iMaxDataSize);
-   }
- 
-   int level = std::min(100.0, ceil(100.0 * m_TimeSize * (m_TimeFront - m_TimeBack) / DVD_TIME_BASE ));
 diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h
 --- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2026-06-20 19:46:12.000000000 +0000
 +++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2026-06-21 10:49:42.000000000 +0000
@@ -34,31 +10,4 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h kodi-patch/xbmc/cores/
  
    /*!
     * \brief Get the current queue level.
-@@ -109,12 +109,12 @@ private:
-   bool m_bInitialized;
-   bool m_drain = false;
- 
--  uint64_t m_iDataSize;
-+  int m_iDataSize;
-   double m_TimeFront;
-   double m_TimeBack;
-   double m_TimeSize;
- 
--  uint64_t m_iMaxDataSize;
-+  int m_iMaxDataSize;
-   std::string m_owner;
- 
-   std::list<DVDMessageListItem> m_messages;
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2026-06-21 08:14:29.000000000 +0000
-@@ -65,7 +65,7 @@ CVideoPlayerAudio::CVideoPlayerAudio(CDV
-   m_maxspeedadjust = 0.0;
- 
-   // allows max bitrate of 18 Mbit/s (TrueHD max peak) during m_messageQueueTimeSize seconds
--  m_messageQueue.SetMaxDataSize(32 * messageQueueTimeSize / 8 * 1024 * 1024);
-+  m_messageQueue.SetMaxDataSize(18 * messageQueueTimeSize / 8 * 1024 * 1024);
-   m_messageQueue.SetMaxTimeSize(messageQueueTimeSize);
- 
-   m_disconAdjustTimeMs = processInfo.GetMaxPassthroughOffSyncDuration();
 
