@@ -12,22 +12,10 @@ diff -Naurp kodi/system/settings/settings.xml kodi-patch/system/settings/setting
            </constraints>
 diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp
 --- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2026-06-21 08:10:32.000000000 +0000
-@@ -307,7 +307,7 @@ void CDVDMessageQueue::WaitUntilEmpty()
-   }
- }
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp	2026-06-21 10:46:54.000000000 +0000
+@@ -318,7 +318,7 @@ int CDVDMessageQueue::GetLevel(bool data
  
--int CDVDMessageQueue::GetLevel(bool dataLevel) const
-+int CDVDMessageQueue::GetLevel() const
- {
-   std::unique_lock lock(m_section);
- 
-@@ -316,9 +316,9 @@ int CDVDMessageQueue::GetLevel(bool data
-   if (m_iDataSize == 0)
-     return 0;
- 
--  if (IsDataBased() || dataLevel)
-+  if (IsDataBased())
+   if (IsDataBased() || dataLevel)
    {
 -    return std::min((uint64_t)100, 100 * m_iDataSize / m_iMaxDataSize);
 +    return std::min(100, 100 * m_iDataSize / m_iMaxDataSize);
@@ -36,26 +24,17 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.cpp kodi-patch/xbmc/core
    int level = std::min(100.0, ceil(100.0 * m_TimeSize * (m_TimeFront - m_TimeBack) / DVD_TIME_BASE ));
 diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h
 --- kodi/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2026-06-21 08:12:46.000000000 +0000
-@@ -80,15 +80,8 @@ public:
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDMessageQueue.h	2026-06-21 10:49:42.000000000 +0000
+@@ -80,7 +80,7 @@ public:
    void WaitUntilEmpty();
  
    // non messagequeue related functions
 -  bool IsFull() const { return GetLevel(true) == 100; }
--
--  /*!
--   * \brief Get the current queue level.
--   *
--   * \param dataLevel If true, return the data-based level.
--   * \return Queue level as a percentage.
--   */
--  int GetLevel(bool dataLevel = false) const;
 +  bool IsFull() const { return GetLevel() == 100; }
-+  int GetLevel() const;
  
-   void SetMaxDataSize(int iMaxDataSize) { m_iMaxDataSize = iMaxDataSize; }
-   void SetMaxTimeSize(double sec) { m_TimeSize = 1.0 / sec; }
-@@ -109,12 +102,12 @@ private:
+   /*!
+    * \brief Get the current queue level.
+@@ -109,12 +109,12 @@ private:
    bool m_bInitialized;
    bool m_drain = false;
  
