@@ -3,8 +3,8 @@
 # Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="kodi"
-PKG_VERSION="df33da08dbee76aaedbd6ae716506ff85dea48c1"
-PKG_SHA256="cecf7b8486b8c336be51c9a4ab03a7df3270a749331ae163e4b6f55ceb702f9a"
+PKG_VERSION="8215fb4515c7c40e85e8c1929697a4cf05419f5b"
+PKG_SHA256="870423389f55f2c2db025539fcbced965addda736e2f23d03c9ff7805dbba197"
 PKG_LICENSE="GPL-2.0-or-later"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="https://github.com/xbmc/xbmc/archive/${PKG_VERSION}.tar.gz"
@@ -63,7 +63,6 @@ configure_package() {
                    -DWAYLANDPP_SCANNER=${TOOLCHAIN}/bin/wayland-scanner++ \
                    -DWAYLANDPP_PROTOCOLS_DIR=${SYSROOT_PREFIX}/usr/share/waylandpp/protocols"
   else # GBM
-    PKG_PATCH_DIRS+=" reardonia" # temp for testing
     if [ ! "${KODIPLAYER_DRIVER}" = "default" ]; then
       PKG_DEPENDS_TARGET+=" ${KODIPLAYER_DRIVER}"
     fi

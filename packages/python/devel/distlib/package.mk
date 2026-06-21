@@ -2,8 +2,8 @@
 # Copyright (C) 2025-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="distlib"
-PKG_VERSION="0.4.1"
-PKG_SHA256="c3804d0d2d4b5fcd44036eb860cb6660485fcdf5c2aba53dc324d805837ea65b"
+PKG_VERSION="0.4.3"
+PKG_SHA256="f152097224a0ae24be5a0f6bae1b9359af82133bce63f98a95f86cae1aede9ed"
 PKG_LICENSE="PSF-2.0"
 PKG_SITE="https://github.com/pypa/distlib"
 PKG_URL="https://files.pythonhosted.org/packages/source/d/distlib/distlib-${PKG_VERSION}.tar.gz"
