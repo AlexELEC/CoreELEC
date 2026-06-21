@@ -61,30 +61,4 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cor
    m_messageQueue.SetMaxTimeSize(messageQueueTimeSize);
  
    m_disconAdjustTimeMs = processInfo.GetMaxPassthroughOffSyncDuration();
-@@ -206,8 +206,8 @@ void CVideoPlayerAudio::OnStartup()
- void CVideoPlayerAudio::UpdatePlayerInfo()
- {
-   std::ostringstream s;
--  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99,m_messageQueue.GetLevel(true)) << "%)";
--  s << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
-+  s << "aq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel());
-+  s << "% " << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
-   s << "s, Kb/s:" << std::fixed << std::setprecision(2) << m_audioStats.GetBitrate() / 1024.0;
-   s << ", ac:"   << m_processInfo.GetAudioDecoderName().c_str();
-   if (!m_info.passthrough)
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerVideo.cpp	2026-06-21 08:15:30.000000000 +0000
-@@ -1096,10 +1096,8 @@ std::string CVideoPlayerVideo::GetPlayer
-   std::ostringstream s;
-   int width, height;
-   m_processInfo.GetVideoDimensions(width, height);
--  s << "vq:" << std::setw(2) << std::min(99, m_messageQueue.GetLevel()) << "% (" << std::setw(2) << std::min(99, m_messageQueue.GetLevel(true));
--  if (m_pVideoCodec && m_processInfo.IsVideoHwDecoder())
--    s << "%/" << std::setw(2) << std::min(99, m_pVideoCodec->GetDataLevel());
--  s << "%)" << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
-+  s << "vq:" << std::setw(2) << std::min(99, m_processInfo.GetLevelVQ());
-+  s << "% " << std::fixed << std::setprecision(3) << m_messageQueue.GetTimeSize();
-   s << "s, Mb/s:" << std::fixed << std::setprecision(2)
-     << static_cast<double>(GetVideoBitrate()) / (1024.0 * 1024.0);
-   s << ", dc:"   << m_processInfo.GetVideoDecoderName().c_str();
+
