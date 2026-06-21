@@ -1,7 +1,7 @@
 diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.xml
---- kodi/system/keymaps/keyboard.xml	2025-07-06 11:06:16.000000000 +0000
-+++ kodi-patch/system/keymaps/keyboard.xml	2025-07-07 12:39:43.000000000 +0000
-@@ -52,6 +52,7 @@
+--- kodi/system/keymaps/keyboard.xml	2026-06-20 19:46:12.000000000 +0000
++++ kodi-patch/system/keymaps/keyboard.xml	2026-06-21 07:59:10.000000000 +0000
+@@ -57,6 +57,7 @@
        <m>Menu</m>
        <n mod="ctrl">ActivateWindow(PlayerControls)</n>
        <s>ActivateWindow(ShutdownMenu)</s>
@@ -9,7 +9,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <s mod="alt">ActivateWindow(Settings)</s>
        <escape>Back</escape>
        <escape mod="longpress">Back</escape>
-@@ -105,6 +106,11 @@
+@@ -111,6 +112,11 @@
        <j>ActivateWindow(RadioChannels)</j>
        <k>ActivateWindow(TVRecordings)</k>
        <b>ActivateWindow(TVTimers)</b>
@@ -21,7 +21,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <!-- PVR -->
        <red>ActivateWindow(TVChannels)</red>
        <green>ActivateWindow(Videos)</green>
-@@ -124,8 +130,10 @@
+@@ -130,8 +136,10 @@
        <volume_mute>Mute</volume_mute>
        <volume_down>VolumeDown</volume_down>
        <volume_up>VolumeUp</volume_up>
@@ -34,7 +34,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <stop>Stop</stop>
        <play_pause>PlayPause</play_pause>
        <play_pause mod="longpress">Info</play_pause>
-@@ -169,6 +177,7 @@
+@@ -176,6 +184,7 @@
        <k mod="ctrl,shift">ReloadKeymaps</k>
        <d mod="ctrl,shift">ToggleDebug</d>
        <r mod="ctrl,shift">ToggleDirtyRegionVisualization</r>
@@ -42,7 +42,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <f11>HDRToggle</f11>
      </keyboard>
    </global>
-@@ -369,6 +378,7 @@
+@@ -380,6 +389,7 @@
        <o>PlayerProcessInfo</o>
        <o mod="ctrl,shift">PlayerDebug</o>
        <o mod="alt">PlayerDebugVideo</o>
@@ -50,7 +50,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <z>AspectRatio</z>
        <zoom>AspectRatio</zoom>
        <t>ShowSubtitles</t>
-@@ -382,7 +392,8 @@
+@@ -396,7 +406,8 @@
        <down mod="longpress">NextSubtitle</down>
        <left mod="alt">PlayerControl(tempodown)</left>
        <right mod="alt">PlayerControl(tempoup)</right>
@@ -60,16 +60,16 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <a mod="ctrl">DialogSelectAudio</a>
        <leftquote>DialogSelectAudio</leftquote>
        <escape>Fullscreen</escape>
-@@ -587,7 +598,7 @@
-       <zoom>AspectRatio</zoom>
-       <t>ShowSubtitles</t>
+@@ -613,7 +624,7 @@
+       <subtitle>NextSubtitle</subtitle>
+       <subtitle mod="longpress">ShowSubtitles</subtitle>
        <l>DialogSelectSubtitle</l>
 -      <a>AudioDelay</a>
 +      <a>AudioNextLanguage</a>
        <escape>Fullscreen</escape>
        <return>Select</return>
        <enter>Select</enter>      <!-- backspace>Fullscreen</backspace -->
-@@ -691,10 +702,10 @@
+@@ -720,10 +731,10 @@
    </NumericInput>
    <FullscreenLiveTV>
      <keyboard>
@@ -83,14 +83,16 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
 +      <down>StepBack</down>
        <return>OSD</return>
        <enter>OSD</enter>
-       <g>ActivateWindow(PVRChannelGuide)</g>
-@@ -702,10 +713,12 @@
-       <return mod="longpress">ActivateWindow(PVROSDChannels)</return>
+       <ok>OSD</ok>
+@@ -733,12 +744,14 @@
        <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
+       <ok mod="longpress">ActivateWindow(PVROSDChannels)</ok>
        <leftquote>DialogSelectAudio</leftquote>
 +      <a>AudioNextLanguage</a>
        <pageup>ChannelUp</pageup>
        <pagedown>ChannelDown</pagedown>
+       <channel_up>ChannelUp</channel_up>
+       <channel_down>ChannelDown</channel_down>
        <period mod="longpress">ChannelNumberSeparator</period>
        <numpadperiod>ChannelNumberSeparator</numpadperiod>
 +      <i mod="longpress">RunAddon(script.tvlink.conrol)</i>
