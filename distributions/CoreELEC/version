@@ -11,10 +11,10 @@
   OS_CODENAME="Piers"
 
 # OS_STAGE: OS Release Stage (alpha, beta, rc, build)
-  OS_STAGE="alpha3"
+  OS_STAGE="beta1"
 
 # BUILD_NUM: Build number
-  BUILD_NUM="-07"
+  BUILD_NUM="-01"
 
 # ADDON_VERSION: Addon version
   ADDON_VERSION="${OS_VERSION}.10"
