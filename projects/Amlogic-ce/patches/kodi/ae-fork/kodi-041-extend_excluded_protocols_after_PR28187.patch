@@ -1,0 +1,14 @@
+diff -Naurp kodi/xbmc/filesystem/DirectoryFactory.cpp kodi-patch/xbmc/filesystem/DirectoryFactory.cpp
+--- kodi/xbmc/filesystem/DirectoryFactory.cpp	2026-05-03 09:01:47.000000000 +0000
++++ kodi-patch/xbmc/filesystem/DirectoryFactory.cpp	2026-05-06 14:23:25.000000000 +0000
+@@ -132,8 +132,8 @@ IDirectory* CDirectoryFactory::Create(co
+   bool canBeFileDirectory = true;
+ 
+   struct __stat64 st = {};
+-  static constexpr auto excludedProtocols =
+-      make_set<std::string_view>({"upnp", "addons", "favourites", "sources"});
++  static constexpr auto excludedProtocols = make_set<std::string_view>({
++      "upnp", "addons", "favourites", "sources", "pvr", "http", "https", "udp"});
+   const bool exclude{excludedProtocols.contains(url.GetProtocol())};
+   if (!exclude && CFile::Stat(URIUtils::SubstitutePath(url), &st) == 0)
+   {
