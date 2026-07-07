@@ -2,9 +2,9 @@
 # Copyright (C) 2019-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="pvr.waipu"
-PKG_VERSION="22.9.2-Piers"
-PKG_SHA256="3391d50fe91625cb735b9e95f02902f45d17d6e966dde58263343dece238c2a9"
-PKG_REV="2"
+PKG_VERSION="22.9.4-Piers"
+PKG_SHA256="80c5ec2451c45148eaa579f1cc1cc385f76374ddf035c2160aecf43e465553fd"
+PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL-2.0-or-later"
 PKG_SITE="https://github.com/flubshi/pvr.waipu"
