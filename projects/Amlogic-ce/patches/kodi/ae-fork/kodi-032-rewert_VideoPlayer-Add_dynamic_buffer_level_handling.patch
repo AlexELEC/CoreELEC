@@ -67,8 +67,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/IVideoPlayer.h kodi-patch/xbmc/cores/Vid
 -  virtual int GetMaxDataSize() const = 0;
  };
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-24 15:12:00.558719840 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-24 15:14:12.439010875 +0000
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-07-07 07:13:16.374348511 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-07-07 07:18:11.000000000 +0000
 @@ -58,7 +58,6 @@
  #include "utils/StreamDetails.h"
  #include "utils/StreamUtils.h"
@@ -77,37 +77,39 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  #include "utils/URIUtils.h"
  #include "utils/Variant.h"
  #include "utils/log.h"
-@@ -1269,82 +1268,6 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1725,129 +1724,6 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
    return false;
  }
  
 -void CVideoPlayer::HandleDynamicBufferLevel()
 -{
+-  // Run adjustment only every 250ms to avoid overreacting
+-  constexpr int64_t INTERVAL_NS = 250'000'000; // 250ms
 -  static int64_t lastAdjust = 0;
 -  const int64_t now = CurrentHostCounter();
 -
--  // check only every 250 ticks
--  if (now - lastAdjust < 250)
+-  if (now - lastAdjust < INTERVAL_NS)
 -    return;
 -
 -  lastAdjust = now;
 -
+-  // Current buffer fill levels (0–100%)
 -  const int lvlv = m_VideoPlayerVideo->GetDataLevel();
 -  const int lvla = m_VideoPlayerAudio->GetDataLevel();
 -
+-  // Current max buffer sizes
 -  const int vcOld = m_VideoPlayerVideo->GetMaxDataSize();
 -  const int acOld = m_VideoPlayerAudio->GetMaxDataSize();
 -
 -  int vcNew = vcOld;
 -  int acNew = acOld;
 -
+-  // Absolute difference between audio and video levels
 -  const int diff = std::abs(lvlv - lvla);
 -
--  // ignore Audio-Burst (TrueHD/DTS-HD)
--  const bool audioBurst = (lvla > 90 && lvlv < 40);
--
--  constexpr int vcStep = 4 * SIZE_1M;
--  constexpr int acStep = 512 * SIZE_1K;
+-  // Fixed step sizes
+-  constexpr int vcStep = 4 * SIZE_1M;      // 4 MB
+-  constexpr int acStep = 512 * SIZE_1K;    // 0.5 MB
 -
 -  auto inc = [](int cur, int step, int max) {
 -    const int v = cur + step;
@@ -119,8 +121,40 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 -    return (v >= min) ? v : cur;
 -  };
 -
--  // --- Increase ---
--  if (!audioBurst && diff > 20)
+-  // ---------------------------------------------------------
+-  // AUDIO BURST DETECTION (TrueHD, DTS-HD, EAC3 JOC)
+-  // ---------------------------------------------------------
+-  static int lastLvla = 0;
+-  const int deltaA = lvla - lastLvla;
+-  lastLvla = lvla;
+-
+-  const bool audioBurst =
+-  (
+-      lvla > 85 &&          // audio buffer very full
+-      lvlv < 50 &&          // video buffer relatively low
+-      (lvla - lvlv) > 25 && // audio significantly fuller than video
+-      deltaA > 10           // rapid increase → real burst
+-  );
+-
+-  // ---------------------------------------------------------
+-  // VIDEO BURST DETECTION (I-frames, HEVC/H.266 peaks)
+-  // ---------------------------------------------------------
+-  static int lastLvlv = 0;
+-  const int deltaV = lvlv - lastLvlv;
+-  lastLvlv = lvlv;
+-
+-  const bool videoBurst =
+-  (
+-      lvlv > 85 &&          // video buffer very full
+-      lvla < 50 &&          // audio buffer relatively low
+-      (lvlv - lvla) > 25 && // video significantly fuller than audio
+-      deltaV > 10           // rapid increase → real burst
+-  );
+-
+-  // -------------------------------------------------
+-  // INCREASE LOGIC
+-  // -------------------------------------------------
+-  if (!audioBurst && !videoBurst && diff > 20)
 -  {
 -    if (lvlv > lvla)
 -      vcNew = inc(vcOld, vcStep, LvLVideoMAX);
@@ -128,14 +162,27 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 -      acNew = inc(acOld, acStep, LvLAudioMAX);
 -  }
 -
--  // --- Decrease ---
--  if (diff < 5 && lvlv > 30 && lvla > 30)
+-  // -------------------------------------------------
+-  // DECREASE LOGIC
+-  //
+-  // Only decrease when:
+-  // - both buffers are reasonably filled (>20%)
+-  // - difference is small (<15)
+-  // -------------------------------------------------
+-  if (!audioBurst && !videoBurst &&
+-      diff < 15 &&
+-      lvlv > 20 &&
+-      lvla > 20)
 -  {
--    vcNew = dec(vcOld, vcStep, LvLVideoMIN);
--    acNew = dec(acOld, acStep, LvLAudioMIN);
+-    if (lvlv < lvla)
+-      vcNew = dec(vcOld, vcStep, LvLVideoMIN);
+-    else
+-      acNew = dec(acOld, acStep, LvLAudioMIN);
 -  }
 -
--  // --- Apply ---
+-  // ---------------------------------------------------------
+-  // APPLY CHANGES
+-  // ---------------------------------------------------------
 -  if (vcNew != vcOld)
 -  {
 -    CLog::Log(LOGDEBUG, LOGAVTIMING,
@@ -160,15 +207,15 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  bool CVideoPlayer::IsValidStream(const CCurrentStream& stream)
  {
    if(stream.id<0)
-@@ -1832,8 +1755,6 @@ void CVideoPlayer::Process()
-       break;
-     }
+@@ -2249,8 +2125,6 @@ void CVideoPlayer::Process()
+     // update player state
+     UpdatePlayState(200);
  
 -    HandleDynamicBufferLevel();
 -
-     // see if we can find something better to play
-     CheckBetterStream(m_CurrentAudio,    pStream);
-     CheckBetterStream(m_CurrentVideo,    pStream);
+     // make sure we run subtitle process here
+     m_VideoPlayerSubtitle->Process(m_clock.GetClock() + m_State.time_offset - m_VideoPlayerVideo->GetSubtitleDelay(), m_State.time_offset);
+ 
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-24 15:12:00.558719840 +0000
 +++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-24 15:14:12.439010875 +0000
