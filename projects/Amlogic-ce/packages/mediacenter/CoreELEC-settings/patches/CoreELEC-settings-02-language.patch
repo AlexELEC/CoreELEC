@@ -1,0 +1,138 @@
+diff -Naurp CoreELEC-settings/language/resource.language.en_gb/strings.po CoreELEC-settings-patch/language/resource.language.en_gb/strings.po
+--- CoreELEC-settings/language/resource.language.en_gb/strings.po	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.en_gb/strings.po	2025-07-09 09:11:59.000000000 +0000
+@@ -1441,3 +1441,42 @@ msgstr ""
+ msgctxt "#33530"
+ msgid "Connection name"
+ msgstr ""
++
++
++########## TV Service #########
++
++msgctxt "#43000"
++msgid "TV services"
++msgstr ""
++
++msgctxt "#4300"
++msgid "Configure TV services."
++msgstr ""
++
++### TVLINK ###
++
++msgctxt "#42025"
++msgid "TVLINK server"
++msgstr ""
++
++msgctxt "#42026"
++msgid "Enable TVLINK"
++msgstr ""
++
++msgctxt "#4226"
++msgid "TVLINK is a restreamer and an aggregator of IPTV channels (http://ip-address:2020)."
++msgstr ""
++
++### HID-REMOTE ###
++
++msgctxt "#43010"
++msgid "HID remote control"
++msgstr ""
++
++msgctxt "#43011"
++msgid "Enable HID remote"
++msgstr ""
++
++msgctxt "#4311"
++msgid "HID-Remote (hid_mapper) daemon to map HID events to key events."
++msgstr ""
+diff -Naurp CoreELEC-settings/language/resource.language.ru_ru/strings.po CoreELEC-settings-patch/language/resource.language.ru_ru/strings.po
+--- CoreELEC-settings/language/resource.language.ru_ru/strings.po	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.ru_ru/strings.po	2025-07-09 09:13:00.000000000 +0000
+@@ -1143,3 +1143,42 @@ msgstr "Общественные"
+ msgctxt "#32400"
+ msgid "Idle Timeout"
+ msgstr "Таймаут неактивности"
++
++
++########## TV Service #########
++
++msgctxt "#43000"
++msgid "TV services"
++msgstr "ТВ сервисы"
++
++msgctxt "#4300"
++msgid "Configure TV services."
++msgstr "Настройки ТВ серверов."
++
++### TVLINK ###
++
++msgctxt "#42025"
++msgid "TVLINK server"
++msgstr "TVLINK сервер"
++
++msgctxt "#42026"
++msgid "Enable TVLINK"
++msgstr "Включить TVLINK"
++
++msgctxt "#4226"
++msgid "TVLINK is a restreamer and an aggregator of IPTV channels (http://ip-address:2020)."
++msgstr "TVLINK - рестример и агрегатор каналов IPTV (http://ip-address:2020)."
++
++### HID-REMOTE ###
++
++msgctxt "#43010"
++msgid "HID remote control"
++msgstr "Управление HID ПДУ"
++
++msgctxt "#43011"
++msgid "Enable HID remote"
++msgstr "Включить HID-Remote"
++
++msgctxt "#4311"
++msgid "HID-Remote (hid_mapper) daemon to map HID events to key events."
++msgstr "HID-Remote (hid_mapper) сервис для сопоставления событий HID с событиями клавиатуры."
+diff -Naurp CoreELEC-settings/language/resource.language.uk_ua/strings.po CoreELEC-settings-patch/language/resource.language.uk_ua/strings.po
+--- CoreELEC-settings/language/resource.language.uk_ua/strings.po	2025-07-07 16:45:29.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.uk_ua/strings.po	2025-07-09 09:13:48.000000000 +0000
+@@ -1129,3 +1129,42 @@ msgstr ""
+ msgctxt "#32400"
+ msgid "Idle Timeout"
+ msgstr ""
++
++
++########## TV Service #########
++
++msgctxt "#43000"
++msgid "TV services"
++msgstr "ТВ сервіси"
++
++msgctxt "#4300"
++msgid "Configure TV services."
++msgstr "Налаштування ТВ серверів."
++
++### TVLINK ###
++
++msgctxt "#42025"
++msgid "TVLINK server"
++msgstr "TVLINK сервер"
++
++msgctxt "#42026"
++msgid "Enable TVLINK"
++msgstr "Вімкнути TVLINK"
++
++msgctxt "#4226"
++msgid "TVLINK is a restreamer and an aggregator of IPTV channels (http://ip-address:2020)."
++msgstr "TVLINK - рестример та агрегатор каналів IPTV (http://ip-address:2020)."
++
++### HID-REMOTE ###
++
++msgctxt "#43010"
++msgid "HID remote control"
++msgstr "Управління HID-пристроями"
++
++msgctxt "#43011"
++msgid "Enable HID remote"
++msgstr "Вімкнути HID-Remote"
++
++msgctxt "#4311"
++msgid "HID-Remote (hid_mapper) daemon to map HID events to key events."
++msgstr "HID-Remote (hid_mapper) сервіс для зіставлення подій HID з подіями клавіатури."

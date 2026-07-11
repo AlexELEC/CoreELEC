@@ -23,4 +23,6 @@ fi
 
 pre_configure_target() {
   export LDFLAGS=$(echo ${LDFLAGS} | sed -e "s|-Wl,--as-needed||")
+
+  PKG_CMAKE_OPTS_TARGET="-DOPENGL_USE_EGL=ON"
 }
