@@ -1,7 +1,7 @@
 diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.xml
---- kodi/system/keymaps/keyboard.xml	2026-06-20 19:46:12.000000000 +0000
-+++ kodi-patch/system/keymaps/keyboard.xml	2026-06-21 07:59:10.000000000 +0000
-@@ -57,6 +57,7 @@
+--- kodi/system/keymaps/keyboard.xml	2026-07-20 08:13:10.000000000 +0000
++++ kodi-patch/system/keymaps/keyboard.xml	2026-07-20 10:34:13.000000000 +0000
+@@ -61,6 +61,7 @@
        <m>Menu</m>
        <n mod="ctrl">ActivateWindow(PlayerControls)</n>
        <s>ActivateWindow(ShutdownMenu)</s>
@@ -9,7 +9,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <s mod="alt">ActivateWindow(Settings)</s>
        <escape>Back</escape>
        <escape mod="longpress">Back</escape>
-@@ -111,6 +112,11 @@
+@@ -119,6 +120,11 @@
        <j>ActivateWindow(RadioChannels)</j>
        <k>ActivateWindow(TVRecordings)</k>
        <b>ActivateWindow(TVTimers)</b>
@@ -21,20 +21,26 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <!-- PVR -->
        <red>ActivateWindow(TVChannels)</red>
        <green>ActivateWindow(Videos)</green>
-@@ -130,8 +136,10 @@
+@@ -139,10 +145,14 @@
        <volume_mute>Mute</volume_mute>
        <volume_down>VolumeDown</volume_down>
        <volume_up>VolumeUp</volume_up>
 -      <next_track>SkipNext</next_track>
 -      <prev_track>SkipPrevious</prev_track>
+-      <next>SkipNext</next>
+-      <previous>SkipPrevious</previous>
 +      <!-- <next_track>SkipNext</next_track> -->
 +      <!-- <prev_track>SkipPrevious</prev_track> -->
 +      <next_track></next_track>
 +      <prev_track></prev_track>
++      <!-- <next>SkipNext</next>  -->
++      <!-- <previous>SkipPrevious</previous> -->
++      <next></next>
++      <previous></previous>
        <stop>Stop</stop>
        <play_pause>PlayPause</play_pause>
        <play_pause mod="longpress">Info</play_pause>
-@@ -176,6 +184,7 @@
+@@ -219,6 +229,7 @@
        <k mod="ctrl,shift">ReloadKeymaps</k>
        <d mod="ctrl,shift">ToggleDebug</d>
        <r mod="ctrl,shift">ToggleDirtyRegionVisualization</r>
@@ -42,7 +48,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <f11>HDRToggle</f11>
      </keyboard>
    </global>
-@@ -380,6 +389,7 @@
+@@ -425,6 +436,7 @@
        <o>PlayerProcessInfo</o>
        <o mod="ctrl,shift">PlayerDebug</o>
        <o mod="alt">PlayerDebugVideo</o>
@@ -50,7 +56,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <z>AspectRatio</z>
        <zoom>AspectRatio</zoom>
        <t>ShowSubtitles</t>
-@@ -396,7 +406,8 @@
+@@ -441,7 +453,8 @@
        <down mod="longpress">NextSubtitle</down>
        <left mod="alt">PlayerControl(tempodown)</left>
        <right mod="alt">PlayerControl(tempoup)</right>
@@ -60,7 +66,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <a mod="ctrl">DialogSelectAudio</a>
        <leftquote>DialogSelectAudio</leftquote>
        <escape>Fullscreen</escape>
-@@ -613,7 +624,7 @@
+@@ -664,7 +677,7 @@
        <subtitle>NextSubtitle</subtitle>
        <subtitle mod="longpress">ShowSubtitles</subtitle>
        <l>DialogSelectSubtitle</l>
@@ -69,7 +75,7 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <escape>Fullscreen</escape>
        <return>Select</return>
        <enter>Select</enter>      <!-- backspace>Fullscreen</backspace -->
-@@ -720,10 +731,10 @@
+@@ -771,10 +784,10 @@
    </NumericInput>
    <FullscreenLiveTV>
      <keyboard>
@@ -84,9 +90,9 @@ diff -Naurp kodi/system/keymaps/keyboard.xml kodi-patch/system/keymaps/keyboard.
        <return>OSD</return>
        <enter>OSD</enter>
        <ok>OSD</ok>
-@@ -733,12 +744,14 @@
-       <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
+@@ -786,12 +799,14 @@
        <ok mod="longpress">ActivateWindow(PVROSDChannels)</ok>
+       <select mod="longpress">ActivateWindow(PVROSDChannels)</select>
        <leftquote>DialogSelectAudio</leftquote>
 +      <a>AudioNextLanguage</a>
        <pageup>ChannelUp</pageup>
