@@ -1,8 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 10:15:56.278416206 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 10:16:01.684730278 +0000
-@@ -1030,7 +1030,7 @@ void CVideoPlayer::CloseDemuxer()
-   CServiceBroker::GetDataCacheCore().SignalSubtitleInfoChange();
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-08-06 07:33:17.524652868 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-08-06 07:36:07.700644838 +0000
+@@ -1064,7 +1064,7 @@ void CVideoPlayer::UpdateHasVideoAudio()
+     m_HasAudio = false;
  }
  
 -bool CVideoPlayer::OpenDefaultStreams(bool reset, bool keepCurrentOnFailure)
@@ -10,7 +10,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
  {
    // if input stream dictate, we will open later
    // unless we are loading a bluray playlist directly in which case set now
-@@ -1065,6 +1065,12 @@ bool CVideoPlayer::OpenDefaultStreams(bo
+@@ -1099,6 +1099,12 @@ bool CVideoPlayer::OpenDefaultStreams(bo
        CloseStream(m_CurrentVideo, true);
        m_processInfo->ResetVideoCodecInfo();
      }
@@ -23,7 +23,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    }
  
    // open audio stream
-@@ -1230,6 +1236,7 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1266,6 +1272,7 @@ bool CVideoPlayer::HandleStreamReset(boo
  
    const bool wasPending = m_realtimeStreamResetPending;
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
@@ -31,7 +31,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    m_realtimeStreamResetLastTry = now;
    m_realtimeQueuesFullSleepSince = {};
    m_realtimeQueuesFullLastSoftRecovery = {};
-@@ -1297,15 +1304,42 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1333,15 +1340,42 @@ bool CVideoPlayer::HandleStreamReset(boo
      return false;
    }
  
@@ -81,7 +81,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    // Purge any pending PLAYER_STARTED messages.
    m_messenger.Flush(CDVDMsg::PLAYER_STARTED);
  
-@@ -1343,11 +1377,34 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1379,11 +1413,34 @@ bool CVideoPlayer::HandleStreamReset(boo
                "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
    }
  
@@ -117,7 +117,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    if (!m_HasVideo && !m_HasAudio)
    {
      if (!wasPending)
-@@ -1447,16 +1504,45 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1483,16 +1540,45 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
        m_pDemuxer->GetPrograms(m_programs);
        UpdateContent();
  
@@ -166,7 +166,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
          {
            // A realtime STREAMCHANGE can arrive in the middle of an in-place TVLINK
            // live source transition. Keep demux reads active only after playback is
-@@ -1703,6 +1789,7 @@ void CVideoPlayer::Prepare()
+@@ -1738,6 +1824,7 @@ void CVideoPlayer::Prepare()
    m_realtimeStartupBufferingAllowed = true;
    m_realtimeStartupAudioStallGraceUntil = {};
    m_realtimeStartupAudioStallGraceLogged = false;
@@ -174,7 +174,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    m_realtimeNoStreamsSince = {};
    m_realtimeStreamTransitionReadUntil = {};
    m_realtimeStreamResetPending = false;
-@@ -5081,7 +5168,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -5222,7 +5309,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
    }
    else
    {
@@ -187,7 +187,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
      {
        /* mark stream as disabled, to disallow further attempts*/
        CLog::Log(LOGWARNING, "{} - Unsupported stream {}. Stream disabled.", __FUNCTION__,
-@@ -5094,6 +5185,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -5235,6 +5326,11 @@ bool CVideoPlayer::OpenStream(CCurrentSt
        failedStream.source = source;
        SetEnableStream(failedStream, false);
      }
@@ -199,7 +199,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    }
  
    UpdateContentState();
-@@ -5235,6 +5331,8 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -5383,6 +5479,8 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
      player->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::GENERAL_RESET), 0);
  
    m_HasVideo = true;
@@ -208,19 +208,19 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
  
    static_cast<IDVDStreamPlayerVideo*>(player)->SendMessage(
        std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_REQUEST_STATE), 1);
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
---- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 10:15:56.298257539 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 10:16:01.686247096 +0000
-@@ -490,7 +490,7 @@ protected:
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-08-06 07:33:17.524652868 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-08-06 07:39:35.000000000 +0000
+@@ -501,7 +501,7 @@ protected:
    bool OpenInputStream();
    bool OpenDemuxStream();
    void CloseDemuxer();
 -  bool OpenDefaultStreams(bool reset = true, bool keepCurrentOnFailure = false);
 +  bool OpenDefaultStreams(bool reset = true, bool keepCurrentOnFailure = false, bool requireVideo = false);
+   void UpdateHasVideoAudio();
  
    void UpdatePlayState(double timeout);
-   void GetGeneralInfo(std::string& strVideoInfo);
-@@ -636,6 +636,7 @@ protected:
+@@ -656,6 +656,7 @@ protected:
    std::chrono::steady_clock::time_point m_realtimePostTransitionVideoDropSince{};
    bool m_realtimePostTransitionVideoDropLogged{false};
    bool m_realtimeStartupBufferingAllowed{true};
