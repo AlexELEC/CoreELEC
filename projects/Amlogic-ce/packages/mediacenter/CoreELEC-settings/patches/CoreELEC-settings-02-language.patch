@@ -1,9 +1,9 @@
 diff -Naurp CoreELEC-settings/language/resource.language.en_gb/strings.po CoreELEC-settings-patch/language/resource.language.en_gb/strings.po
---- CoreELEC-settings/language/resource.language.en_gb/strings.po	2025-07-07 16:45:29.000000000 +0000
-+++ CoreELEC-settings-patch/language/resource.language.en_gb/strings.po	2025-07-09 09:11:59.000000000 +0000
-@@ -1441,3 +1441,42 @@ msgstr ""
- msgctxt "#33530"
- msgid "Connection name"
+--- CoreELEC-settings/language/resource.language.en_gb/strings.po	2026-08-05 16:29:46.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.en_gb/strings.po	2026-08-06 07:12:38.000000000 +0000
+@@ -1500,3 +1500,42 @@ msgstr ""
+ msgctxt "#33533"
+ msgid "Please reboot device"
  msgstr ""
 +
 +
@@ -45,8 +45,8 @@ diff -Naurp CoreELEC-settings/language/resource.language.en_gb/strings.po CoreEL
 +msgid "HID-Remote (hid_mapper) daemon to map HID events to key events."
 +msgstr ""
 diff -Naurp CoreELEC-settings/language/resource.language.ru_ru/strings.po CoreELEC-settings-patch/language/resource.language.ru_ru/strings.po
---- CoreELEC-settings/language/resource.language.ru_ru/strings.po	2025-07-07 16:45:29.000000000 +0000
-+++ CoreELEC-settings-patch/language/resource.language.ru_ru/strings.po	2025-07-09 09:13:00.000000000 +0000
+--- CoreELEC-settings/language/resource.language.ru_ru/strings.po	2026-08-05 16:29:46.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.ru_ru/strings.po	2026-08-06 07:13:40.000000000 +0000
 @@ -1143,3 +1143,42 @@ msgstr "Общественные"
  msgctxt "#32400"
  msgid "Idle Timeout"
@@ -91,12 +91,12 @@ diff -Naurp CoreELEC-settings/language/resource.language.ru_ru/strings.po CoreEL
 +msgid "HID-Remote (hid_mapper) daemon to map HID events to key events."
 +msgstr "HID-Remote (hid_mapper) сервис для сопоставления событий HID с событиями клавиатуры."
 diff -Naurp CoreELEC-settings/language/resource.language.uk_ua/strings.po CoreELEC-settings-patch/language/resource.language.uk_ua/strings.po
---- CoreELEC-settings/language/resource.language.uk_ua/strings.po	2025-07-07 16:45:29.000000000 +0000
-+++ CoreELEC-settings-patch/language/resource.language.uk_ua/strings.po	2025-07-09 09:13:48.000000000 +0000
-@@ -1129,3 +1129,42 @@ msgstr ""
- msgctxt "#32400"
- msgid "Idle Timeout"
- msgstr ""
+--- CoreELEC-settings/language/resource.language.uk_ua/strings.po	2026-08-05 16:29:46.000000000 +0000
++++ CoreELEC-settings-patch/language/resource.language.uk_ua/strings.po	2026-08-06 07:15:30.000000000 +0000
+@@ -1828,3 +1828,42 @@ msgstr "Виберіть типовий
+ msgctxt "#33533"
+ msgid "Please reboot device"
+ msgstr "Будь ласка, перезавантажте пристрій"
 +
 +
 +########## TV Service #########
