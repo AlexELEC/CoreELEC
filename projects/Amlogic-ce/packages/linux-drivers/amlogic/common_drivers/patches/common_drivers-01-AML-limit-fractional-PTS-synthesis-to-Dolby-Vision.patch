@@ -1,0 +1,61 @@
+From 5c1d0a4f7a1f7a4f2d0a4c2b8e6d3f1a9b7c5e2d Mon Sep 17 00:00:00 2001
+From: Alex <alex@example.invalid>
+Date: Mon, 7 Sep 2026 09:15:00 +0300
+Subject: [PATCH] AML: limit fractional PTS synthesis fix to Dolby Vision
+
+This patch is intended to be applied on top of:
+
+  fcba5266bb267b4dd8b7883ff060f26fcf9fb822
+  AML: v4l2_dqbuf: Carry fractional us when synthesising PTS in amlvideo
+
+The commit above changes the fallback PTS synthesis in amlvideo.c for every
+vframe whose pts_us64 and pts are both zero.
+
+For testing, keep the new fractional-microsecond calculation only for
+Dolby Vision (DOVI/DOVI_LL) frames, which is the case explicitly described
+by the original commit. Restore the previous dur2pts() calculation for all
+other video formats, including ordinary H.264 and non-DV H.265.
+
+This is intended as a diagnostic patch to determine whether the newer PTS
+calculation can be related to reboots seen during ordinary H.264 playback,
+while preserving the fix for the Dolby Vision case.
+
+---
+ drivers/media/video_processor/video_dev/amlvideo.c | 17 +++++++++++++++--
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/video_processor/video_dev/amlvideo.c b/drivers/media/video_processor/video_dev/amlvideo.c
+--- a/drivers/media/video_processor/video_dev/amlvideo.c
++++ b/drivers/media/video_processor/video_dev/amlvideo.c
+@@ -68,6 +68,11 @@ AMLVIDEO_MINOR_VERSION, AMLVIDEO_RELEASE)
+
+ static u32 omx_freerun_index = 0;
+
++static inline u32 dur2pts(u32 duration)
++{
++	return (duration - (duration >> 4));
++}
++
+ #define DUR2PTS_RM(x) ((x) & 0xf)
+
+ //MODULE_AUTHOR("amlogic-sh");
+@@ -623,8 +628,15 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
+ 		dev->first_frame = 1;
+ 		pts_us64 = 0;
+ 	} else {
+-		pts_tmp = (u64)dev->vf->duration * 1000 + dev->pts_us64_rm;
+-		dev->pts_us64_rm = do_div(pts_tmp, 96);
++		if (get_vframe_src_fmt(dev->vf) == VFRAME_SIGNAL_FMT_DOVI ||
++		    get_vframe_src_fmt(dev->vf) == VFRAME_SIGNAL_FMT_DOVI_LL) {
++			pts_tmp = (u64)dev->vf->duration * 1000 +
++				dev->pts_us64_rm;
++			dev->pts_us64_rm = do_div(pts_tmp, 96);
++		} else {
++			pts_tmp = dur2pts(dev->vf->duration) * 100;
++			do_div(pts_tmp, 9);
++		}
+ 		pts_us64 = dev->last_pts_us64
+ 			+ pts_tmp;
+ 		pts_tmp = pts_us64 * 9;
+-- 
+2.43.0
