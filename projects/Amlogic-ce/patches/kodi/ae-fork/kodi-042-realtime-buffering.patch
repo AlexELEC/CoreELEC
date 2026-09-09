@@ -1,6 +1,6 @@
 diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
 --- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-09 06:43:56.606384301 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-09 07:42:31.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-09 09:55:34.000000000 +0000
 @@ -1079,22 +1079,24 @@ void CVideoPlayer::UpdateHasVideoAudio()
      m_HasAudio = false;
  }
@@ -969,7 +969,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
  
        m_syncTimer.Set(3000ms);
-@@ -2522,6 +2895,391 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2522,6 +2895,377 @@ void CVideoPlayer::HandlePlaySpeed()
      }
    }
  
@@ -1160,25 +1160,11 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +        SetCaching(CACHESTATE_INIT);
 +    }
 +
-+    // if audio stream stalled, wait until demux queues have filled to 10% before
-+    // resuming playback. Both audio AND video need to be checked here - checking
-+    // audio alone means buffering can end while video hasn't recovered at all
-+    if (m_pInputStream->IsRealtime())
++    // if audio stream stalled, wait until demux queue filled 10%
++    if (m_pInputStream->IsRealtime() &&
++        (m_CurrentAudio.id < 0 || m_VideoPlayerAudio->GetLevel() > 10))
 +    {
-+      const bool audioReady = m_CurrentAudio.id < 0 || m_VideoPlayerAudio->GetLevel() > 10;
-+      const bool videoReady = m_CurrentVideo.id < 0 || m_processInfo->GetLevelVQ() > 10;
-+
-+      if (audioReady && (videoReady || m_cachingTimer.IsTimePast()))
-+      {
-+        if (!videoReady)
-+        {
-+          CLog::Log(LOGDEBUG,
-+                    "Stream stalled, caching timeout reached before video recovered. "
-+                    "Audio: {} - Video: {}",
-+                    m_VideoPlayerAudio->GetLevel(), m_processInfo->GetLevelVQ());
-+        }
-+        SetCaching(CACHESTATE_INIT);
-+      }
++      SetCaching(CACHESTATE_INIT);
 +    }
 +  }
 +
@@ -1361,7 +1347,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    // handle ff/rw
    if (m_playSpeed != DVD_PLAYSPEED_NORMAL && m_playSpeed != DVD_PLAYSPEED_PAUSE)
    {
-@@ -4524,21 +5282,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4524,21 +5268,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
    if (hint.flags & AV_DISPOSITION_ATTACHED_PIC)
      return false;
  
@@ -1383,7 +1369,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    IDVDStreamPlayer* player = GetStreamPlayer(m_CurrentVideo.player);
    if(player == nullptr)
      return false;
-@@ -4552,6 +5295,24 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4552,6 +5281,24 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
      if (!player->OpenStream(hint))
        return false;
  
