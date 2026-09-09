@@ -1,6 +1,6 @@
 diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCache.cpp
 --- kodi/xbmc/filesystem/FileCache.cpp	2026-09-04 11:27:16.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-05 05:31:40.000000000 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-09 06:38:24.000000000 +0000
 @@ -26,6 +26,13 @@
  #include <cassert>
  #include <inttypes.h>
@@ -10,7 +10,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
 +namespace
 +{
 +constexpr unsigned int MAX_SOURCE_ATTEMPTS = 3;
-+constexpr auto SOURCE_REOPEN_RETRY_DELAY = 1s;
++constexpr auto SOURCE_REOPEN_RETRY_DELAY = 2s;
 +}
  
  #ifdef TARGET_POSIX
@@ -23,12 +23,14 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
    CLog::Log(LOGDEBUG, "CFileCache::{} - <{}> opening", __FUNCTION__, m_sourcePath);
  
-@@ -217,6 +225,67 @@ bool CFileCache::Open(const CURL& url)
+@@ -217,6 +225,73 @@ bool CFileCache::Open(const CURL& url)
    return true;
  }
  
 +bool CFileCache::ReopenSource()
 +{
++  auto retryDelay = SOURCE_REOPEN_RETRY_DELAY;
++
 +  for (unsigned int attempt = 1; attempt <= MAX_SOURCE_ATTEMPTS; ++attempt)
 +  {
 +    if (m_bStop)
@@ -78,8 +80,12 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
 +    {
 +      CLog::Log(LOGWARNING,
 +                "CFileCache::{} - waiting {} ms before next reopen attempt <{}>",
-+                __FUNCTION__, SOURCE_REOPEN_RETRY_DELAY.count(), m_sourcePath);
-+      std::this_thread::sleep_for(SOURCE_REOPEN_RETRY_DELAY);
++                __FUNCTION__,
++                std::chrono::duration_cast<std::chrono::milliseconds>(retryDelay).count(),
++                m_sourcePath);
++
++      std::this_thread::sleep_for(retryDelay);
++      retryDelay += 1s;
 +    }
 +  }
 +
@@ -91,7 +97,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  void CFileCache::Process()
  {
    if (!m_pCache)
-@@ -245,6 +314,7 @@ void CFileCache::Process()
+@@ -245,6 +320,7 @@ void CFileCache::Process()
  
    CWriteRate limiter;
    CWriteRate average;
@@ -99,7 +105,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
    while (!m_bStop)
    {
-@@ -344,8 +414,18 @@ void CFileCache::Process()
+@@ -344,8 +420,18 @@ void CFileCache::Process()
        // Check for actual EOF and retry as long as we still have data in our cache
        if (m_writePos < m_fileSize && m_pCache->WaitForData(0, 0ms) > 0)
        {
@@ -120,7 +126,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
          // Wait a bit:
          if (m_seekEvent.Wait(2000ms))
-@@ -388,6 +468,8 @@ void CFileCache::Process()
+@@ -388,6 +474,8 @@ void CFileCache::Process()
        }
      }
  
