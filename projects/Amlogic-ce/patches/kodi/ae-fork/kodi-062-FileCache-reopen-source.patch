@@ -1,10 +1,9 @@
-diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCache.cpp
---- kodi/xbmc/filesystem/FileCache.cpp	2026-09-04 11:27:16.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-09 06:38:24.000000000 +0000
-@@ -26,6 +26,13 @@
- #include <cassert>
+--- kodi/xbmc/filesystem/FileCache.cpp	2026-09-13 18:44:09.000000000 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-14 05:46:19.351115904 +0000
+@@ -28,6 +28,13 @@
  #include <inttypes.h>
  #include <memory>
+ #include <stdexcept>
 +#include <thread>
 +
 +namespace
@@ -15,7 +14,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
  #ifdef TARGET_POSIX
  #include "platform/posix/ConvUtils.h"
-@@ -98,6 +105,7 @@ bool CFileCache::Open(const CURL& url)
+@@ -132,6 +139,7 @@ bool CFileCache::Open(const CURL& url)
    std::unique_lock lock(m_sync);
  
    m_sourcePath = url.GetRedacted();
@@ -23,7 +22,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
    CLog::Log(LOGDEBUG, "CFileCache::{} - <{}> opening", __FUNCTION__, m_sourcePath);
  
-@@ -217,6 +225,73 @@ bool CFileCache::Open(const CURL& url)
+@@ -252,6 +260,73 @@ bool CFileCache::Open(const CURL& url)
    return true;
  }
  
@@ -40,16 +39,16 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
 +              "CFileCache::{} - reopening source at position {} (attempt {}/{}) <{}>",
 +              __FUNCTION__, m_writePos, attempt, MAX_SOURCE_ATTEMPTS, m_sourcePath);
 +
-+    m_source.Close();
++    m_source->Close();
 +
-+    if (m_source.Open(m_sourceUrl, READ_NO_CACHE | READ_TRUNCATED | READ_NO_BUFFER))
++    if (m_source->Open(CURL(m_sourceUrl), READ_NO_CACHE | READ_TRUNCATED | READ_NO_BUFFER))
 +    {
-+      m_seekPossible = m_source.IoControl(IOControl::SEEK_POSSIBLE, NULL);
++      m_seekPossible = m_source->IoControl(IOControl::SEEK_POSSIBLE, NULL);
 +      if (m_seekPossible)
 +      {
-+        m_fileSize = m_source.GetLength();
++        m_fileSize = m_source->GetLength();
 +
-+        const auto seekResult = m_source.Seek(m_writePos, SEEK_SET);
++        const auto seekResult = m_source->Seek(m_writePos, SEEK_SET);
 +        if (seekResult == m_writePos)
 +        {
 +          CLog::Log(LOGWARNING,
@@ -74,7 +73,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
 +                __FUNCTION__, attempt, MAX_SOURCE_ATTEMPTS, m_sourcePath);
 +    }
 +
-+    m_source.Close();
++    m_source->Close();
 +
 +    if (attempt < MAX_SOURCE_ATTEMPTS)
 +    {
@@ -97,7 +96,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  void CFileCache::Process()
  {
    if (!m_pCache)
-@@ -245,6 +320,7 @@ void CFileCache::Process()
+@@ -280,6 +355,7 @@ void CFileCache::Process()
  
    CWriteRate limiter;
    CWriteRate average;
@@ -105,7 +104,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
    while (!m_bStop)
    {
-@@ -344,8 +420,18 @@ void CFileCache::Process()
+@@ -413,8 +489,18 @@ void CFileCache::Process()
        // Check for actual EOF and retry as long as we still have data in our cache
        if (m_writePos < m_fileSize && m_pCache->WaitForData(0, 0ms) > 0)
        {
@@ -113,10 +112,10 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
 -                  __FUNCTION__, m_sourcePath, iRead);
 +        ++sourceReadRetries;
 +
-+        CLog::Log(LOGWARNING,
-+                  "CFileCache::{} - source read returned {}! Will retry ({}/{}) <{}>",
-+                  __FUNCTION__, iRead, sourceReadRetries, MAX_SOURCE_ATTEMPTS,
-+                  m_sourcePath);
++        CLog::Log(
++            LOGWARNING,
++            "CFileCache::{} - source read returned {}! Will retry ({}/{}) <{}>",
++            __FUNCTION__, iRead, sourceReadRetries, MAX_SOURCE_ATTEMPTS, m_sourcePath);
 +
 +        if (sourceReadRetries >= MAX_SOURCE_ATTEMPTS)
 +        {
@@ -126,7 +125,7 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
  
          // Wait a bit:
          if (m_seekEvent.Wait(2000ms))
-@@ -388,6 +474,8 @@ void CFileCache::Process()
+@@ -457,6 +543,8 @@ void CFileCache::Process()
        }
      }
  
@@ -135,18 +134,17 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
      int iTotalWrite = 0;
      while (!m_bStop && (iTotalWrite < iRead))
      {
-diff -Naurp kodi/xbmc/filesystem/FileCache.h kodi-patch/xbmc/filesystem/FileCache.h
---- kodi/xbmc/filesystem/FileCache.h	2026-09-04 11:27:16.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.h	2026-09-05 05:29:17.000000000 +0000
-@@ -58,10 +58,13 @@ namespace XFILE
-     }
+--- kodi/xbmc/filesystem/FileCache.h	2026-09-13 18:44:09.000000000 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.h	2026-09-14 05:46:19.351275431 +0000
+@@ -90,10 +90,13 @@ public:
+     CFileCache(unsigned int flags, std::unique_ptr<IFileCacheSource> source);
  
    private:
 +    bool ReopenSource();
 +
      std::unique_ptr<CCacheStrategy> m_pCache;
      int m_seekPossible = 0;
-     CFile m_source;
+     std::unique_ptr<IFileCacheSource> m_source;
      std::string m_sourcePath;
 +    std::string m_sourceUrl;
      CEvent m_seekEvent;
