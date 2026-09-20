@@ -1,0 +1,329 @@
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-08-14 12:15:19.014963274 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-08-14 12:49:52.000000000 +0000
+@@ -16,6 +16,7 @@
+ #include "utils/log.h"
+ 
+ #include <memory>
++#include <new>
+ #include <tuple>
+ #include <type_traits>
+ #include <utility>
+@@ -102,9 +103,30 @@ void CDVDDemuxClient::DisposeStreams()
+ 
+ bool CDVDDemuxClient::Reset()
+ {
++  const int videoStreamPlaying = m_videoStreamPlaying;
++  const CDemuxStream* videoStream = GetStream(videoStreamPlaying);
++  if (videoStream && videoStream->type == StreamType::VIDEO)
++  {
++    CLog::Log(LOGWARNING,
++              "CDVDDemuxClient::Reset: discarding parser state for video stream {} ({}, {} bytes extradata)",
++              videoStreamPlaying, avcodec_get_name(videoStream->codec),
++              videoStream->extraData.GetSize());
++  }
++
+   std::shared_ptr<CDVDInputStream> pInputStream = m_pInput;
+   Dispose();
+-  return Open(pInputStream);
++  const bool opened = Open(pInputStream);
++
++  const CDemuxStream* reopenedVideoStream = GetStream(videoStreamPlaying);
++  if (opened && reopenedVideoStream && reopenedVideoStream->type == StreamType::VIDEO)
++  {
++    CLog::Log(LOGINFO,
++              "CDVDDemuxClient::Reset: rebuilt video stream {} ({}, {} bytes extradata)",
++              videoStreamPlaying, avcodec_get_name(reopenedVideoStream->codec),
++              reopenedVideoStream->extraData.GetSize());
++  }
++
++  return opened;
+ }
+ 
+ void CDVDDemuxClient::Abort()
+@@ -157,6 +179,23 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+     stream->m_context->time_base.den = DVD_TIME_BASE;
+   }
+ 
++  auto setExtradata = [&](FFmpegExtraData&& extraData, const char* source)
++  {
++    if (!extraData)
++      return false;
++
++    const size_t extraDataSize = extraData.GetSize();
++    st->changes++;
++    st->disabled = false;
++    st->extraData = std::move(extraData);
++    stream->m_parser_split = false;
++    change = true;
++    CLog::Log(LOGINFO,
++              "CDVDDemuxClient::ParsePacket: extracted {} bytes of {} extradata for stream {} from {}",
++              extraDataSize, avcodec_get_name(st->codec), st->uniqueId, source);
++    return true;
++  };
++
+   if (stream->m_parser_split && stream->m_parser && stream->m_parser->parser)
+   {
+     AVPacket* avpkt = av_packet_alloc();
+@@ -181,15 +220,8 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+     }
+ 
+     FFmpegExtraData retExtraData = GetPacketExtradata(avpkt, codecPar.get());
+-    if (retExtraData)
++    if (setExtradata(std::move(retExtraData), "extract_extradata"))
+     {
+-      st->changes++;
+-      st->disabled = false;
+-      st->extraData = std::move(retExtraData);
+-      stream->m_parser_split = false;
+-      change = true;
+-      CLog::LogF(LOGDEBUG, "split extradata");
+-
+       // Allow ffmpeg to transport codec information to stream->m_context
+       if (!avcodec_open2(stream->m_context, stream->m_context->codec, nullptr))
+       {
+@@ -211,6 +243,26 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+   // our parse is setup to parse complete frames, so we don't care about outbufs
+   if (len >= 0)
+   {
++    // extract_extradata can only emit extradata when the complete parameter
++    // sets are present in one packet. For raw inputstream packets the FFmpeg
++    // parser may instead accumulate them in its codec context across packets.
++    if (!st->extraData && stream->m_context->extradata &&
++        stream->m_context->extradata_size > 0)
++    {
++      try
++      {
++        setExtradata(
++            FFmpegExtraData(stream->m_context->extradata,
++                            static_cast<size_t>(stream->m_context->extradata_size)),
++            "FFmpeg parser context");
++      }
++      catch (const std::bad_alloc&)
++      {
++        CLog::LogF(LOGERROR, "failed to allocate {} bytes for parser extradata",
++                   stream->m_context->extradata_size);
++      }
++    }
++
+     if (stream->m_context->profile != st->profile &&
+         stream->m_context->profile != AV_PROFILE_UNKNOWN)
+     {
+@@ -341,7 +393,13 @@ DemuxPacket* CDVDDemuxClient::Read()
+     // layout change. Keep the marker packet for VideoPlayer::ReadPacket(), but
+     // refresh CDVDDemuxClient's stream map first so OpenDefaultStreams() does
+     // not request stale/invalid stream ids from the old layout.
+-    RequestStreams();
++    // This is the real source-transition boundary. Clear parser/extradata
++    // state here, before post-transition packets are read. Do not defer this
++    // work to VideoPlayer, where a retry can otherwise discard newly parsed
++    // VPS/SPS/PPS.
++    CLog::Log(LOGINFO,
++              "CDVDDemuxClient: input stream layout changed, reset client parser state");
++    RequestStreams(true);
+   }
+   else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
+   {
+@@ -406,11 +464,11 @@ std::vector<CDemuxStream*> CDVDDemuxClie
+   return streams;
+ }
+ 
+-void CDVDDemuxClient::RequestStreams()
++void CDVDDemuxClient::RequestStreams(bool resetParserState)
+ {
+   std::map<int, std::shared_ptr<CDemuxStream>> newStreamMap;
+   for (auto stream : m_IDemux->GetStreams())
+-    SetStreamProps(stream, newStreamMap, false);
++    SetStreamProps(stream, newStreamMap, resetParserState);
+   m_streams = newStreamMap;
+ }
+ 
+@@ -483,12 +541,12 @@ void CDVDDemuxClient::SetStreamProps(CDe
+       streamVideo->m_parser = av_parser_init(source->codec);
+       if (streamVideo->m_parser)
+         streamVideo->m_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+-      streamVideo->iHeight = source->iHeight;
+-      streamVideo->iWidth = source->iWidth;
+-      streamVideo->fAspect = source->fAspect;
+-      streamVideo->iFpsScale = source->iFpsScale;
+-      streamVideo->iFpsRate = source->iFpsRate;
+     }
++    streamVideo->iHeight = source->iHeight;
++    streamVideo->iWidth = source->iWidth;
++    streamVideo->fAspect = source->fAspect;
++    streamVideo->iFpsScale = source->iFpsScale;
++    streamVideo->iFpsRate = source->iFpsRate;
+     streamVideo->iBitRate = source->iBitRate;
+     if (source->extraData)
+     {
+@@ -721,8 +779,10 @@ void CDVDDemuxClient::EnableStream(int i
+ 
+ void CDVDDemuxClient::OpenStream(int id)
+ {
+-  // OpenStream may change some parameters
+-  // in this case we need to reset our stream properties
++  // OpenStream can update source properties. It must not recreate the client
++  // parser: for raw inputstream packets that parser owns any VPS/SPS/PPS
++  // already extracted for this stream. Source-transition markers reset it in
++  // Read() before the new raw packets are consumed.
+   if (m_IDemux)
+   {
+     bool bOpenStream = m_IDemux->OpenStream(id);
+@@ -732,7 +792,7 @@ void CDVDDemuxClient::OpenStream(int id)
+       m_videoStreamPlaying = id;
+ 
+     if (bOpenStream)
+-      SetStreamProps(stream, m_streams, true);
++      SetStreamProps(stream, m_streams, false);
+   }
+ }
+ 
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-08-11 18:44:29.000000000 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-08-14 12:49:51.000000000 +0000
+@@ -45,7 +45,7 @@ public:
+   void SetVideoResolution(unsigned int width, unsigned int height) override;
+ 
+ protected:
+-  void RequestStreams();
++  void RequestStreams(bool resetParserState = false);
+   void SetStreamProps(CDemuxStream *stream, std::map<int, std::shared_ptr<CDemuxStream>> &map, bool forceInit);
+   bool ParsePacket(DemuxPacket* pPacket);
+   void DisposeStreams();
+@@ -63,4 +63,3 @@ protected:
+ private:
+   static inline bool CodecHasExtraData(AVCodecID id);
+ };
+-
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-08-14 12:15:19.078963411 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-08-14 12:51:36.000000000 +0000
+@@ -1274,6 +1274,17 @@ bool CVideoPlayer::HandleStreamReset(boo
+   const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
+   const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
+ 
++  // CDVDDemuxClient extracts HEVC VPS/SPS/PPS from the raw packets it receives
++  // from inputstream add-ons. Resetting it recreates the parser and discards
++  // both already extracted extradata and any partial parser state. Keep it
++  // alive until the pending HEVC stream can be opened.
++  if (resetDemuxer && realtime && m_realtimeHevcExtradataPending)
++  {
++    CLog::Log(LOGWARNING,
++              "VideoPlayer: preserve client demuxer while realtime HEVC extradata is pending");
++    resetDemuxer = false;
++  }
++
+   if (wasRealtimePlaybackStarted && expectedRealtimeVideo && m_CurrentVideo.id >= 0 &&
+       m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC)
+   {
+@@ -1624,8 +1635,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+ 
+         if (demuxerResetRetry)
+         {
+-          CLog::Log(LOGWARNING,
+-                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++          if (m_realtimeHevcExtradataPending)
++            CLog::Log(LOGWARNING,
++                      "VideoPlayer: [STREAM RESET] pending for too long, retry stream open while preserving HEVC parser");
++          else
++            CLog::Log(LOGWARNING,
++                      "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
+         }
+ 
+         HandleStreamReset(demuxerResetRetry, true);
+@@ -1633,11 +1648,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+       else if (forceInternalReset)
+       {
+         // In-place H.265 episode boundaries on Amlogic can expose a new stream
+-        // before HEVC extradata is usable. Do a full internal stream reset, but
+-        // keep the current inputstream/socket alive.
++        // before HEVC extradata is usable. Reopen the players, but leave the
++        // client demuxer/parser alive so it can extract VPS/SPS/PPS from the
++        // following raw packets.
+         CLog::Log(LOGWARNING,
+-                  "VideoPlayer: realtime HEVC stream change, force internal stream reset without closing input socket");
+-        HandleStreamReset(true);
++                  "VideoPlayer: realtime HEVC stream change, reset players without resetting client demuxer");
++        HandleStreamReset(false);
+       }
+       else
+       {
+@@ -1891,6 +1907,7 @@ void CVideoPlayer::Prepare()
+   m_realtimeStartupAudioStallGraceLogged = false;
+   m_realtimeExpectVideoStream = false;
+   m_realtimeForceVideoCodecReopen = false;
++  m_realtimeHevcExtradataPending = false;
+   m_realtimeHevcPostResetGate = false;
+   m_realtimeHevcPostResetVideoSeen = false;
+   m_realtimeHevcPostResetAudioReady = false;
+@@ -2418,8 +2435,12 @@ void CVideoPlayer::Process()
+ 
+       if (demuxerResetRetry)
+       {
+-        CLog::Log(LOGWARNING,
+-                  "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++        if (m_realtimeHevcExtradataPending)
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry stream open while preserving HEVC parser");
++        else
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
+       }
+ 
+       // A normal demux packet means the demuxer had another chance to expose
+@@ -2500,8 +2521,12 @@ void CVideoPlayer::Process()
+ 
+         if (demuxerResetRetry)
+         {
+-          CLog::Log(LOGWARNING,
+-                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++          if (m_realtimeHevcExtradataPending)
++            CLog::Log(LOGWARNING,
++                      "VideoPlayer: [STREAM RESET] pending for too long, retry stream open while preserving HEVC parser");
++          else
++            CLog::Log(LOGWARNING,
++                      "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
+         }
+ 
+         HandleStreamReset(demuxerResetRetry, true);
+@@ -5492,6 +5517,14 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+ 
+   if (res)
+   {
++    if (current.type == StreamType::VIDEO && m_realtimeHevcExtradataPending)
++    {
++      CLog::Log(LOGINFO,
++                "VideoPlayer: realtime HEVC extradata recovery succeeded ({} bytes)",
++                hint.extradata.GetSize());
++      m_realtimeHevcExtradataPending = false;
++    }
++
+     int oldId = current.id;
+     current.id = iStream;
+     current.demuxerId = demuxerId;
+@@ -5525,6 +5558,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+     }
+     else if (stream)
+     {
++      if (!m_realtimeHevcExtradataPending)
++      {
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime HEVC opening deferred; preserve client parser until raw extradata is extracted");
++      }
++      m_realtimeHevcExtradataPending = true;
+       CLog::Log(LOGWARNING,
+                 "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");
+     }
+diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-08-14 12:15:19.078963411 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-08-14 12:47:35.000000000 +0000
+@@ -682,6 +682,9 @@ protected:
+   bool m_realtimeStartupBufferingAllowed{true};
+   bool m_realtimeExpectVideoStream{false};
+   bool m_realtimeForceVideoCodecReopen{false};
++  // CDVDDemuxClient owns the parser which extracts HEVC VPS/SPS/PPS from raw
++  // inputstream packets. Do not recreate that demuxer while this is true.
++  bool m_realtimeHevcExtradataPending{false};
+   bool m_realtimeHevcPostResetGate{false};
+   bool m_realtimeHevcPostResetVideoSeen{false};
+   bool m_realtimeHevcPostResetAudioReady{false};

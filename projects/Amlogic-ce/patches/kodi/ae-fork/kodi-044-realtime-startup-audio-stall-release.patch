@@ -1,0 +1,175 @@
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 08:23:40.036055679 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 08:23:40.037832488 +0000
+@@ -1234,6 +1234,10 @@ bool CVideoPlayer::HandleStreamReset(boo
+   m_realtimeQueuesFullSleepSince = {};
+   m_realtimeQueuesFullLastSoftRecovery = {};
+   m_realtimeQueuesFullSoftRecoveries = 0;
++  m_realtimeStartupAudioStallGraceUntil = {};
++  m_realtimeStartupAudioStallGraceLogged = false;
++  if (wasRealtimePlaybackStarted)
++    m_realtimeStartupBufferingAllowed = false;
+ 
+   auto markPending = [&](bool restartTimer)
+   {
+@@ -1331,6 +1335,9 @@ bool CVideoPlayer::HandleStreamReset(boo
+     m_realtimePostTransitionVideoGraceUntil = {};
+     m_realtimePostTransitionVideoDropSince = {};
+     m_realtimePostTransitionVideoDropLogged = false;
++    m_realtimeStartupBufferingAllowed = false;
++    m_realtimeStartupAudioStallGraceUntil = {};
++    m_realtimeStartupAudioStallGraceLogged = false;
+ 
+     CLog::Log(LOGINFO,
+               "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
+@@ -1693,6 +1700,9 @@ void CVideoPlayer::Prepare()
+   m_realtimePostTransitionVideoGraceUntil = {};
+   m_realtimePostTransitionVideoDropSince = {};
+   m_realtimePostTransitionVideoDropLogged = false;
++  m_realtimeStartupBufferingAllowed = true;
++  m_realtimeStartupAudioStallGraceUntil = {};
++  m_realtimeStartupAudioStallGraceLogged = false;
+   m_realtimeNoStreamsSince = {};
+   m_realtimeStreamTransitionReadUntil = {};
+   m_realtimeStreamResetPending = false;
+@@ -2716,6 +2726,7 @@ void CVideoPlayer::HandlePlaySpeed()
+   constexpr auto realtimeBufferEmergencyResetTime = 10000ms;
+   constexpr auto realtimePostTransitionReadTime = 20s;
+   constexpr auto realtimePostTransitionVideoGraceTime = 3s;
++  constexpr auto realtimeStartupAudioStallGraceTime = 5s;
+ 
+ 
+   const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
+@@ -2965,18 +2976,45 @@ void CVideoPlayer::HandlePlaySpeed()
+           const bool emergencyResetPassed =
+               now - m_realtimeBufferReadySince >= realtimeBufferEmergencyResetTime;
+ 
++          const bool realtimeTransitionRecovery =
++              m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{};
++
++          const bool startupAudioStallRelease =
++              m_realtimeStartupBufferingAllowed &&
++              !realtimeTransitionRecovery &&
++              maxHoldPassed &&
++              realtimeSynced &&
++              realtimeQueuesBuffered &&
++              audioStalled &&
++              !videoStalled;
++
+           const bool releaseBuffering =
+               realtimeSynced &&
+-              !audioStalled &&
+               !videoStalled &&
+-              realtimeQueuesBuffered;
++              realtimeQueuesBuffered &&
++              (!audioStalled || startupAudioStallRelease);
+ 
+           if (releaseBuffering)
+           {
++            if (startupAudioStallRelease)
++            {
++              CLog::Log(LOGWARNING,
++                        "VideoPlayer: realtime startup buffering release with audio still stalled after max hold. A/V levels: {}/{}",
++                        audioLevel, videoLevel);
++              m_realtimeStartupAudioStallGraceUntil = now + realtimeStartupAudioStallGraceTime;
++              m_realtimeStartupAudioStallGraceLogged = false;
++            }
++            else
++            {
++              m_realtimeStartupAudioStallGraceUntil = {};
++              m_realtimeStartupAudioStallGraceLogged = false;
++            }
++
+             CLog::Log(LOGINFO,
+                       "VideoPlayer: realtime buffering done. A/V levels: {}/{} | AudioStalled: {} | VideoStalled: {} | NoStreams: {} | Synced: {} | QueuesBuffered: {} | MaxHold: {}",
+                       audioLevel, videoLevel, audioStalled, videoStalled, noActiveStreams,
+                       realtimeSynced, realtimeQueuesBuffered, maxHoldPassed);
++            m_realtimeStartupBufferingAllowed = false;
+             m_realtimeBufferReadySince = {};
+             m_realtimeBufferMaxHoldLogged = false;
+             m_realtimeAudioStallHoldLogged = false;
+@@ -3148,6 +3186,38 @@ void CVideoPlayer::HandlePlaySpeed()
+     if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
+     {
+       const auto now = std::chrono::steady_clock::now();
++      if (m_realtimeStartupAudioStallGraceUntil != std::chrono::steady_clock::time_point{})
++      {
++        if (!audioStalled || audioCritical || videoCritical || videoStalled ||
++            now >= m_realtimeStartupAudioStallGraceUntil)
++        {
++          if (!audioStalled)
++          {
++            CLog::Log(LOGINFO,
++                      "VideoPlayer: realtime startup audio stall cleared after buffering release");
++          }
++          m_realtimeStartupAudioStallGraceUntil = {};
++          m_realtimeStartupAudioStallGraceLogged = false;
++        }
++        else if (!m_realtimeStartupAudioStallGraceLogged)
++        {
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: realtime startup audio stall grace active after buffering release. A/V levels: {}/{}",
++                    audioLevel, videoLevel);
++          m_realtimeStartupAudioStallGraceLogged = true;
++        }
++      }
++
++      const bool realtimeStartupAudioStallGrace =
++          realtime &&
++          m_realtimeStartupAudioStallGraceUntil != std::chrono::steady_clock::time_point{} &&
++          audioStalled &&
++          !audioCritical &&
++          !videoCritical &&
++          !videoStalled;
++
++      const bool audioStalledForUnderrun = audioStalled && !realtimeStartupAudioStallGrace;
++
+       if (m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
+           now >= m_realtimePostTransitionVideoGraceUntil &&
+           m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
+@@ -3210,7 +3280,7 @@ void CVideoPlayer::HandlePlaySpeed()
+       }
+ 
+       if (realtimePlaybackStarted && !noActiveStreams &&
+-          (audioCritical || videoCritical || audioStalled || videoStalled))
++          (audioCritical || videoCritical || audioStalledForUnderrun || videoStalled))
+       {
+         if (audioLevel == 0 && videoLevel == 0 && !audioStalled && videoStalled)
+         {
+@@ -3233,15 +3303,21 @@ void CVideoPlayer::HandlePlaySpeed()
+         return;
+       }
+ 
++      if (realtimePlaybackStarted && m_realtimeStartupBufferingAllowed &&
++          !audioCritical && !videoCritical && !audioStalled && !videoStalled)
++      {
++        m_realtimeStartupBufferingAllowed = false;
++      }
++
+       // take action if audio or video stream is stalled
+-      if (((m_VideoPlayerAudio->IsStalled() && m_CurrentAudio.inited) ||
++      if (((audioStalledForUnderrun && m_CurrentAudio.inited) ||
+            (m_VideoPlayerVideo->IsStalled() && m_CurrentVideo.inited)) &&
+           m_syncTimer.IsTimePast())
+       {
+         if (m_pInputStream->IsRealtime())
+         {
+           if ((m_CurrentAudio.id >= 0 && m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+-               m_VideoPlayerAudio->IsStalled()) ||
++               audioStalledForUnderrun) ||
+               (m_CurrentVideo.id >= 0 && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+                m_processInfo->GetLevelVQ() == 0))
+           {
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 08:23:40.036854490 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 08:23:40.038550093 +0000
+@@ -635,6 +635,9 @@ protected:
+   std::chrono::steady_clock::time_point m_realtimePostTransitionVideoGraceUntil{};
+   std::chrono::steady_clock::time_point m_realtimePostTransitionVideoDropSince{};
+   bool m_realtimePostTransitionVideoDropLogged{false};
++  bool m_realtimeStartupBufferingAllowed{true};
++  std::chrono::steady_clock::time_point m_realtimeStartupAudioStallGraceUntil{};
++  bool m_realtimeStartupAudioStallGraceLogged{false};
+ 
+   bool m_updateStreamDetails{false};
+ 

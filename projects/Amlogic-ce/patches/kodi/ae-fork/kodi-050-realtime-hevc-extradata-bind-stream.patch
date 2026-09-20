@@ -1,0 +1,78 @@
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-09 11:11:20.238407031 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-09 11:11:20.240280574 +0000
+@@ -1307,10 +1307,19 @@ bool CVideoPlayer::HandleStreamReset(boo
+   // from inputstream add-ons. Resetting it recreates the parser and discards
+   // both already extracted extradata and any partial parser state. Keep it
+   // alive until the pending HEVC stream can be opened.
+-  if (resetDemuxer && realtime && m_realtimeHevcExtradataPending)
++  const bool pendingHevcStreamMatches =
++      m_realtimeHevcExtradataPending &&
++      m_realtimeHevcExtradataPendingDemuxerId == m_CurrentVideo.demuxerId &&
++      m_realtimeHevcExtradataPendingStreamId == m_CurrentVideo.id &&
++      m_realtimeHevcExtradataPendingSource == m_CurrentVideo.source &&
++      m_realtimeHevcExtradataPendingCodec == m_CurrentVideo.hint.codec &&
++      m_realtimeHevcExtradataPendingWidth == m_CurrentVideo.hint.width &&
++      m_realtimeHevcExtradataPendingHeight == m_CurrentVideo.hint.height;
++
++  if (resetDemuxer && realtime && pendingHevcStreamMatches)
+   {
+     CLog::Log(LOGWARNING,
+-              "VideoPlayer: preserve client demuxer while realtime HEVC extradata is pending");
++              "VideoPlayer: preserve client demuxer while realtime HEVC extradata is pending for current stream");
+     resetDemuxer = false;
+   }
+ 
+@@ -1937,6 +1946,12 @@ void CVideoPlayer::Prepare()
+   m_realtimeExpectVideoStream = false;
+   m_realtimeForceVideoCodecReopen = false;
+   m_realtimeHevcExtradataPending = false;
++  m_realtimeHevcExtradataPendingDemuxerId = -1;
++  m_realtimeHevcExtradataPendingStreamId = -1;
++  m_realtimeHevcExtradataPendingSource = STREAM_SOURCE_NONE;
++  m_realtimeHevcExtradataPendingCodec = AV_CODEC_ID_NONE;
++  m_realtimeHevcExtradataPendingWidth = 0;
++  m_realtimeHevcExtradataPendingHeight = 0;
+   m_realtimeHevcPostResetGate = false;
+   m_realtimeHevcPostResetVideoSeen = false;
+   m_realtimeHevcPostResetAudioReady = false;
+@@ -5625,6 +5640,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+                 "VideoPlayer: realtime HEVC extradata recovery succeeded ({} bytes)",
+                 hint.extradata.GetSize());
+       m_realtimeHevcExtradataPending = false;
++      m_realtimeHevcExtradataPendingDemuxerId = -1;
++      m_realtimeHevcExtradataPendingStreamId = -1;
++      m_realtimeHevcExtradataPendingSource = STREAM_SOURCE_NONE;
++      m_realtimeHevcExtradataPendingCodec = AV_CODEC_ID_NONE;
++      m_realtimeHevcExtradataPendingWidth = 0;
++      m_realtimeHevcExtradataPendingHeight = 0;
+     }
+ 
+     int oldId = current.id;
+@@ -5666,6 +5687,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+                   "VideoPlayer: realtime HEVC opening deferred; preserve client parser until raw extradata is extracted");
+       }
+       m_realtimeHevcExtradataPending = true;
++      m_realtimeHevcExtradataPendingDemuxerId = demuxerId;
++      m_realtimeHevcExtradataPendingStreamId = iStream;
++      m_realtimeHevcExtradataPendingSource = source;
++      m_realtimeHevcExtradataPendingCodec = hint.codec;
++      m_realtimeHevcExtradataPendingWidth = hint.width;
++      m_realtimeHevcExtradataPendingHeight = hint.height;
+       CLog::Log(LOGWARNING,
+                 "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");
+     }
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-09 11:11:20.239378282 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-09 11:11:20.241199170 +0000
+@@ -688,6 +688,12 @@ protected:
+   // CDVDDemuxClient owns the parser which extracts HEVC VPS/SPS/PPS from raw
+   // inputstream packets. Do not recreate that demuxer while this is true.
+   bool m_realtimeHevcExtradataPending{false};
++  int64_t m_realtimeHevcExtradataPendingDemuxerId{-1};
++  int m_realtimeHevcExtradataPendingStreamId{-1};
++  int m_realtimeHevcExtradataPendingSource{STREAM_SOURCE_NONE};
++  AVCodecID m_realtimeHevcExtradataPendingCodec{AV_CODEC_ID_NONE};
++  int m_realtimeHevcExtradataPendingWidth{0};
++  int m_realtimeHevcExtradataPendingHeight{0};
+   bool m_realtimeHevcPostResetGate{false};
+   bool m_realtimeHevcPostResetVideoSeen{false};
+   bool m_realtimeHevcPostResetAudioReady{false};

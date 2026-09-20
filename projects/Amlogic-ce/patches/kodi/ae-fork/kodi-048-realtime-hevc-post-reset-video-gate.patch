@@ -1,0 +1,200 @@
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 16:31:25.407856656 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 16:38:59.894212375 +0000
+@@ -1253,6 +1253,17 @@ bool CVideoPlayer::HandleStreamReset(boo
+   if (!wasRealtimePlaybackStarted)
+     m_realtimeForceVideoCodecReopen = false;
+ 
++  if (!expectedRealtimeVideo)
++  {
++    m_realtimeHevcPostResetGate = false;
++    m_realtimeHevcPostResetVideoSeen = false;
++    m_realtimeHevcPostResetAudioReady = false;
++    m_realtimeHevcPostResetAudioCorrectionValid = false;
++    m_realtimeHevcPostResetVideoDts = DVD_NOPTS_VALUE;
++    m_realtimeHevcPostResetAudioCorrection = 0.0;
++    m_realtimeHevcPostResetLastLog = {};
++  }
++
+   m_realtimeStreamResetLastTry = now;
+   m_realtimeQueuesFullSleepSince = {};
+   m_realtimeQueuesFullLastSoftRecovery = {};
+@@ -1454,6 +1465,30 @@ bool CVideoPlayer::HandleStreamReset(boo
+   m_realtimePostTransitionVideoDropSince = {};
+   m_realtimePostTransitionVideoDropLogged = false;
+ 
++  if (expectedRealtimeVideo && (wasRealtimePlaybackStarted || wasPending) && m_HasVideo &&
++      m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC)
++  {
++    m_realtimeHevcPostResetGate = true;
++    m_realtimeHevcPostResetVideoSeen = false;
++    m_realtimeHevcPostResetAudioReady = false;
++    m_realtimeHevcPostResetAudioCorrectionValid = false;
++    m_realtimeHevcPostResetVideoDts = DVD_NOPTS_VALUE;
++    m_realtimeHevcPostResetAudioCorrection = 0.0;
++    m_realtimeHevcPostResetLastLog = {};
++    CLog::Log(LOGINFO,
++              "VideoPlayer: realtime HEVC post-reset A/V gate armed until valid video timestamp");
++  }
++  else
++  {
++    m_realtimeHevcPostResetGate = false;
++    m_realtimeHevcPostResetVideoSeen = false;
++    m_realtimeHevcPostResetAudioReady = false;
++    m_realtimeHevcPostResetAudioCorrectionValid = false;
++    m_realtimeHevcPostResetVideoDts = DVD_NOPTS_VALUE;
++    m_realtimeHevcPostResetAudioCorrection = 0.0;
++    m_realtimeHevcPostResetLastLog = {};
++  }
++
+   // Keep the aggressive post-transition read window only for in-place realtime
+   // stream switches after playback has already started. The forced STREAMRESET
+   // used while opening a new inputstream is part of normal channel startup;
+@@ -1820,6 +1855,14 @@ void CVideoPlayer::Prepare()
+   m_realtimeStartupAudioStallGraceUntil = {};
+   m_realtimeStartupAudioStallGraceLogged = false;
+   m_realtimeExpectVideoStream = false;
++  m_realtimeForceVideoCodecReopen = false;
++  m_realtimeHevcPostResetGate = false;
++  m_realtimeHevcPostResetVideoSeen = false;
++  m_realtimeHevcPostResetAudioReady = false;
++  m_realtimeHevcPostResetAudioCorrectionValid = false;
++  m_realtimeHevcPostResetVideoDts = DVD_NOPTS_VALUE;
++  m_realtimeHevcPostResetAudioCorrection = 0.0;
++  m_realtimeHevcPostResetLastLog = {};
+   m_realtimeNoStreamsSince = {};
+   m_realtimeStreamTransitionReadUntil = {};
+   m_realtimeStreamResetPending = false;
+@@ -2639,6 +2682,64 @@ void CVideoPlayer::ProcessAudioData(CDem
+ {
+   CheckStreamChanges(m_CurrentAudio, pStream);
+ 
++  const bool realtimeHevcGate =
++      m_pInputStream && m_pInputStream->IsRealtime() &&
++      m_realtimeExpectVideoStream && m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
++      (m_realtimeHevcPostResetGate || m_realtimeHevcPostResetAudioCorrectionValid);
++
++  if (realtimeHevcGate)
++  {
++    const double audioDts = pPacket->dts != DVD_NOPTS_VALUE ? pPacket->dts : pPacket->pts;
++    const auto now = std::chrono::steady_clock::now();
++    auto logDrop = [&](const char* reason)
++    {
++      if (m_realtimeHevcPostResetLastLog == std::chrono::steady_clock::time_point{} ||
++          now - m_realtimeHevcPostResetLastLog >= 2s)
++      {
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: drop realtime HEVC audio packet after reset: {} | audio dts:{:.3f} pts:{:.3f} video dts:{:.3f}",
++                  reason, pPacket->dts == DVD_NOPTS_VALUE ? -1.0 : pPacket->dts / DVD_TIME_BASE,
++                  pPacket->pts == DVD_NOPTS_VALUE ? -1.0 : pPacket->pts / DVD_TIME_BASE,
++                  m_realtimeHevcPostResetVideoDts == DVD_NOPTS_VALUE
++                      ? -1.0
++                      : m_realtimeHevcPostResetVideoDts / DVD_TIME_BASE);
++        m_realtimeHevcPostResetLastLog = now;
++      }
++    };
++
++    if (audioDts == DVD_NOPTS_VALUE)
++    {
++      logDrop("invalid audio timestamp");
++      CDVDDemuxUtils::FreeDemuxPacket(pPacket);
++      return;
++    }
++
++    if (m_realtimeHevcPostResetGate && !m_realtimeHevcPostResetVideoSeen)
++    {
++      logDrop("waiting for first valid video timestamp");
++      CDVDDemuxUtils::FreeDemuxPacket(pPacket);
++      return;
++    }
++
++    if (m_realtimeHevcPostResetGate && !m_realtimeHevcPostResetAudioReady)
++    {
++      const double diff = audioDts - m_realtimeHevcPostResetVideoDts;
++      if (std::abs(diff) > DVD_MSEC_TO_TIME(500))
++      {
++        m_realtimeHevcPostResetAudioCorrection = diff;
++        m_realtimeHevcPostResetAudioCorrectionValid = true;
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime HEVC post-reset audio/video timestamp gap {:.3f}s, align audio to video timeline",
++                  diff / DVD_TIME_BASE);
++      }
++      m_realtimeHevcPostResetAudioReady = true;
++      m_realtimeHevcPostResetGate = false;
++    }
++
++    if (m_realtimeHevcPostResetAudioCorrectionValid)
++      UpdateCorrection(pPacket, m_realtimeHevcPostResetAudioCorrection);
++  }
++
+   bool checkcont = CheckContinuity(m_CurrentAudio, pPacket);
+   UpdateTimestamps(m_CurrentAudio, pPacket);
+ 
+@@ -2681,6 +2782,22 @@ void CVideoPlayer::ProcessVideoData(CDem
+   {
+     checkcont = CheckContinuity(m_CurrentVideo, pPacket);
+     UpdateTimestamps(m_CurrentVideo, pPacket);
++
++    if (m_pInputStream && m_pInputStream->IsRealtime() &&
++        m_realtimeExpectVideoStream && m_realtimeHevcPostResetGate &&
++        m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
++        !m_realtimeHevcPostResetVideoSeen)
++    {
++      const double videoDts = pPacket->dts != DVD_NOPTS_VALUE ? pPacket->dts : pPacket->pts;
++      if (videoDts != DVD_NOPTS_VALUE)
++      {
++        m_realtimeHevcPostResetVideoSeen = true;
++        m_realtimeHevcPostResetVideoDts = videoDts;
++        CLog::Log(LOGINFO,
++                  "VideoPlayer: realtime HEVC post-reset first valid video timestamp {:.3f}",
++                  videoDts / DVD_TIME_BASE);
++      }
++    }
+   }
+   if (checkcont && (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CHECK))
+     m_CurrentVideo.avsync = CCurrentStream::AV_SYNC_NONE;
+@@ -3105,10 +3222,14 @@ void CVideoPlayer::HandlePlaySpeed()
+               audioStalled &&
+               !videoStalled;
+ 
++          const bool hevcPostResetGateReady =
++              !m_realtimeHevcPostResetGate || m_realtimeHevcPostResetAudioReady;
++
+           const bool releaseBuffering =
+               realtimeSynced &&
+               !videoStalled &&
+               realtimeQueuesBuffered &&
++              hevcPostResetGateReady &&
+               (!audioStalled || startupAudioStallRelease);
+ 
+           if (releaseBuffering)
+@@ -3185,8 +3306,12 @@ void CVideoPlayer::HandlePlaySpeed()
+             const bool stalledWithBufferedQueues =
+                 realtimeQueuesBuffered && (audioStalled || videoStalled);
+ 
++            const bool hevcPostResetGateStuck =
++                m_realtimeHevcPostResetGate && emergencyResetPassed;
++
+             const bool recoveryReset =
+                 !realtimeSynced ||
++                hevcPostResetGateStuck ||
+                 (!realtimeQueuesBuffered && (audioStalled || emergencyResetPassed)) ||
+                 (stalledWithBufferedQueues && emergencyResetPassed);
+ 
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 16:31:25.360967305 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 16:37:10.867304502 +0000
+@@ -638,6 +638,13 @@ protected:
+   bool m_realtimeStartupBufferingAllowed{true};
+   bool m_realtimeExpectVideoStream{false};
+   bool m_realtimeForceVideoCodecReopen{false};
++  bool m_realtimeHevcPostResetGate{false};
++  bool m_realtimeHevcPostResetVideoSeen{false};
++  bool m_realtimeHevcPostResetAudioReady{false};
++  bool m_realtimeHevcPostResetAudioCorrectionValid{false};
++  double m_realtimeHevcPostResetVideoDts{DVD_NOPTS_VALUE};
++  double m_realtimeHevcPostResetAudioCorrection{0.0};
++  std::chrono::steady_clock::time_point m_realtimeHevcPostResetLastLog{};
+   std::chrono::steady_clock::time_point m_realtimeStartupAudioStallGraceUntil{};
+   bool m_realtimeStartupAudioStallGraceLogged{false};
+ 

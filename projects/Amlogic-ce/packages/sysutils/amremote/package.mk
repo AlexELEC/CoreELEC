@@ -17,6 +17,8 @@ makeinstall_target() {
 
   mkdir -p ${INSTALL}/usr/lib/coreelec
     cp ${PKG_DIR}/scripts/* ${INSTALL}/usr/lib/coreelec
+  mkdir -p $INSTALL/usr/config/amremote
+    cp $PKG_DIR/config/* $INSTALL/usr/config/amremote
 }
 
 post_install() {
