@@ -1,20 +1,19 @@
---- kodi/xbmc/filesystem/FileCache.cpp	2026-09-13 18:44:09.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-14 05:46:19.351115904 +0000
-@@ -28,6 +28,13 @@
- #include <inttypes.h>
+--- kodi/xbmc/filesystem/FileCache.cpp	2026-09-22 02:27:32.788482226 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-22 02:27:32.783763145 +0000
+@@ -29,6 +29,12 @@
  #include <memory>
  #include <stdexcept>
-+#include <thread>
-+
+ 
 +namespace
 +{
-+constexpr unsigned int MAX_SOURCE_ATTEMPTS = 3;
 +constexpr auto SOURCE_REOPEN_RETRY_DELAY = 2s;
++constexpr unsigned int SOURCE_READ_RETRIES_BEFORE_REOPEN = 3;
 +}
- 
++
  #ifdef TARGET_POSIX
  #include "platform/posix/ConvUtils.h"
-@@ -132,6 +139,7 @@ bool CFileCache::Open(const CURL& url)
+ #endif
+@@ -132,6 +138,7 @@ bool CFileCache::Open(const CURL& url)
    std::unique_lock lock(m_sync);
  
    m_sourcePath = url.GetRedacted();
@@ -22,27 +21,42 @@
  
    CLog::Log(LOGDEBUG, "CFileCache::{} - <{}> opening", __FUNCTION__, m_sourcePath);
  
-@@ -252,6 +260,73 @@ bool CFileCache::Open(const CURL& url)
+@@ -252,6 +259,95 @@ bool CFileCache::Open(const CURL& url)
    return true;
  }
  
 +bool CFileCache::ReopenSource()
 +{
 +  auto retryDelay = SOURCE_REOPEN_RETRY_DELAY;
++  unsigned int attempt = 0;
 +
-+  for (unsigned int attempt = 1; attempt <= MAX_SOURCE_ATTEMPTS; ++attempt)
++  while (!m_bStop)
 +  {
++    ++attempt;
++
++    CLog::Log(LOGWARNING,
++              "CFileCache::{} - reopening source at position {} (attempt {}) <{}>",
++              __FUNCTION__, m_writePos, attempt, m_sourcePath);
++
++    // StopThread() waits for the worker thread before Close() can close m_source.
++    // Check the stop state before every source operation so shutdown cannot start
++    // another open/seek attempt after the worker has been asked to exit.
 +    if (m_bStop)
 +      return false;
 +
-+    CLog::Log(LOGWARNING,
-+              "CFileCache::{} - reopening source at position {} (attempt {}/{}) <{}>",
-+              __FUNCTION__, m_writePos, attempt, MAX_SOURCE_ATTEMPTS, m_sourcePath);
-+
 +    m_source->Close();
++
++    if (m_bStop)
++      return false;
 +
 +    if (m_source->Open(CURL(m_sourceUrl), READ_NO_CACHE | READ_TRUNCATED | READ_NO_BUFFER))
 +    {
++      if (m_bStop)
++      {
++        m_source->Close();
++        return false;
++      }
++
 +      m_seekPossible = m_source->IoControl(IOControl::SEEK_POSSIBLE, NULL);
 +      if (m_seekPossible)
 +      {
@@ -51,9 +65,16 @@
 +        const auto seekResult = m_source->Seek(m_writePos, SEEK_SET);
 +        if (seekResult == m_writePos)
 +        {
++          if (m_bStop)
++          {
++            m_source->Close();
++            return false;
++          }
++
++          m_sourcePositionValid = true;
 +          CLog::Log(LOGWARNING,
-+                    "CFileCache::{} - source reopened successfully on attempt {}/{} <{}>",
-+                    __FUNCTION__, attempt, MAX_SOURCE_ATTEMPTS, m_sourcePath);
++                    "CFileCache::{} - source reopened successfully on attempt {} <{}>",
++                    __FUNCTION__, attempt, m_sourcePath);
 +          return true;
 +        }
 +
@@ -69,34 +90,34 @@
 +    }
 +    else
 +    {
-+      CLog::Log(LOGERROR, "CFileCache::{} - failed to reopen source (attempt {}/{}) <{}>",
-+                __FUNCTION__, attempt, MAX_SOURCE_ATTEMPTS, m_sourcePath);
++      CLog::Log(LOGERROR, "CFileCache::{} - failed to reopen source (attempt {}) <{}>",
++                __FUNCTION__, attempt, m_sourcePath);
 +    }
 +
 +    m_source->Close();
 +
-+    if (attempt < MAX_SOURCE_ATTEMPTS)
-+    {
-+      CLog::Log(LOGWARNING,
-+                "CFileCache::{} - waiting {} ms before next reopen attempt <{}>",
-+                __FUNCTION__,
-+                std::chrono::duration_cast<std::chrono::milliseconds>(retryDelay).count(),
-+                m_sourcePath);
++    if (m_bStop)
++      return false;
 +
-+      std::this_thread::sleep_for(retryDelay);
-+      retryDelay += 1s;
-+    }
++    CLog::Log(LOGWARNING,
++              "CFileCache::{} - waiting {} ms before next reopen attempt <{}>",
++              __FUNCTION__,
++              std::chrono::duration_cast<std::chrono::milliseconds>(retryDelay).count(),
++              m_sourcePath);
++
++    if (AbortableWait(m_reopenEvent, retryDelay) == WAIT_INTERRUPTED || m_bStop)
++      return false;
++
++    retryDelay += 1s;
 +  }
 +
-+  CLog::Log(LOGERROR, "CFileCache::{} - all reopen attempts failed <{}>",
-+            __FUNCTION__, m_sourcePath);
 +  return false;
 +}
 +
  void CFileCache::Process()
  {
    if (!m_pCache)
-@@ -280,6 +355,7 @@ void CFileCache::Process()
+@@ -280,6 +376,7 @@ void CFileCache::Process()
  
    CWriteRate limiter;
    CWriteRate average;
@@ -104,7 +125,7 @@
  
    while (!m_bStop)
    {
-@@ -413,8 +489,18 @@ void CFileCache::Process()
+@@ -413,8 +510,18 @@ void CFileCache::Process()
        // Check for actual EOF and retry as long as we still have data in our cache
        if (m_writePos < m_fileSize && m_pCache->WaitForData(0, 0ms) > 0)
        {
@@ -112,12 +133,12 @@
 -                  __FUNCTION__, m_sourcePath, iRead);
 +        ++sourceReadRetries;
 +
-+        CLog::Log(
-+            LOGWARNING,
-+            "CFileCache::{} - source read returned {}! Will retry ({}/{}) <{}>",
-+            __FUNCTION__, iRead, sourceReadRetries, MAX_SOURCE_ATTEMPTS, m_sourcePath);
++        CLog::Log(LOGWARNING,
++                  "CFileCache::{} - source read returned {}! Will retry ({}/{}) <{}>",
++                  __FUNCTION__, iRead, sourceReadRetries, SOURCE_READ_RETRIES_BEFORE_REOPEN,
++                  m_sourcePath);
 +
-+        if (sourceReadRetries >= MAX_SOURCE_ATTEMPTS)
++        if (sourceReadRetries >= SOURCE_READ_RETRIES_BEFORE_REOPEN)
 +        {
 +          if (ReopenSource())
 +            sourceReadRetries = 0;
@@ -125,7 +146,7 @@
  
          // Wait a bit:
          if (m_seekEvent.Wait(2000ms))
-@@ -457,6 +543,8 @@ void CFileCache::Process()
+@@ -457,6 +564,8 @@ void CFileCache::Process()
        }
      }
  
@@ -134,9 +155,9 @@
      int iTotalWrite = 0;
      while (!m_bStop && (iTotalWrite < iRead))
      {
---- kodi/xbmc/filesystem/FileCache.h	2026-09-13 18:44:09.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.h	2026-09-14 05:46:19.351275431 +0000
-@@ -90,10 +90,13 @@ public:
+--- kodi/xbmc/filesystem/FileCache.h	2026-09-22 02:27:32.789758788 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.h	2026-09-22 02:27:32.786256919 +0000
+@@ -90,10 +90,14 @@ public:
      CFileCache(unsigned int flags, std::unique_ptr<IFileCacheSource> source);
  
    private:
@@ -147,6 +168,7 @@
      std::unique_ptr<IFileCacheSource> m_source;
      std::string m_sourcePath;
 +    std::string m_sourceUrl;
++    CEvent m_reopenEvent;
      CEvent m_seekEvent;
      CEvent m_seekEnded;
      int64_t m_nSeekResult = 0;
