@@ -1,6 +1,5 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-25 13:09:54.204838052 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-25 13:35:03.133809058 +0000
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-25 14:36:54.612480671 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-09-25 14:37:11.915236586 +0000
 @@ -1050,22 +1050,24 @@ void CVideoPlayer::UpdateHasVideoAudio()
      m_HasAudio = false;
  }
@@ -906,20 +905,36 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  
    // sync streams to clock
    if ((m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC) ||
-@@ -2439,7 +2774,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2417,8 +2752,10 @@ void CVideoPlayer::HandlePlaySpeed()
+     const bool syncVideo = m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC &&
+                            (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CONT ||
+                             m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC);
+-    const bool deferNoPts = ShouldDeferSync(video && audio && !syncAudio && !syncVideo,
+-                                            std::chrono::steady_clock::now());
++    const bool deferNoPts =
++        !realtime &&
++        ShouldDeferSync(video && audio && !syncAudio && !syncVideo,
++                        std::chrono::steady_clock::now());
+ 
+     if (syncAudio)
+     {
+@@ -2439,7 +2776,10 @@ void CVideoPlayer::HandlePlaySpeed()
      }
      else if (video && audio && !deferNoPts)
      {
 -      double clock = 0;
-+      double clock = DVD_NOPTS_VALUE;
++      // Preserve the realtime startup behavior: do not anchor the master clock to
++      // zero while both stream start timestamps are still unknown. For non-realtime
++      // playback, the upstream ShouldDeferSync() keeps its bounded 2s fallback.
++      double clock = realtime ? DVD_NOPTS_VALUE : 0;
        if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
          CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                               m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
-@@ -2483,6 +2818,17 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2483,6 +2823,18 @@ void CVideoPlayer::HandlePlaySpeed()
          clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
        }
  
-+      if (clock == DVD_NOPTS_VALUE)
++      if (realtime && clock == DVD_NOPTS_VALUE)
 +      {
 +        CLog::Log(LOGDEBUG,
 +                  "VideoPlayer::Sync - waiting for valid start time. Audio start:{:.3f} Video start:{:.3f}",
@@ -927,13 +942,14 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +                                                              : m_CurrentAudio.starttime / DVD_TIME_BASE,
 +                  m_CurrentVideo.starttime == DVD_NOPTS_VALUE ? -1.0
 +                                                              : m_CurrentVideo.starttime / DVD_TIME_BASE);
++        m_syncStartPtsWait.reset();
 +        return;
 +      }
 +
        m_syncStartPtsWait.reset();
        m_clock.Discontinuity(clock);
        m_CurrentAudio.syncState = IDVDStreamPlayer::SYNC_INSYNC;
-@@ -2494,7 +2840,34 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2494,7 +2846,34 @@ void CVideoPlayer::HandlePlaySpeed()
            std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
        m_VideoPlayerVideo->SendMessage(
            std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
@@ -969,7 +985,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        UpdatePlayState(0);
  
        m_syncTimer.Set(3000ms);
-@@ -2536,6 +2909,377 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2536,6 +2915,377 @@ void CVideoPlayer::HandlePlaySpeed()
    else
      m_syncStartPtsWait.reset();
  
@@ -1347,7 +1363,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    // handle ff/rw
    if (m_playSpeed != DVD_PLAYSPEED_NORMAL && m_playSpeed != DVD_PLAYSPEED_PAUSE)
    {
-@@ -4560,21 +5304,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4560,21 +5310,6 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
    if (hint.flags & AV_DISPOSITION_ATTACHED_PIC)
      return false;
  
@@ -1369,7 +1385,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    IDVDStreamPlayer* player = GetStreamPlayer(m_CurrentVideo.player);
    if(player == nullptr)
      return false;
-@@ -4588,6 +5317,24 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -4588,6 +5323,24 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
      if (!player->OpenStream(hint))
        return false;
  
@@ -1386,7 +1402,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
 +        const double framerate = DVD_TIME_BASE / CDVDCodecUtils::NormalizeFrameduration(
 +                                                     (double)DVD_TIME_BASE * hint.fpsscale /
 +                                                     (hint.fpsrate * (hint.interlaced ? 2 : 1)));
-+
++  
 +        m_renderManager.TriggerUpdateResolution(framerate, hint.width, hint.height, hint.stereo_mode);
 +      }
 +    }
@@ -1394,9 +1410,8 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      player->SendMessage(std::make_shared<CDVDMsgBool>(CDVDMsg::GENERAL_PAUSE, m_displayLost), 1);
  
      const std::shared_ptr<CDVDInputStream::IExtentionStream>  pExt = std::dynamic_pointer_cast<CDVDInputStream::IExtentionStream>(m_pInputStream);
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.h kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h
---- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-25 13:09:54.204838052 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-25 13:35:03.133809058 +0000
+--- kodi/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-25 14:36:54.613000626 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-09-25 14:37:11.915434097 +0000
 @@ -499,6 +499,7 @@ protected:
    void SendPlayerMessage(std::shared_ptr<CDVDMsg> pMsg, unsigned int target);
  
