@@ -55,6 +55,9 @@ EOF
 }
 
 load_dovi() {
+  # disable loading dovi.ko
+  [ -f /storage/.config/dovi.disable ] && return 0
+
   # local dovi.ko
   for DOVI_KO_STORAGE in /storage/.config/dovi.ko \
                          /flash/dovi.ko \
@@ -125,6 +128,9 @@ umount_partitions() {
 }
 
 cleanup_dovi() {
+  # disable cleanup dovi.ko
+  [ -f /storage/.config/dovi.disable ] && return 0
+
   rmmod dovi 2>/dev/null
   umount_partitions
 }
@@ -136,7 +142,7 @@ case "${1}" in
     load_dovi
     ;;
   stop)
-    cleanup
+    cleanup_dovi
     ;;
 esac
 

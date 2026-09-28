@@ -1,0 +1,14 @@
+diff -Naurp kodi/xbmc/application/ApplicationMessageHandling.cpp kodi-patch/xbmc/application/ApplicationMessageHandling.cpp
+--- kodi/xbmc/application/ApplicationMessageHandling.cpp	2025-11-16 08:28:15.000000000 +0000
++++ kodi-patch/xbmc/application/ApplicationMessageHandling.cpp	2025-11-16 10:06:54.000000000 +0000
+@@ -516,9 +516,7 @@ bool CApplicationMessageHandling::OnMess
+                                                          m_app.CurrentFileItemPtr(), param);
+ 
+       // we don't want a busy dialog when switching channels
+-      const auto appPlayer = m_app.GetComponent<CApplicationPlayer>();
+-      if (!m_app.CurrentFileItem().IsLiveTV() ||
+-          (!appPlayer->IsPlayingVideo() && !appPlayer->IsPlayingAudio()))
++      if (!m_app.CurrentFileItem().IsLiveTV())
+         CGUIDialogBusy::WaitOnEvent(m_app.m_playerEvent);
+ 
+       return true;
