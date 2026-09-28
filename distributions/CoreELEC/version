@@ -11,7 +11,7 @@
   OS_CODENAME="Piers"
 
 # OS_STAGE: OS Release Stage (alpha, beta, rc, build)
-  OS_STAGE="rc1"
+  OS_STAGE="beta2"
 
 # BUILD_NUM: Build number
   BUILD_NUM="-01"
