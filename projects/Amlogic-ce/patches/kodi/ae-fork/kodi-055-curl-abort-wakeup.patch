@@ -1,0 +1,310 @@
+diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.cpp kodi-new/xbmc/addons/interfaces/Filesystem.cpp
+--- kodi-base/xbmc/addons/interfaces/Filesystem.cpp	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/addons/interfaces/Filesystem.cpp	2026-10-01 08:48:24.121163519 +0000
+@@ -118,6 +118,7 @@ void Interface_Filesystem::Init(AddonGlo
+   addonInterface->toKodi->kodi_filesystem->curl_create = curl_create;
+   addonInterface->toKodi->kodi_filesystem->curl_add_option = curl_add_option;
+   addonInterface->toKodi->kodi_filesystem->curl_open = curl_open;
++  addonInterface->toKodi->kodi_filesystem->abort_file = abort_file;
+ }
+ 
+ void Interface_Filesystem::DeInit(AddonGlobalInterface* addonInterface)
+@@ -951,6 +952,18 @@ void Interface_Filesystem::close_file(vo
+   delete f;
+ }
+ 
++void Interface_Filesystem::abort_file(void* kodiBase, void* file)
++{
++  const auto* addon = static_cast<const CAddonDll*>(kodiBase);
++  if (!addon || !file)
++  {
++    CLog::LogF(LOGERROR, "Invalid data (addon='{}', file='{}')", kodiBase, file);
++    return;
++  }
++
++  static_cast<CFile*>(file)->Abort();
++}
++
+ int Interface_Filesystem::get_file_chunk_size(void* kodiBase, void* file)
+ {
+   const auto* addon = static_cast<const CAddonDll*>(kodiBase);
+diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.h kodi-new/xbmc/addons/interfaces/Filesystem.h
+--- kodi-base/xbmc/addons/interfaces/Filesystem.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/addons/interfaces/Filesystem.h	2026-10-01 08:48:24.121067174 +0000
+@@ -109,6 +109,7 @@ struct Interface_Filesystem
+   static int64_t get_file_length(void* kodiBase, void* file);
+   static double get_file_download_speed(void* kodiBase, void* file);
+   static void close_file(void* kodiBase, void* file);
++  static void abort_file(void* kodiBase, void* file);
+   static int get_file_chunk_size(void* kodiBase, void* file);
+   static bool io_control_get_seek_possible(void* kodiBase, void* file);
+   static bool io_control_get_cache_status(void* kodiBase,
+diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
+--- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h	2026-10-01 08:48:24.120971320 +0000
+@@ -1932,6 +1932,15 @@ public:
+         CPrivateBase::m_interface->toKodi->kodiBase, m_file);
+     m_file = nullptr;
+   }
++  void Abort()
++  {
++    using namespace kodi::addon;
++
++    if (!m_file)
++      return;
++    CPrivateBase::m_interface->toKodi->kodi_filesystem->abort_file(
++        CPrivateBase::m_interface->toKodi->kodiBase, m_file);
++  }
+   //--------------------------------------------------------------------------
+ 
+   //==========================================================================
+diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
+--- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h	2026-09-30 05:57:23.000000000 +0000
++++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h	2026-10-01 08:48:24.120776666 +0000
+@@ -324,6 +324,7 @@ extern "C"
+     bool (*get_disk_space)(
+         void* kodiBase, const char* path, uint64_t* capacity, uint64_t* free, uint64_t* available);
+     bool (*remove_directory_recursive)(void* kodiBase, const char* path);
++    void (*abort_file)(void* kodiBase, void* file);
+   } AddonToKodiFuncTable_kodi_filesystem;
+ 
+   //}}}
+diff -Naurp kodi-base/xbmc/filesystem/CurlFile.cpp kodi-new/xbmc/filesystem/CurlFile.cpp
+--- kodi-base/xbmc/filesystem/CurlFile.cpp	2026-09-30 05:57:23.000000000 +0000
++++ kodi-new/xbmc/filesystem/CurlFile.cpp	2026-10-01 08:48:24.120279668 +0000
+@@ -1109,9 +1109,16 @@ bool CCurlFile::IsInternet()
+   return found;
+ }
+ 
+-void CCurlFile::Cancel()
++void CCurlFile::Abort()
+ {
+   m_state->m_cancelled = true;
++  if (m_state->m_multiHandle)
++    g_curlInterface.multi_wakeup(m_state->m_multiHandle);
++}
++
++void CCurlFile::Cancel()
++{
++  Abort();
+   while (m_opened)
+     KODI::TIME::Sleep(1ms);
+ }
+@@ -1772,9 +1779,6 @@ ssize_t CCurlFile::CReadState::Read(void
+ int8_t CCurlFile::CReadState::FillBuffer(unsigned int want)
+ {
+   int retry = 0;
+-  fd_set fdread;
+-  fd_set fdwrite;
+-  fd_set fdexcep;
+ 
+   // only attempt to fill buffer if transactions still running and buffer
+   // doesn't exceed required size already
+@@ -1909,71 +1913,17 @@ int8_t CCurlFile::CReadState::FillBuffer
+     {
+       case CURLM_OK:
+       {
+-        int maxfd = -1;
+-        FD_ZERO(&fdread);
+-        FD_ZERO(&fdwrite);
+-        FD_ZERO(&fdexcep);
+-
+-        // get file descriptors from the transfers
+-        g_curlInterface.multi_fdset(m_multiHandle, &fdread, &fdwrite, &fdexcep, &maxfd);
+-
+         long timeout = 0;
+-        if (CURLM_OK != g_curlInterface.multi_timeout(m_multiHandle, &timeout) || timeout == -1 || timeout < 200)
++        if (CURLM_OK != g_curlInterface.multi_timeout(m_multiHandle, &timeout) ||
++            timeout == -1 || timeout < 200)
+           timeout = 200;
+ 
+-        XbmcThreads::EndTime<> endTime{std::chrono::milliseconds(timeout)};
+-        int rc;
+-
+-        do
+-        {
+-          /* On success the value of maxfd is guaranteed to be >= -1. We call
+-           * select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+-           * no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+-           * to sleep 100ms, which is the minimum suggested value in the
+-           * curl_multi_fdset() doc.
+-           */
+-          if (maxfd == -1)
+-          {
+-#ifdef TARGET_WINDOWS
+-            /* Windows does not support using select() for sleeping without a dummy
+-             * socket. Instead use Windows' Sleep() and sleep for 100ms which is the
+-             * minimum suggested value in the curl_multi_fdset() doc.
+-             */
+-            KODI::TIME::Sleep(100ms);
+-            rc = 0;
+-#else
+-            /* Portable sleep for platforms other than Windows. */
+-            struct timeval wait = { 0, 100 * 1000 }; /* 100ms */
+-            rc = select(0, NULL, NULL, NULL, &wait);
+-#endif
+-          }
+-          else
+-          {
+-            unsigned int time_left = endTime.GetTimeLeft().count();
+-            struct timeval wait = { (int)time_left / 1000, ((int)time_left % 1000) * 1000 };
+-            rc = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &wait);
+-          }
+-#ifdef TARGET_WINDOWS
+-        } while(rc == SOCKET_ERROR && WSAGetLastError() == WSAEINTR);
+-#else
+-        } while(rc == SOCKET_ERROR && errno == EINTR);
+-#endif
+-
+-        if(rc == SOCKET_ERROR)
+-        {
+-#ifdef TARGET_WINDOWS
+-          char buf[256];
+-          strerror_s(buf, 256, WSAGetLastError());
+-          CLog::Log(LOGERROR, "CCurlFile::CReadState::{} - ({}) Failed with socket error:{}",
+-                    __FUNCTION__, fmt::ptr(this), buf);
+-#else
+-          char const * str = strerror(errno);
+-          CLog::Log(LOGERROR, "CCurlFile::CReadState::{} - ({}) Failed with socket error:{}",
+-                    __FUNCTION__, fmt::ptr(this), str);
+-#endif
+-
++        timeout = std::min(timeout, static_cast<long>(INT_MAX));
++        if (g_curlInterface.multi_poll(m_multiHandle, static_cast<int>(timeout)) != CURLM_OK)
+           return FILLBUFFER_FAIL;
+-        }
++
++        if (m_cancelled)
++          return FILLBUFFER_NO_DATA;
+       }
+       break;
+       case CURLM_CALL_MULTI_PERFORM:
+diff -Naurp kodi-base/xbmc/filesystem/CurlFile.h kodi-new/xbmc/filesystem/CurlFile.h
+--- kodi-base/xbmc/filesystem/CurlFile.h	2026-09-30 05:57:23.000000000 +0000
++++ kodi-new/xbmc/filesystem/CurlFile.h	2026-10-01 08:48:24.120003161 +0000
+@@ -12,6 +12,7 @@
+ #include "utils/HttpHeader.h"
+ #include "utils/RingBuffer.h"
+ 
++#include <atomic>
+ #include <map>
+ #include <string>
+ 
+@@ -46,6 +47,7 @@ namespace XFILE
+       int64_t GetLength() override;
+       int Stat(const CURL& url, struct __stat64* buffer) override;
+       void Close() override;
++      void Abort() override;
+       ReadLineResult ReadLine(char* buffer, std::size_t bufferSize) override
+       {
+         return m_state->ReadLine(buffer, bufferSize);
+@@ -112,7 +114,7 @@ namespace XFILE
+           char* m_overflowBuffer; // in the rare case we would overflow the above buffer
+           unsigned int m_overflowSize; // size of the overflow buffer
+           int m_stillRunning; // Is background url fetch still in progress
+-          bool m_cancelled;
++          std::atomic<bool> m_cancelled;
+           int64_t m_fileSize;
+           int64_t m_filePos;
+           bool m_bFirstLoop;
+diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.cpp kodi-new/xbmc/filesystem/DllLibCurl.cpp
+--- kodi-base/xbmc/filesystem/DllLibCurl.cpp	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/filesystem/DllLibCurl.cpp	2026-10-01 08:48:24.120663907 +0000
+@@ -87,6 +87,16 @@ CURLMcode DllLibCurl::multi_timeout(CURL
+   return curl_multi_timeout(multi_handle, timeout);
+ }
+ 
++CURLMcode DllLibCurl::multi_poll(CURLM* multi_handle, int timeout_ms)
++{
++  return curl_multi_poll(multi_handle, nullptr, 0, timeout_ms, nullptr);
++}
++
++CURLMcode DllLibCurl::multi_wakeup(CURLM* multi_handle)
++{
++  return curl_multi_wakeup(multi_handle);
++}
++
+ CURLMsg* DllLibCurl::multi_info_read(CURLM* multi_handle, int* msgs_in_queue)
+ {
+   return curl_multi_info_read(multi_handle, msgs_in_queue);
+diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.h kodi-new/xbmc/filesystem/DllLibCurl.h
+--- kodi-base/xbmc/filesystem/DllLibCurl.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/filesystem/DllLibCurl.h	2026-10-01 08:48:24.120520180 +0000
+@@ -57,6 +57,8 @@ public:
+                         fd_set* exc_fd_set,
+                         int* max_fd);
+   CURLMcode multi_timeout(CURLM* multi_handle, long* timeout);
++  CURLMcode multi_poll(CURLM* multi_handle, int timeout_ms);
++  CURLMcode multi_wakeup(CURLM* multi_handle);
+   CURLMsg* multi_info_read(CURLM* multi_handle, int* msgs_in_queue);
+   CURLMcode multi_cleanup(CURLM* handle);
+   curl_slist* slist_append(curl_slist* list, const char* to_append);
+diff -Naurp kodi-base/xbmc/filesystem/File.cpp kodi-new/xbmc/filesystem/File.cpp
+--- kodi-base/xbmc/filesystem/File.cpp	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/filesystem/File.cpp	2026-10-01 08:48:24.119937443 +0000
+@@ -667,6 +667,18 @@ ssize_t CFile::Read(void *lpBuf, size_t
+ }
+ 
+ //*********************************************************************************************
++void CFile::Abort()
++{
++  try
++  {
++    if (m_pFile)
++      m_pFile->Abort();
++  }
++  XBMCCOMMONS_HANDLE_UNCHECKED
++  catch (...) { CLog::Log(LOGERROR, "{} - Unhandled exception", __FUNCTION__); }
++}
++
++//*********************************************************************************************
+ void CFile::Close()
+ {
+   try
+diff -Naurp kodi-base/xbmc/filesystem/File.h kodi-new/xbmc/filesystem/File.h
+--- kodi-base/xbmc/filesystem/File.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/filesystem/File.h	2026-10-01 08:48:24.119847337 +0000
+@@ -72,6 +72,7 @@ public:
+    *         or undetectable error occur, -1 in case of any explicit error
+    */
+   ssize_t Read(void* bufPtr, size_t bufSize);
++  void Abort();
+ 
+   /*!
+    * \brief String reading by line
+diff -Naurp kodi-base/xbmc/filesystem/IFile.h kodi-new/xbmc/filesystem/IFile.h
+--- kodi-base/xbmc/filesystem/IFile.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/filesystem/IFile.h	2026-10-01 08:48:24.119726084 +0000
+@@ -117,6 +117,7 @@ public:
+   virtual ReadLineResult ReadLine(char* buffer, std::size_t bufferSize);
+   virtual int64_t Seek(int64_t iFilePosition, int iWhence = SEEK_SET) = 0;
+   virtual void Close() = 0;
++  virtual void Abort() {}
+   virtual int64_t GetPosition() = 0;
+   virtual int64_t GetLength() = 0;
+   virtual void Flush() { }
+--- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h	2026-10-01 11:59:04.697613867 +0000
+@@ -17,6 +17,7 @@ public:
+   ~CDVDInputStreamFile() override;
+   bool Open() override;
+   void Close() override;
++  void Abort() override;
+   int Read(uint8_t* buf, int buf_size) override;
+   int64_t Seek(int64_t offset, int whence) override;
+   bool IsEOF() override;
+--- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp	2026-09-28 10:09:11.000000000 +0000
++++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp	2026-10-01 11:59:04.699240002 +0000
+@@ -89,6 +89,12 @@ void CDVDInputStreamFile::Close()
+   m_eof = true;
+ }
+ 
++void CDVDInputStreamFile::Abort()
++{
++  if (m_pFile)
++    m_pFile->Abort();
++}
++
+ int CDVDInputStreamFile::Read(uint8_t* buf, int buf_size)
+ {
+   if(!m_pFile) return -1;
