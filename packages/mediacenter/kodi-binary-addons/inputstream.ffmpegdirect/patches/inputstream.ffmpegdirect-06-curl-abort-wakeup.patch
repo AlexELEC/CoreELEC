@@ -1,8 +1,46 @@
+diff -Naurp ff-base/src/StreamManager.cpp ff-new/src/StreamManager.cpp
+--- ff-base/src/StreamManager.cpp	2026-09-28 11:04:43.000000000 +0000
++++ ff-new/src/StreamManager.cpp	2026-10-02 12:57:50.977452320 +0000
+@@ -61,6 +61,12 @@ InputStreamFFmpegDirect::~InputStreamFFm
+ {
+ }
+ 
++void InputStreamFFmpegDirect::Abort()
++{
++  if (m_stream)
++    m_stream->Abort();
++}
++
+ bool InputStreamFFmpegDirect::Open(const kodi::addon::InputstreamProperty& props)
+ {
+   Log(LOGLEVEL_INFO, "inputstream.ffmpegdirect: OpenStream() - Num Props: %d", props.GetPropertiesAmount());
+diff -Naurp ff-base/src/StreamManager.h ff-new/src/StreamManager.h
+--- ff-base/src/StreamManager.h	2026-09-28 11:04:43.000000000 +0000
++++ ff-new/src/StreamManager.h	2026-10-02 12:57:50.977368264 +0000
+@@ -45,6 +45,7 @@ public:
+ 
+   virtual bool Open(const kodi::addon::InputstreamProperty& props) override;
+   virtual void Close() override;
++  virtual void Abort() override;
+   virtual void GetCapabilities(kodi::addon::InputstreamCapabilities& caps) override;
+   virtual bool GetStreamIds(std::vector<unsigned int>& ids) override;
+   virtual bool GetStream(int streamid, kodi::addon::InputstreamInfo& info) override;
+diff -Naurp ff-base/src/stream/BaseStream.h ff-new/src/stream/BaseStream.h
+--- ff-base/src/stream/BaseStream.h	2026-09-28 11:04:43.000000000 +0000
++++ ff-new/src/stream/BaseStream.h	2026-10-02 12:57:50.977196475 +0000
+@@ -23,6 +23,7 @@ public:
+ 
+   virtual bool Open(const std::string& streamUrl, const std::string& mimeType, bool isRealTimeStream, const std::string& programProperty) = 0;
+   virtual void Close() = 0;
++  virtual void Abort() {}
+   virtual void GetCapabilities(kodi::addon::InputstreamCapabilities& caps) = 0;
+   virtual bool GetStreamIds(std::vector<unsigned int>& ids) = 0;
+   virtual bool GetStream(int streamid, kodi::addon::InputstreamInfo& info) = 0;
 diff -Naurp ff-base/src/stream/CurlInput.cpp ff-new/src/stream/CurlInput.cpp
 --- ff-base/src/stream/CurlInput.cpp	2026-09-30 05:57:28.000000000 +0000
-+++ ff-new/src/stream/CurlInput.cpp	2026-10-01 08:49:04.672818814 +0000
-@@ -90,6 +90,13 @@ void CurlInput::Close()
-   m_eof = true;
++++ ff-new/src/stream/CurlInput.cpp	2026-10-02 12:57:50.977164136 +0000
+@@ -76,6 +76,12 @@ bool CurlInput::Open(const std::string&
+   return true;
  }
  
 +void CurlInput::Abort()
@@ -11,13 +49,12 @@ diff -Naurp ff-base/src/stream/CurlInput.cpp ff-new/src/stream/CurlInput.cpp
 +    m_pFile->Abort();
 +}
 +
-+
- int CurlInput::Read(uint8_t* buf, int buf_size)
+ // close file and reset everything
+ void CurlInput::Close()
  {
-   if (!m_pFile) return -1;
 diff -Naurp ff-base/src/stream/CurlInput.h ff-new/src/stream/CurlInput.h
 --- ff-base/src/stream/CurlInput.h	2026-09-28 11:04:43.000000000 +0000
-+++ ff-new/src/stream/CurlInput.h	2026-10-01 08:48:24.121248287 +0000
++++ ff-new/src/stream/CurlInput.h	2026-10-02 12:57:50.977125598 +0000
 @@ -27,6 +27,7 @@ public:
    ~CurlInput();
    bool Open(const std::string& filename, const std::string& mimeType, unsigned int flags);
@@ -28,12 +65,29 @@ diff -Naurp ff-base/src/stream/CurlInput.h ff-new/src/stream/CurlInput.h
    bool IsEOF();
 diff -Naurp ff-base/src/stream/FFmpegStream.cpp ff-new/src/stream/FFmpegStream.cpp
 --- ff-base/src/stream/FFmpegStream.cpp	2026-09-30 05:57:28.000000000 +0000
-+++ ff-new/src/stream/FFmpegStream.cpp	2026-10-01 08:48:24.121383610 +0000
-@@ -270,6 +270,7 @@ void FFmpegStream::DemuxReset()
- 
- void FFmpegStream::DemuxAbort()
- {
-+  m_curlInput->Abort();
-   m_timeout.SetExpired();
++++ ff-new/src/stream/FFmpegStream.cpp	2026-10-02 12:57:50.977293611 +0000
+@@ -268,6 +268,13 @@ void FFmpegStream::DemuxReset()
+   m_demuxResetOpenSuccess = Open(false);
  }
  
++void FFmpegStream::Abort()
++{
++  m_timeout.SetExpired();
++  if (m_curlInput)
++    m_curlInput->Abort();
++}
++
+ void FFmpegStream::DemuxAbort()
+ {
+   m_timeout.SetExpired();
+diff -Naurp ff-base/src/stream/FFmpegStream.h ff-new/src/stream/FFmpegStream.h
+--- ff-base/src/stream/FFmpegStream.h	2026-09-30 05:57:28.000000000 +0000
++++ ff-new/src/stream/FFmpegStream.h	2026-10-02 12:57:50.977232469 +0000
+@@ -64,6 +64,7 @@ public:
+ 
+   virtual bool Open(const std::string& streamUrl, const std::string& mimeType, bool isRealTimeStream, const std::string& programProperty) override;
+   virtual void Close() override;
++  virtual void Abort() override;
+   virtual void GetCapabilities(kodi::addon::InputstreamCapabilities& caps) override;
+   virtual bool GetStreamIds(std::vector<unsigned int>& ids) override;
+   virtual bool GetStream(int streamid, kodi::addon::InputstreamInfo& info) override;
