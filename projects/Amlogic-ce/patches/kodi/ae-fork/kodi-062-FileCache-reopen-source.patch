@@ -1,5 +1,6 @@
---- kodi/xbmc/filesystem/FileCache.cpp	2026-09-22 02:27:32.788482226 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-09-22 02:27:32.783763145 +0000
+diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCache.cpp
+--- kodi/xbmc/filesystem/FileCache.cpp	2026-10-09 09:26:43.000000000 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-10-09 16:01:21.155717696 +0000
 @@ -29,6 +29,12 @@
  #include <memory>
  #include <stdexcept>
@@ -146,7 +147,7 @@
  
          // Wait a bit:
          if (m_seekEvent.Wait(2000ms))
-@@ -457,6 +564,8 @@ void CFileCache::Process()
+@@ -455,6 +562,8 @@ void CFileCache::Process()
        }
      }
  
@@ -155,12 +156,13 @@
      int iTotalWrite = 0;
      while (!m_bStop && (iTotalWrite < iRead))
      {
---- kodi/xbmc/filesystem/FileCache.h	2026-09-22 02:27:32.789758788 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.h	2026-09-22 02:27:32.786256919 +0000
-@@ -90,10 +90,14 @@ public:
-     CFileCache(unsigned int flags, std::unique_ptr<IFileCacheSource> source);
+diff -Naurp kodi/xbmc/filesystem/FileCache.h kodi-patch/xbmc/filesystem/FileCache.h
+--- kodi/xbmc/filesystem/FileCache.h	2026-10-09 09:26:43.000000000 +0000
++++ kodi-patch/xbmc/filesystem/FileCache.h	2026-10-09 16:10:42.000000000 +0000
+@@ -96,10 +96,14 @@ public:
+     // the events
+     friend class ::TestFileCache;
  
-   private:
 +    bool ReopenSource();
 +
      std::unique_ptr<CCacheStrategy> m_pCache;
