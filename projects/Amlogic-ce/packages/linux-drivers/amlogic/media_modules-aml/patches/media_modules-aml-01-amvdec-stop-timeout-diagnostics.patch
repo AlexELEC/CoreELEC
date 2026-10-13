@@ -1,0 +1,35 @@
+diff -Naurp a/drivers/frame_provider/decoder/utils/amvdec.c b/drivers/frame_provider/decoder/utils/amvdec.c
+--- a/drivers/frame_provider/decoder/utils/amvdec.c
++++ b/drivers/frame_provider/decoder/utils/amvdec.c
+@@ -1111,15 +1111,29 @@ void amvdec_stop(void)
+ 	WRITE_VREG(MPSR, 0);
+ 	WRITE_VREG(CPSR, 0);
+ 
+ 	while (READ_VREG(IMEM_DMA_CTRL) & 0x8000) {
+-		if (time_after(jiffies, timeout))
++		if (time_after(jiffies, timeout)) {
++			pr_err("%s: IMEM DMA timeout, ctrl %x, pc %x status %x,%x\n",
++				__func__,
++				READ_VREG(IMEM_DMA_CTRL),
++				READ_VREG(MPC_E),
++				READ_VREG(AV_SCRATCH_J),
++				READ_VREG(AV_SCRATCH_9));
+ 			break;
++		}
+ 	}
+ 
+ 	timeout = jiffies + HZ/10;
+ 	while (READ_VREG(LMEM_DMA_CTRL) & 0x8000) {
+-		if (time_after(jiffies, timeout))
++		if (time_after(jiffies, timeout)) {
++			pr_err("%s: LMEM DMA timeout, ctrl %x, pc %x status %x,%x\n",
++				__func__,
++				READ_VREG(LMEM_DMA_CTRL),
++				READ_VREG(MPC_E),
++				READ_VREG(AV_SCRATCH_J),
++				READ_VREG(AV_SCRATCH_9));
+ 			break;
++		}
+ 	}
+ 
+ 	timeout = jiffies + HZ/80;

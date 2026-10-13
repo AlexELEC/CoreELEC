@@ -1,0 +1,53 @@
+diff -Naurp inputstream.ffmpegdirect/src/stream/CurlInput.cpp inputstream.ffmpegdirect-patch/src/stream/CurlInput.cpp
+--- inputstream.ffmpegdirect/src/stream/CurlInput.cpp	2025-04-01 16:11:20.000000000 +0000
++++ inputstream.ffmpegdirect-patch/src/stream/CurlInput.cpp	2025-06-11 14:05:35.000000000 +0000
+@@ -44,31 +44,7 @@ bool CurlInput::Open(const std::string&
+     return false;
+ 
+   flags |= ADDON_READ_AUDIO_VIDEO;
+-
+-  /*
+-   * There are 5 buffer modes available (configurable in as.xml)
+-   * 0) Buffer all internet filesystems (like 2 but additionally also ftp, webdav, etc.) (default)
+-   * 1) Buffer all filesystems (including local)
+-   * 2) Only buffer true internet filesystems (streams) (http, etc.)
+-   * 3) No buffer
+-   * 4) Buffer all non-local (remote) filesystems
+-   */
+-  // if (!URIUtils::IsOnDVD(m_item.GetDynPath()) && !URIUtils::IsBluray(m_item.GetDynPath())) // Never cache these
+-  // {
+-    // TODO: Support other buffer modes once IsLocalHost() is available for addons in koid::network
+-    //  if ((iCacheBufferMode == CACHE_BUFFER_MODE_INTERNET) && URIUtils::IsInternetStream(m_item.GetDynPath(), true))
+-    //  || (iCacheBufferMode == CACHE_BUFFER_MODE_TRUE_INTERNET && URIUtils::IsInternetStream(m_item.GetDynPath(), false))
+-    //  || (iCacheBufferMode == CACHE_BUFFER_MODE_REMOTE && URIUtils::IsRemote(m_item.GetDynPath()))
+-    //  || (iCacheBufferMode == CACHE_BUFFER_MODE_ALL))
+-    unsigned int iCacheBufferMode = CACHE_BUFFER_MODE_INTERNET; //CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_cacheBufferMode;
+-    if (iCacheBufferMode == CACHE_BUFFER_MODE_INTERNET)
+-    {
+-      flags |= ADDON_READ_CACHED;
+-    }
+-  //}
+-
+-  if (!(flags & ADDON_READ_CACHED))
+-    flags |= ADDON_READ_NO_CACHE; // Make sure CFile honors our no-cache hint
++  flags |= ADDON_READ_NO_CACHE;
+ 
+   std::string content = m_mimeType;
+ 
+@@ -79,8 +55,14 @@ bool CurlInput::Open(const std::string&
+       content == "video/x-matroska-3d")
+     flags |= ADDON_READ_MULTI_STREAM;
+ 
+-  // open file in binary mode
+-  if (!m_pFile->OpenFile(m_filename, flags))
++  m_pFile->CURLCreate(m_filename.c_str());
++  m_pFile->CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "connection-timeout", "10");
++  m_pFile->CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "data-timeout", "0");
++  m_pFile->CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "lowspeed-time", "0");
++  m_pFile->CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "speed-limit", "0");
++
++  // open url
++  if (!m_pFile->CURLOpen(flags))
+   {
+     delete m_pFile;
+     m_pFile = NULL;

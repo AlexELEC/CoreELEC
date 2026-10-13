@@ -1,0 +1,12 @@
+diff -Naurp kodi/xbmc/interfaces/legacy/ModuleXbmc.cpp kodi-patch/xbmc/interfaces/legacy/ModuleXbmc.cpp
+--- kodi/xbmc/interfaces/legacy/ModuleXbmc.cpp	2026-10-11 08:24:02.000000000 +0000
++++ kodi-patch/xbmc/interfaces/legacy/ModuleXbmc.cpp	2026-10-13 12:48:08.000000000 +0000
+@@ -273,6 +273,8 @@ namespace XBMCAddon
+         return ret;
+       }
+ 
++      XBMCAddonUtils::GuiLock lock(nullptr, false);
++
+       CGUIInfoManager& infoMgr = CServiceBroker::GetGUI()->GetInfoManager();
+       int ret = infoMgr.TranslateString(cLine);
+       //doesn't seem to be a single InfoTag?
