@@ -1,0 +1,162 @@
+diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp
+--- kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp	2026-10-15 13:37:19.000000000 +0000
++++ kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp	2026-10-16 12:39:53.000000000 +0000
+@@ -26,13 +26,17 @@ namespace ActiveAE
+ {
+ 
+ CActiveAESettings* CActiveAESettings::m_instance = nullptr;
++std::mutex CActiveAESettings::m_instanceMutex;
+ 
+ CActiveAESettings::CActiveAESettings(CActiveAE &ae) : m_audioEngine(ae)
+ {
+   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+ 
++  {
++    std::unique_lock instanceLock(m_instanceMutex);
++    m_instance = this;
++  }
+   std::unique_lock lock(m_cs);
+-  m_instance = this;
+ 
+   settings->GetSettingsManager()->RegisterCallback(
+       this, {CSettings::SETTING_AUDIOOUTPUT_CONFIG,
+@@ -67,19 +71,29 @@ CActiveAESettings::~CActiveAESettings()
+ {
+   const std::shared_ptr<CSettings> settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+ 
++  // Drain callbacks before invalidating the instance. New callbacks see nullptr.
++  {
++    std::unique_lock instanceLock(m_instanceMutex);
++    if (m_instance == this)
++      m_instance = nullptr;
++  }
++
+   std::unique_lock lock(m_cs);
+   settings->GetSettingsManager()->UnregisterSettingOptionsFiller("aequalitylevels");
+   settings->GetSettingsManager()->UnregisterSettingOptionsFiller("audiodevices");
+   settings->GetSettingsManager()->UnregisterSettingOptionsFiller("audiodevicespassthrough");
+   settings->GetSettingsManager()->UnregisterSettingOptionsFiller("audiostreamsilence");
+   settings->GetSettingsManager()->UnregisterCallback(this);
+-  m_instance = nullptr;
+ }
+ 
+ void CActiveAESettings::OnSettingChanged(const std::shared_ptr<const CSetting>& setting)
+ {
++  std::unique_lock instanceLock(m_instanceMutex);
++  if (m_instance != this)
++    return;
++
+   std::unique_lock lock(m_cs);
+-  m_instance->m_audioEngine.OnSettingsChange();
++  m_audioEngine.OnSettingsChange();
+ }
+ 
+ void CActiveAESettings::SettingOptionsAudioDevicesFiller(const SettingConstPtr& setting,
+@@ -98,21 +112,26 @@ void CActiveAESettings::SettingOptionsAu
+ void CActiveAESettings::SettingOptionsAudioQualityLevelsFiller(
+     const SettingConstPtr& /*setting*/, std::vector<IntegerSettingOption>& list, int& /*current*/)
+ {
+-  std::unique_lock lock(m_instance->m_cs);
++  std::unique_lock instanceLock(m_instanceMutex);
++  CActiveAESettings* instance = m_instance;
++  if (!instance)
++    return;
++
++  std::unique_lock lock(instance->m_cs);
+ 
+-  if (m_instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_LOW))
++  if (instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_LOW))
+     list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13506),
+                       AE_QUALITY_LOW);
+-  if (m_instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_MID))
++  if (instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_MID))
+     list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13507),
+                       AE_QUALITY_MID);
+-  if (m_instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_HIGH))
++  if (instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_HIGH))
+     list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13508),
+                       AE_QUALITY_HIGH);
+-  if (m_instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_REALLYHIGH))
++  if (instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_REALLYHIGH))
+     list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13509),
+                       AE_QUALITY_REALLYHIGH);
+-  if (m_instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_GPU))
++  if (instance->m_audioEngine.SupportsQualityLevel(AE_QUALITY_GPU))
+     list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(38010),
+                       AE_QUALITY_GPU);
+ }
+@@ -120,13 +139,18 @@ void CActiveAESettings::SettingOptionsAu
+ void CActiveAESettings::SettingOptionsAudioStreamsilenceFiller(
+     const SettingConstPtr& /*setting*/, std::vector<IntegerSettingOption>& list, int& /*current*/)
+ {
+-  std::unique_lock lock(m_instance->m_cs);
++  std::unique_lock instanceLock(m_instanceMutex);
++  CActiveAESettings* instance = m_instance;
++  if (!instance)
++    return;
++
++  std::unique_lock lock(instance->m_cs);
+ 
+   list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(20422),
+                     XbmcThreads::EndTime<std::chrono::minutes>::Max().count());
+   list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13551), 0);
+ 
+-  if (m_instance->m_audioEngine.SupportsSilenceTimeout())
++  if (instance->m_audioEngine.SupportsSilenceTimeout())
+   {
+     list.emplace_back(
+         StringUtils::Format(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13554),
+@@ -149,11 +173,13 @@ bool CActiveAESettings::IsSettingVisible
+   if (setting == NULL || value.empty())
+     return false;
+ 
+-  std::unique_lock lock(m_instance->m_cs);
+-  if (!m_instance)
++  std::unique_lock instanceLock(m_instanceMutex);
++  CActiveAESettings* instance = m_instance;
++  if (!instance)
+     return false;
+ 
+-  return m_instance->m_audioEngine.IsSettingVisible(value);
++  std::unique_lock lock(instance->m_cs);
++  return instance->m_audioEngine.IsSettingVisible(value);
+ }
+ 
+ void CActiveAESettings::SettingOptionsAudioDevicesFillerGeneral(
+@@ -165,11 +191,16 @@ void CActiveAESettings::SettingOptionsAu
+   current = std::static_pointer_cast<const CSettingString>(setting)->GetValue();
+   std::string firstDevice;
+ 
+-  std::unique_lock lock(m_instance->m_cs);
++  std::unique_lock instanceLock(m_instanceMutex);
++  CActiveAESettings* instance = m_instance;
++  if (!instance)
++    return;
++
++  std::unique_lock lock(instance->m_cs);
+ 
+   bool foundValue = false;
+   AEDeviceList sinkList;
+-  m_instance->m_audioEngine.EnumerateOutputDevices(sinkList, passthrough);
++  instance->m_audioEngine.EnumerateOutputDevices(sinkList, passthrough);
+   if (sinkList.empty())
+     list.emplace_back("Error - no devices found", "error");
+   else
+diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h
+--- kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h	2026-10-15 13:37:19.000000000 +0000
++++ kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h	2026-10-16 12:31:25.025295454 +0000
+@@ -13,6 +13,7 @@
+ 
+ #include <atomic>
+ #include <memory>
++#include <mutex>
+ #include <string>
+ #include <vector>
+ 
+@@ -60,5 +61,6 @@ protected:
+   CActiveAE &m_audioEngine;
+   CCriticalSection m_cs;
+   static CActiveAESettings* m_instance;
++  static std::mutex m_instanceMutex;
+ };
+ };
