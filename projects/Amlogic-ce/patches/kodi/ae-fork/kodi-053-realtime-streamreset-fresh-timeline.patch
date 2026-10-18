@@ -1,0 +1,59 @@
+diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 15:12:28.270130266 +0000
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 15:13:04.677561608 +0000
+@@ -1532,6 +1532,34 @@ bool CVideoPlayer::HandleStreamReset(boo
+     m_processInfo->ResetAudioCodecInfo();
+   }
+ 
++  if (IsRealtimePVRStream(m_pInputStream, m_item) && wasRealtimePlaybackStarted)
++  {
++    // A realtime STREAMRESET starts a new timestamp timeline even when the
++    // existing video player can be reused. Preserve stream identity/hints, but
++    // discard all per-stream timing and sync state from the previous source.
++    // In particular, stale starttime/packets or dts would let HandlePlaySpeed()
++    // resync against the old clock, and CheckContinuity() could erase the new
++    // source's (possibly non-zero catchup/archive) PTS offset.
++    const auto resetTimeline = [](CCurrentStream& current)
++    {
++      current.dts = DVD_NOPTS_VALUE;
++      current.dur = DVD_NOPTS_VALUE;
++      current.dispTime = 0;
++      current.inited = false;
++      current.packets = 0;
++      current.syncState = IDVDStreamPlayer::SYNC_STARTING;
++      current.starttime = DVD_NOPTS_VALUE;
++      current.starttimePending = false;
++      current.cachetime = 0.0;
++      current.cachetotal = 0.0;
++      current.startpts = DVD_NOPTS_VALUE;
++      current.lastdts = DVD_NOPTS_VALUE;
++      current.avsync = CCurrentStream::AV_SYNC_FORCE;
++    };
++    resetTimeline(m_CurrentAudio);
++    resetTimeline(m_CurrentVideo);
++  }
++
+   const bool openedDefaultStreams =
+       OpenDefaultStreams(true, expectedRealtimeVideo, expectedRealtimeVideo);
+ 
+@@ -3252,10 +3280,18 @@ void CVideoPlayer::HandlePlaySpeed()
+                  (m_CurrentAudio.packets == 0 && m_CurrentVideo.packets > threshold) ||
+                  (!m_VideoPlayerVideo->AcceptsData() && m_VideoPlayerAudio->GetLevel() < 10);
+ 
+-    const bool syncAudio = m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC &&
++    // Until streamsReady is set, the master clock has not been anchored to the
++    // current realtime source. In particular, a catchup stream may have a
++    // non-zero archive PTS offset. Do not resync one player to a stale/zero
++    // m_clock.GetClock(); wait for the common start-time calculation below.
++    const bool deferRealtimeResync = realtimePVR && !m_State.streamsReady;
++
++    const bool syncAudio = !deferRealtimeResync &&
++                           m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC &&
+                            (m_CurrentAudio.avsync == CCurrentStream::AV_SYNC_CONT ||
+                             m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC);
+-    const bool syncVideo = m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC &&
++    const bool syncVideo = !deferRealtimeResync &&
++                           m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_WAITSYNC &&
+                            (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CONT ||
+                             m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC);
+     const bool deferNoPts =
