@@ -1,0 +1,431 @@
+diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h
+--- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h	2026-10-18 19:20:29.633322352 +0000
++++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h	2026-10-18 19:21:59.699017691 +0000
+@@ -269,6 +269,9 @@ public:
+    */
+   virtual bool HasPendingStreamReset() const { return false; }
+ 
++  /* Require packets after STREAMRESET to be held until VideoPlayer acknowledges it. */
++  virtual void SetStreamResetAckRequired(bool required) {}
++
+   /* Notify the demuxer that VideoPlayer has completed handling a STREAMRESET. */
+   virtual void AcknowledgeStreamReset() {}
+ 
+diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+--- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-18 19:20:29.643543529 +0000
++++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-18 19:21:59.701258107 +0000
+@@ -15,6 +15,8 @@
+ #include "utils/StreamUtils.h"
+ #include "utils/log.h"
+ 
++#include <algorithm>
++#include <cstddef>
+ #include <memory>
+ #include <new>
+ #include <tuple>
+@@ -74,6 +76,8 @@ bool CDVDDemuxClient::Open(std::shared_p
+   m_streamResetPending = false;
+   m_streamResetPendingSince = {};
+   m_streamResetAwaitingAck = false;
++  m_streamResetAckRequired = false;
++  m_streamResetLastStreamMapRefresh = {};
+   Abort();
+ 
+   m_pInput = std::move(pInput);
+@@ -97,6 +101,8 @@ void CDVDDemuxClient::Dispose()
+   m_streamResetPending = false;
+   m_streamResetPendingSince = {};
+   m_streamResetAwaitingAck = false;
++  m_streamResetAckRequired = false;
++  m_streamResetLastStreamMapRefresh = {};
+   DisposeStreams();
+ 
+   m_pInput = nullptr;
+@@ -110,6 +116,8 @@ void CDVDDemuxClient::ClearDeferredStrea
+     CDVDDemuxUtils::FreeDemuxPacket(m_deferredStreamResetPackets.front());
+     m_deferredStreamResetPackets.pop_front();
+   }
++  m_deferredStreamResetPacketBytes = 0;
++  m_streamResetQueueLimitLogged = false;
+ }
+ 
+ void CDVDDemuxClient::DisposeStreams()
+@@ -270,7 +278,7 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+       {
+         setExtradata(
+             FFmpegExtraData(stream->m_context->extradata,
+-                            static_cast<size_t>(stream->m_context->extradata_size)),
++                            static_cast<std::size_t>(stream->m_context->extradata_size)),
+             "FFmpeg parser context");
+       }
+       catch (const std::bad_alloc&)
+@@ -396,8 +404,46 @@ DemuxPacket* CDVDDemuxClient::Read()
+ 
+   const auto deferCurrentPacket = [this]()
+   {
+-    if (m_packet)
+-      m_deferredStreamResetPackets.push_back(m_packet.release());
++    if (!m_packet)
++      return;
++
++    // A delayed stream-map update must not let the pre-roll queue grow without
++    // limit. Keep the most recent packets; decoding resumes from the next
++    // available random-access point after VideoPlayer acknowledges the reset.
++    constexpr std::size_t maxDeferredPacketBytes = 32 * 1024 * 1024;
++    constexpr std::size_t maxDeferredPackets = 65536;
++    const std::size_t packetBytes = m_packet->iSize > 0 ? static_cast<std::size_t>(m_packet->iSize) : 0;
++    if (packetBytes > maxDeferredPacketBytes)
++    {
++      CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
++      if (!m_streamResetQueueLimitLogged)
++      {
++        CLog::Log(LOGWARNING,
++                  "CDVDDemuxClient: dropping oversized deferred packet after STREAMRESET");
++        m_streamResetQueueLimitLogged = true;
++      }
++      return;
++    }
++
++    while (!m_deferredStreamResetPackets.empty() &&
++           (m_deferredStreamResetPacketBytes + packetBytes > maxDeferredPacketBytes ||
++            m_deferredStreamResetPackets.size() >= maxDeferredPackets))
++    {
++      DemuxPacket* oldest = m_deferredStreamResetPackets.front();
++      m_deferredStreamResetPackets.pop_front();
++      const std::size_t oldestBytes = oldest->iSize > 0 ? static_cast<std::size_t>(oldest->iSize) : 0;
++      m_deferredStreamResetPacketBytes -= std::min(m_deferredStreamResetPacketBytes, oldestBytes);
++      CDVDDemuxUtils::FreeDemuxPacket(oldest);
++      if (!m_streamResetQueueLimitLogged)
++      {
++        CLog::Log(LOGWARNING,
++                  "CDVDDemuxClient: dropping oldest deferred packets after STREAMRESET (32 MiB / 65536 packet limit)");
++        m_streamResetQueueLimitLogged = true;
++      }
++    }
++
++    m_deferredStreamResetPacketBytes += packetBytes;
++    m_deferredStreamResetPackets.push_back(m_packet.release());
+   };
+ 
+   const auto takePendingStreamReset = [this](bool timedOut)
+@@ -437,6 +483,8 @@ DemuxPacket* CDVDDemuxClient::Read()
+   {
+     DemuxPacket* pPacket = m_deferredStreamResetPackets.front();
+     m_deferredStreamResetPackets.pop_front();
++    const std::size_t packetBytes = pPacket->iSize > 0 ? static_cast<std::size_t>(pPacket->iSize) : 0;
++    m_deferredStreamResetPacketBytes -= std::min(m_deferredStreamResetPacketBytes, packetBytes);
+     return pPacket;
+   }
+ 
+@@ -461,8 +509,43 @@ DemuxPacket* CDVDDemuxClient::Read()
+     return takePendingStreamReset(true);
+   }
+ 
++  // While waiting for a realtime-PVR reset, keep polling the upstream stream
++  // map at a bounded rate even if only known audio IDs are arriving. Otherwise
++  // an audio-only intermediate map can remain authoritative forever. If a packet
++  // arrives with an unknown ID, refresh immediately when the interval permits.
++  const bool realtimePVRResetWaiting =
++      m_streamResetAckRequired && (m_streamResetPending || m_streamResetAwaitingAck);
++  const auto refreshStreamMapIfNeeded = [this, realtimePVRResetWaiting](bool unknownStreamId)
++  {
++    if (!realtimePVRResetWaiting)
++      return;
++
++    const bool hasVideoStream = std::any_of(
++        m_streams.begin(), m_streams.end(),
++        [](const auto& stream) { return stream.second && stream.second->type == StreamType::VIDEO; });
++    if (hasVideoStream && !unknownStreamId)
++      return;
++
++    constexpr auto streamMapRefreshInterval = std::chrono::milliseconds(250);
++    const auto now = std::chrono::steady_clock::now();
++    if (m_streamResetLastStreamMapRefresh == std::chrono::steady_clock::time_point{} ||
++        now - m_streamResetLastStreamMapRefresh >= streamMapRefreshInterval)
++    {
++      RequestStreams();
++      m_streamResetLastStreamMapRefresh = now;
++    }
++  };
++
+   if (!m_packet)
++  {
++    refreshStreamMapIfNeeded(false);
+     return nullptr;
++  }
++
++  if (m_packet->iStreamId >= 0 && !m_streams.contains(m_packet->iStreamId))
++    refreshStreamMapIfNeeded(true);
++  else
++    refreshStreamMapIfNeeded(false);
+ 
+   if (m_packet->iStreamId == DMX_SPECIALID_STREAMINFO)
+   {
+@@ -549,6 +632,18 @@ DemuxPacket* CDVDDemuxClient::Read()
+       CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
+       return takePendingStreamReset(false);
+     }
++
++    // IsVideoReady() only checks extradata for an already-selected video id; it
++    // returns true when no video has appeared in the stream map at all. For the
++    // realtime PVR path, deliver the reset marker but hold subsequent media
++    // packets until VideoPlayer has opened the replacement streams. HEVC-specific
++    // decoder recovery remains controlled separately by the discovered codec.
++    if (incomingStreamReset && m_streamResetAckRequired)
++    {
++      m_streamResetAwaitingAck = true;
++      m_streamResetLastStreamMapRefresh = {};
++      return m_packet.release();
++    }
+   }
+   else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
+   {
+diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+--- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-18 19:20:29.638605701 +0000
++++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-18 19:21:59.700130918 +0000
+@@ -12,6 +12,7 @@
+ #include "DVDInputStreams/DVDInputStream.h"
+ 
+ #include <chrono>
++#include <cstddef>
+ #include <deque>
+ #include <map>
+ #include <vector>
+@@ -38,7 +39,12 @@ public:
+   {
+     return m_streamResetPending || m_streamResetAwaitingAck;
+   }
+-  void AcknowledgeStreamReset() override { m_streamResetAwaitingAck = false; }
++  void SetStreamResetAckRequired(bool required) override { m_streamResetAckRequired = required; }
++  void AcknowledgeStreamReset() override
++  {
++    m_streamResetAwaitingAck = false;
++    m_streamResetQueueLimitLogged = false;
++  }
+   bool SeekTime(double time, bool backwards = false, double* startpts = NULL) override;
+   void SetSpeed(int iSpeed) override;
+   void FillBuffer(bool mode) override;
+@@ -74,9 +80,15 @@ protected:
+   std::chrono::steady_clock::time_point m_streamResetPendingSince{};
+   // Hold queued packets until VideoPlayer has successfully handled the marker.
+   bool m_streamResetAwaitingAck = false;
+-  // Media packets read after the reset marker are kept until VideoPlayer has
+-  // received the reset, so the first keyframe/audio packets are not discarded.
++  // Only realtime PVR playback opts into acknowledgement for an immediately
++  // deliverable STREAMRESET; unrelated inputstream add-ons keep their old path.
++  bool m_streamResetAckRequired = false;
++  std::chrono::steady_clock::time_point m_streamResetLastStreamMapRefresh{};
++  // Preserve packets across the transition, but bound memory if the replacement
++  // stream map never becomes usable.
+   std::deque<DemuxPacket*> m_deferredStreamResetPackets;
++  std::size_t m_deferredStreamResetPacketBytes = 0;
++  bool m_streamResetQueueLimitLogged = false;
+ 
+ private:
+   static inline bool CodecHasExtraData(AVCodecID id);
+diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- base/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-18 19:20:29.652805908 +0000
++++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-18 19:21:59.703769984 +0000
+@@ -1323,7 +1323,32 @@ bool CVideoPlayer::HandleStreamReset(boo
+ 
+   const bool wasPending = m_realtimeStreamResetPending;
+   const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
+-  const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
++  const bool realtimePVR = IsRealtimePVRStream(m_pInputStream, m_item);
++
++  // Remember whether this in-place PVR session had an active video stream
++  // before the reset. That is a general readiness guard; it is not a codec
++  // decision and must not inherit the previous stream's HEVC-specific state.
++  if (!wasPending)
++  {
++    m_realtimeStreamResetWaitingForVideo =
++        realtimePVR && !m_pendingOpenFile && m_State.streamsReady && m_CurrentVideo.id >= 0;
++  }
++
++  // Until the replacement stream map is available, do not treat the previous
++  // stream's codec as the codec being opened now. The HEVC path is re-enabled
++  // below only after the replacement video has actually been identified.
++  bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream &&
++                               !m_realtimeStreamResetWaitingForVideo;
++
++  // Do not destroy the client demuxer/parser while a reset is waiting for a
++  // replacement video stream. It must remain alive to refresh the new stream
++  // map and, for HEVC, accumulate VPS/SPS/PPS from the incoming packets.
++  if (wasPending && realtimePVR && m_realtimeStreamResetWaitingForVideo && resetDemuxer)
++  {
++    CLog::Log(LOGWARNING,
++              "VideoPlayer: preserve demuxer while realtime PVR reset is waiting for video");
++    resetDemuxer = false;
++  }
+ 
+   // CDVDDemuxClient extracts HEVC VPS/SPS/PPS from the raw packets it receives
+   // from inputstream add-ons. Resetting it recreates the parser and discards
+@@ -1426,6 +1451,24 @@ bool CVideoPlayer::HandleStreamReset(boo
+   const int videoStreams = m_SelectionStreams.CountType(StreamType::VIDEO);
+   const int audioStreams = m_SelectionStreams.CountType(StreamType::AUDIO);
+ 
++  // The reset marker can arrive before the new stream map is populated. Once
++  // a replacement video is visible, classify it by its actual codec. Do not
++  // carry HEVC-only recovery across an H.264 transition merely because the
++  // previous source used HEVC (or vice versa).
++  if (realtimePVR && m_realtimeStreamResetWaitingForVideo && videoStreams > 0)
++  {
++    const bool incomingHevcVideo = std::ranges::any_of(
++        m_SelectionStreams.Get(StreamType::VIDEO),
++        [](const SelectionStream& ss) { return ss.codecId == AV_CODEC_ID_HEVC; });
++    m_realtimeExpectVideoStream = incomingHevcVideo;
++    expectedRealtimeVideo = realtime && incomingHevcVideo;
++
++    // The replacement codec is now known. Force a decoder/player reopen only
++    // when the incoming stream is HEVC; a H.264 Empty Channel must never enter
++    // the HEVC-only recovery path just because the previous stream was HEVC.
++    m_realtimeForceVideoCodecReopen = incomingHevcVideo && wasRealtimePlaybackStarted;
++  }
++
+   if (videoStreams == 0 && audioStreams == 0)
+   {
+     if (!wasPending)
+@@ -1441,6 +1484,23 @@ bool CVideoPlayer::HandleStreamReset(boo
+     return false;
+   }
+ 
++  if (realtimePVR && m_realtimeStreamResetWaitingForVideo && videoStreams == 0 &&
++      !expectedRealtimeVideo)
++  {
++    if (!wasPending)
++    {
++      CLog::Log(LOGWARNING,
++                "VideoPlayer: [STREAM RESET] pending... Waiting for replacement video stream. Demux A/V streams: {}/{}",
++                audioStreams, videoStreams);
++    }
++
++    // The previous active video may be an H.264 Empty Channel placeholder; do
++    // not apply the HEVC decoder gate here. Simply keep the reset pending until
++    // a new video stream appears, instead of committing an audio-only layout.
++    markPending(false);
++    return false;
++  }
++
+   if (expectedRealtimeVideo && videoStreams == 0)
+   {
+     if (!wasPending)
+@@ -1579,6 +1639,22 @@ bool CVideoPlayer::HandleStreamReset(boo
+     return false;
+   }
+ 
++  if (realtimePVR && m_realtimeStreamResetWaitingForVideo && !m_HasVideo)
++  {
++    if (!wasPending)
++    {
++      CLog::Log(LOGWARNING,
++                "VideoPlayer: [STREAM RESET] pending... Replacement video stream is not open yet. Demux A/V streams: {}/{}",
++                audioStreams, videoStreams);
++    }
++
++    // Do not complete the transition just because audio could be opened while
++    // video failed to open. Keep retrying with the same client demuxer; HEVC
++    // parser preservation remains handled by the existing HEVC-specific path.
++    markPending(false);
++    return false;
++  }
++
+   if (!m_HasVideo && !m_HasAudio)
+   {
+     if (!wasPending)
+@@ -1593,6 +1669,7 @@ bool CVideoPlayer::HandleStreamReset(boo
+   }
+ 
+   m_realtimeStreamResetPending = false;
++  m_realtimeStreamResetWaitingForVideo = false;
+   m_realtimeStreamResetHardRetryDone = false;
+   m_realtimeForceVideoCodecReopen = false;
+   m_realtimeStreamResetLastTry = {};
+@@ -1664,6 +1741,12 @@ bool CVideoPlayer::HandleStreamReset(boo
+ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
+ {
+ 
++  // The client demuxer's post-STREAMRESET hold is restricted to realtime PVR
++  // (including PVR via inputstream.ffmpegdirect); this is independent of whether
++  // the replacement codec is HEVC or H.264.
++  if (m_pDemuxer)
++    m_pDemuxer->SetStreamResetAckRequired(IsRealtimePVRStream(m_pInputStream, m_item));
++
+   // check if we should read from subtitle demuxer
+   if (m_pSubtitleDemuxer && m_VideoPlayerSubtitle->AcceptsData())
+   {
+@@ -1725,6 +1808,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+         constexpr auto pendingResetDemuxerRetryTime = 5s;
+         const auto now = std::chrono::steady_clock::now();
+         const bool demuxerResetRetry =
++            !m_realtimeStreamResetWaitingForVideo &&
+             m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
+             now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
+ 
+@@ -1821,7 +1905,19 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+ 
+           if (bad_packet_count > 50)
+           {
+-            if (now - m_lastStreamResetTime > minResetInterval)
++            if (m_realtimeStreamResetPending)
++            {
++              // The original one-shot STREAMRESET is already being retried by
++              // Process(). A second forced demuxer reset here can destroy the
++              // stream/parser state while FFmpeg Direct is still publishing the
++              // replacement map (notably during HEVC -> Empty Channel -> HEVC).
++              if (bad_packet_count == 51)
++              {
++                CLog::Log(LOGWARNING,
++                          "VideoPlayer: invalid packets while STREAM RESET is pending; preserve current demuxer");
++              }
++            }
++            else if (now - m_lastStreamResetTime > minResetInterval)
+             {
+               CLog::Log(LOGWARNING, "VideoPlayer: Too many invalid packets, perform [STREAM RESET]");
+ 
+@@ -2019,6 +2115,7 @@ void CVideoPlayer::Prepare()
+   m_realtimeNoStreamsSince = {};
+   m_realtimeStreamTransitionReadUntil = {};
+   m_realtimeStreamResetPending = false;
++  m_realtimeStreamResetWaitingForVideo = false;
+   m_realtimeStreamResetHardRetryDone = false;
+   m_realtimeStreamResetLastTry = {};
+   m_realtimeStreamResetPendingSince = {};
+@@ -2543,7 +2640,7 @@ void CVideoPlayer::Process()
+       constexpr auto pendingResetDemuxerRetryTime = 5s;
+       const auto now = std::chrono::steady_clock::now();
+       const bool demuxerResetRetry =
+-          !m_realtimeStreamResetHardRetryDone &&
++          !m_realtimeStreamResetWaitingForVideo && !m_realtimeStreamResetHardRetryDone &&
+           m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
+           now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
+ 
+@@ -2571,7 +2668,7 @@ void CVideoPlayer::Process()
+       constexpr auto pendingResetDemuxerRetryTime = 5s;
+       const auto now = std::chrono::steady_clock::now();
+       const bool demuxerResetRetry =
+-          !m_realtimeStreamResetHardRetryDone &&
++          !m_realtimeStreamResetWaitingForVideo && !m_realtimeStreamResetHardRetryDone &&
+           m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
+           now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
+ 
+@@ -2677,6 +2774,7 @@ void CVideoPlayer::Process()
+         constexpr auto pendingResetDemuxerRetryTime = 5s;
+         const auto now = std::chrono::steady_clock::now();
+         const bool demuxerResetRetry =
++            !m_realtimeStreamResetWaitingForVideo &&
+             m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
+             now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
+ 
+diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
+--- base/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-10-18 19:20:29.647966004 +0000
++++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-10-18 19:21:59.702688318 +0000
+@@ -685,6 +685,9 @@ protected:
+   std::chrono::steady_clock::time_point m_realtimeQueuesFullLastSoftRecovery{};
+   int m_realtimeQueuesFullSoftRecoveries{0};
+   bool m_realtimeStreamResetPending{false};
++  // A TVLINK PVR reset began while a video player was active. Keep waiting for
++  // replacement video without extending any HEVC-specific behavior to H.264.
++  bool m_realtimeStreamResetWaitingForVideo{false};
+   bool m_realtimeBufferMaxHoldLogged{false};
+   bool m_realtimeFailedStreamChangeLogged{false};
+   bool m_realtimeAudioStallHoldLogged{false};
