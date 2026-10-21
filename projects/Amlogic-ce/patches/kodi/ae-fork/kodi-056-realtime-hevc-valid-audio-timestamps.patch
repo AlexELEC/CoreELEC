@@ -1,0 +1,128 @@
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -69,6 +69,7 @@
+ #include <algorithm>
+ #include <cassert>
+ #include <chrono>
++#include <cmath>
+ #include <iterator>
+ #include <limits>
+ #include <memory>
+@@ -1308,6 +1309,21 @@ static bool IsRealtimePVRStream(const st
+          item.GetProperty(STREAM_PROPERTY_INPUTSTREAM).asString() == "inputstream.ffmpegdirect";
+ }
+ 
++// Some input paths can expose a no-timestamp sentinel in DEMUX_PACKET's double
++// fields with the opposite sign from DVD_NOPTS_VALUE. Comparing only with
++// DVD_NOPTS_VALUE therefore misclassifies it as a real timestamp. Do not let
++// such values take part in post-reset A/V alignment: they can create an enormous
++// correction that makes ActiveAE wait for audio forever.
++static bool IsValidRealtimeTimestamp(double timestamp)
++{
++  if (!std::isfinite(timestamp))
++    return false;
++
++  constexpr double noPtsLimit = static_cast<double>(DVD_NOPTS_VALUE) / 2.0;
++  return timestamp != static_cast<double>(DVD_NOPTS_VALUE) &&
++         std::abs(timestamp) < noPtsLimit;
++}
++
+ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+ {
+   const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
+@@ -3004,6 +3020,15 @@ void CVideoPlayer::ProcessAudioData(CDem
+ 
+   if (realtimeHevcGate)
+   {
++    // Normalize either signed form of a missing timestamp before the generic
++    // CheckContinuity()/UpdateTimestamps() logic sees this packet. Those paths
++    // compare directly with DVD_NOPTS_VALUE and must not consume a negative
++    // sentinel as a genuine DTS/PTS.
++    if (!IsValidRealtimeTimestamp(pPacket->dts))
++      pPacket->dts = DVD_NOPTS_VALUE;
++    if (!IsValidRealtimeTimestamp(pPacket->pts))
++      pPacket->pts = DVD_NOPTS_VALUE;
++
+     const double audioDts = pPacket->dts != DVD_NOPTS_VALUE ? pPacket->dts : pPacket->pts;
+     const auto now = std::chrono::steady_clock::now();
+     auto logDrop = [&](const char* reason)
+@@ -3013,16 +3038,17 @@ void CVideoPlayer::ProcessAudioData(CDem
+       {
+         CLog::Log(LOGWARNING,
+                   "VideoPlayer: drop realtime HEVC audio packet after reset: {} | audio dts:{:.3f} pts:{:.3f} video dts:{:.3f}",
+-                  reason, pPacket->dts == DVD_NOPTS_VALUE ? -1.0 : pPacket->dts / DVD_TIME_BASE,
+-                  pPacket->pts == DVD_NOPTS_VALUE ? -1.0 : pPacket->pts / DVD_TIME_BASE,
+-                  m_realtimeHevcPostResetVideoDts == DVD_NOPTS_VALUE
+-                      ? -1.0
+-                      : m_realtimeHevcPostResetVideoDts / DVD_TIME_BASE);
++                  reason,
++                  IsValidRealtimeTimestamp(pPacket->dts) ? pPacket->dts / DVD_TIME_BASE : -1.0,
++                  IsValidRealtimeTimestamp(pPacket->pts) ? pPacket->pts / DVD_TIME_BASE : -1.0,
++                  IsValidRealtimeTimestamp(m_realtimeHevcPostResetVideoDts)
++                      ? m_realtimeHevcPostResetVideoDts / DVD_TIME_BASE
++                      : -1.0);
+         m_realtimeHevcPostResetLastLog = now;
+       }
+     };
+ 
+-    if (audioDts == DVD_NOPTS_VALUE)
++    if (!IsValidRealtimeTimestamp(audioDts))
+     {
+       logDrop("invalid audio timestamp");
+       CDVDDemuxUtils::FreeDemuxPacket(pPacket);
+@@ -3038,6 +3064,17 @@ void CVideoPlayer::ProcessAudioData(CDem
+ 
+     if (m_realtimeHevcPostResetGate && !m_realtimeHevcPostResetAudioReady)
+     {
++      // The gate is released only after both sides provide valid timestamps.
++      // ProcessVideoData normally guarantees this, but keep the audio path
++      // defensive so an invalid stored timestamp can never become a correction.
++      if (!m_realtimeHevcPostResetVideoSeen ||
++          !IsValidRealtimeTimestamp(m_realtimeHevcPostResetVideoDts))
++      {
++        logDrop("waiting for valid video timestamp");
++        CDVDDemuxUtils::FreeDemuxPacket(pPacket);
++        return;
++      }
++
+       const double diff = audioDts - m_realtimeHevcPostResetVideoDts;
+       if (std::abs(diff) > DVD_MSEC_TO_TIME(500))
+       {
+@@ -3090,6 +3127,20 @@ void CVideoPlayer::ProcessAudioData(CDem
+ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
+ {
+   CheckStreamChanges(m_CurrentVideo, pStream);
++
++  const bool realtimeHevcPostResetVideoGate =
++      m_pInputStream && m_pInputStream->IsRealtime() && m_realtimeExpectVideoStream &&
++      m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC && m_realtimeHevcPostResetGate;
++  if (realtimeHevcPostResetVideoGate)
++  {
++    // Normalize malformed/missing timestamp sentinels before generic continuity
++    // and timestamp tracking sees this packet, just as in the audio path below.
++    if (!IsValidRealtimeTimestamp(pPacket->dts))
++      pPacket->dts = DVD_NOPTS_VALUE;
++    if (!IsValidRealtimeTimestamp(pPacket->pts))
++      pPacket->pts = DVD_NOPTS_VALUE;
++  }
++
+   bool checkcont = false;
+ 
+   if( pPacket->iSize != 4) //don't check the EOF_SEQUENCE of stillframes
+@@ -3097,13 +3148,10 @@ void CVideoPlayer::ProcessVideoData(CDem
+     checkcont = CheckContinuity(m_CurrentVideo, pPacket);
+     UpdateTimestamps(m_CurrentVideo, pPacket);
+ 
+-    if (IsRealtimePVRStream(m_pInputStream, m_item) &&
+-        m_realtimeExpectVideoStream && m_realtimeHevcPostResetGate &&
+-        m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
+-        !m_realtimeHevcPostResetVideoSeen)
++    if (realtimeHevcPostResetVideoGate && !m_realtimeHevcPostResetVideoSeen)
+     {
+-      const double videoDts = pPacket->dts != DVD_NOPTS_VALUE ? pPacket->dts : pPacket->pts;
+-      if (videoDts != DVD_NOPTS_VALUE)
++      const double videoDts = IsValidRealtimeTimestamp(pPacket->dts) ? pPacket->dts : pPacket->pts;
++      if (IsValidRealtimeTimestamp(videoDts))
+       {
+         m_realtimeHevcPostResetVideoSeen = true;
+         m_realtimeHevcPostResetVideoDts = videoDts;
