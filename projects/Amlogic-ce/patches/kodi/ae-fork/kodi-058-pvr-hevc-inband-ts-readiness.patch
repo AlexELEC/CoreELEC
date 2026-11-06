@@ -1,0 +1,45 @@
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+@@ -1890,10 +1890,12 @@
+     }
+ 
+     // Only fill in what the re-open does not know, and never extradata or ch_layout:
+-    // ResetVideoStreams() clears extradata so that TransportStreamVideoState() waits for the
+-    // demuxer to find it again, which is what starts playback on an i-frame; a restored ch_layout
+-    // outlives the channel count the demuxer resets from the PMT, which IsProgramChange() then
+-    // reads as a change and rebuilds the streams for nothing.
++    // ResetVideoStreams() clears extradata so TransportStreamVideoState() normally waits for the
++    // demuxer to find it again before starting video. PVR HEVC is an exception:
++    // VPS/SPS/PPS may arrive in-band, so timestamped packets must reach the downstream parser before
++    // extradata is populated. A restored ch_layout outlives the channel count the demuxer resets
++    // from the PMT, which IsProgramChange() then reads as a change and rebuilds the streams for
++    // nothing.
+     AVCodecParameters* cur = st->codecpar;
+ 
+     if (cur->profile == AV_PROFILE_UNKNOWN)
+@@ -3146,8 +3148,10 @@
+       if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+       {
+         if (idx == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
+-            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC) ||
+-            (st->codecpar->codec_id == AV_CODEC_ID_AVS2)))
++            (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
++             st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
++             (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
++              st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
+         {
+           if (!m_startTime)
+           {
+@@ -3169,8 +3173,10 @@
+       if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+       {
+         if (static_cast<int>(i) == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
+-            (st->codecpar->extradata || (st->codecpar->codec_id == AV_CODEC_ID_VVC) ||
+-            (st->codecpar->codec_id == AV_CODEC_ID_AVS2)))
++            (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
++             st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
++             (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
++              st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
+         {
+           if (!m_startTime)
+           {

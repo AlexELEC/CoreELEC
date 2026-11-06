@@ -1,0 +1,292 @@
+From 145b0ca0ca090b7953e1712ae3135ebf9c688d2a Mon Sep 17 00:00:00 2001
+From: AlexElec <patch@alexelec.invalid>
+Date: Sun, 25 Oct 2026 11:17:36 +0000
+Subject: [PATCH] kodi: interrupt realtime MPEG-TS read on stable topology
+ change
+
+Mirror the bounded topology-change interrupt used by inputstream.ffmpegdirect in the built-in FFmpeg demuxer. After the stream/program counts stay beyond the existing IsProgramChange threshold for 100 ms, interrupt the active av_read_frame call and route the result through the normal STREAMRESET/STREAMCHANGE logic instead of waiting for the 20-second read timeout.
+
+Signed-off-by: AlexElec <patch@alexelec.invalid>
+---
+ .../DVDDemuxers/DVDDemuxFFmpeg.cpp            | 178 +++++++++++++++---
+ .../VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h  |  13 ++
+ 2 files changed, 162 insertions(+), 29 deletions(-)
+
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+index d2739f4..0377a2b 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+@@ -153,9 +153,15 @@ CDemuxParserFFmpeg::~CDemuxParserFFmpeg()
+ static int interrupt_cb(void* ctx)
+ {
+   CDVDDemuxFFmpeg* demuxer = static_cast<CDVDDemuxFFmpeg*>(ctx);
+-  if (demuxer && demuxer->Aborted())
++  if (!demuxer)
++    return 0;
++
++  // Keep explicit aborts and the hard timeout authoritative. The topology check
++  // is enabled only around an active read of a realtime MPEG-TS stream.
++  if (demuxer->Aborted())
+     return 1;
+-  return 0;
++
++  return demuxer->ShouldInterruptForTopologyChange() ? 1 : 0;
+ }
+ 
+ 
+@@ -240,6 +246,59 @@ bool CDVDDemuxFFmpeg::Aborted()
+   return false;
+ }
+ 
++bool CDVDDemuxFFmpeg::ShouldInterruptForTopologyChange()
++{
++  if (!m_topologyInterruptEnabled)
++    return false;
++
++  if (m_topologyInterruptTriggered)
++    return true;
++
++  if (!m_pInput || !m_pInput->IsRealtime() || !m_pFormatContext ||
++      !m_pFormatContext->iformat || !m_pFormatContext->iformat->name ||
++      std::strcmp(m_pFormatContext->iformat->name, "mpegts") != 0 ||
++      m_program == UINT_MAX || m_streams.empty())
++    return false;
++
++  const unsigned int streams = m_pFormatContext->nb_streams;
++  const unsigned int programs = m_pFormatContext->nb_programs;
++
++  // Match IsProgramChange(): interrupt only for a topology delta that Kodi
++  // already treats as a stream reset/change (more than one additional stream,
++  // or an additional program). The baseline is captured before av_read_frame.
++  if (streams <= m_topologyBaselineStreams + 1 &&
++      programs <= m_topologyBaselinePrograms)
++  {
++    m_topologyChangeLastSeenAt = {};
++    m_topologyCandidateStreams = 0;
++    m_topologyCandidatePrograms = 0;
++    return false;
++  }
++
++  const auto now = std::chrono::steady_clock::now();
++  if (m_topologyChangeLastSeenAt == std::chrono::steady_clock::time_point{} ||
++      streams != m_topologyCandidateStreams || programs != m_topologyCandidatePrograms)
++  {
++    m_topologyCandidateStreams = streams;
++    m_topologyCandidatePrograms = programs;
++    m_topologyChangeLastSeenAt = now;
++    return false;
++  }
++
++  // PAT/PMT updates can arrive in a short burst. Let that burst settle before
++  // interrupting so the new source's full topology is observed as one change.
++  constexpr auto topologySettleTime = std::chrono::milliseconds(100);
++  if (now - m_topologyChangeLastSeenAt < topologySettleTime)
++    return false;
++
++  m_topologyInterruptTriggered = true;
++  CLog::Log(LOGINFO,
++            "CDVDDemuxFFmpeg: stable realtime MPEG-TS topology change detected "
++            "(streams={}, programs={}); interrupting av_read_frame",
++            streams, programs);
++  return true;
++}
++
+ bool CDVDDemuxFFmpeg::IsStreaming() const
+ {
+   if (m_pInput && m_pInput->IsStreaming())
+@@ -1176,6 +1235,7 @@ void CDVDDemuxFFmpeg::ConvertBlurayTimestamps(DemuxPacket* packet, const AVStrea
+ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
+ {
+   DemuxPacket* pPacket = NULL;
++  bool topologyChangeInterrupted = false;
+   // on some cases where the received packet is invalid we will need to return an empty packet (0 length) otherwise the main loop (in CVideoPlayer)
+   // would consider this the end of stream and stop.
+   bool bReturnEmpty = false;
+@@ -1195,13 +1255,67 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
+         m_pkt.pkt.size = 0;
+         m_pkt.pkt.data = NULL;
+ 
+-        // timeout reads after 100ms
++        // Detect a stable topology change during an active read of an already
++        // selected realtime MPEG-TS stream. Do not affect startup probing, VOD,
++        // other demuxers, or the existing hard read timeout.
++        m_topologyInterruptEnabled =
++            m_pInput && m_pInput->IsRealtime() && m_pFormatContext->iformat &&
++            m_pFormatContext->iformat->name &&
++            std::strcmp(m_pFormatContext->iformat->name, "mpegts") == 0 &&
++            m_program != UINT_MAX && !m_streams.empty();
++        m_topologyInterruptTriggered = false;
++        m_topologyChangeLastSeenAt = {};
++        m_topologyCandidateStreams = 0;
++        m_topologyCandidatePrograms = 0;
++        if (m_oldStreams > 0)
++        {
++          m_topologyBaselineStreams = m_oldStreams;
++          m_topologyBaselinePrograms = m_oldProgCount;
++        }
++        else
++        {
++          // m_oldStreams is zero while a newly opened demuxer establishes its
++          // first baseline. Use the current counts rather than mistaking initial
++          // stream discovery for an in-place transition.
++          m_topologyBaselineStreams = m_pFormatContext->nb_streams;
++          m_topologyBaselinePrograms = m_pFormatContext->nb_programs;
++        }
++
++        const auto readStarted = std::chrono::steady_clock::now();
+         m_timeout.Set(20s);
+         m_pkt.result = av_read_frame(m_pFormatContext, &m_pkt.pkt);
+         m_timeout.SetInfinite();
++        m_topologyInterruptEnabled = false;
++        topologyChangeInterrupted = m_topologyInterruptTriggered;
++        m_topologyInterruptTriggered = false;
++        if (topologyChangeInterrupted)
++        {
++          const double elapsedMs = std::chrono::duration<double, std::milli>(
++                                       std::chrono::steady_clock::now() - readStarted)
++                                       .count();
++          CLog::Log(LOGINFO,
++                    "CDVDDemuxFFmpeg::ReadInternal(): av_read_frame ended early for live "
++                    "MPEG-TS topology change after {:.1f} ms (result={}, streams={}, programs={})",
++                    elapsedMs, m_pkt.result, m_pFormatContext->nb_streams,
++                    m_pFormatContext->nb_programs);
++        }
+       }
+ 
+-      if (m_pkt.result == AVERROR(EINTR) || m_pkt.result == AVERROR(EAGAIN))
++      if (m_pkt.result < 0 && topologyChangeInterrupted)
++      {
++        // av_read_frame may return the interrupt error instead of a buffered
++        // packet. The topology change is still meaningful; process it before the
++        // generic error path flushes the current demuxer state.
++        av_packet_unref(&m_pkt.pkt);
++        m_pkt.result = -1;
++        if (IsProgramChange())
++          return HandleProgramChange();
++
++        // The candidate topology no longer meets the normal stream-change rule.
++        // Retry on the next ReadInternal call without flushing the transport.
++        bReturnEmpty = true;
++      }
++      else if (m_pkt.result == AVERROR(EINTR) || m_pkt.result == AVERROR(EAGAIN))
+       {
+         // timeout, probably no real error, return empty packet
+         bReturnEmpty = true;
+@@ -1241,31 +1355,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
+         ParsePacket(&m_pkt.pkt);
+ 
+         if (IsProgramChange())
+-        {
+-          CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): stream change");
+-          av_dump_format(m_pFormatContext, 0, CURL::GetRedacted(m_pInput->GetFileName()).c_str(), 0);
+-
+-          if (m_bResetStream) // reset stream
+-          {
+-            m_bResetStream = false;
+-            Reset();
+-
+-            CreateStreams(m_program);
+-            pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
+-            pPacket->iStreamId = DMX_SPECIALID_STREAMRESET;
+-            pPacket->demuxerId = GetDemuxerId();
+-            CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): immediate STREAMRESET");
+-          }
+-          else // update streams
+-          {
+-            CreateStreams(m_program);
+-            pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
+-            pPacket->iStreamId = DMX_SPECIALID_STREAMCHANGE;
+-            pPacket->demuxerId = GetDemuxerId();
+-          }
+-
+-          return pPacket;
+-        }
++          return HandleProgramChange();
+ 
+         AVStream* stream = m_pFormatContext->streams[m_pkt.pkt.stream_index];
+ 
+@@ -2824,6 +2914,36 @@ std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
+   return {};
+ }
+ 
++DemuxPacket* CDVDDemuxFFmpeg::HandleProgramChange()
++{
++  CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): stream change");
++  if (m_pFormatContext && m_pInput)
++    av_dump_format(m_pFormatContext, 0,
++                   CURL::GetRedacted(m_pInput->GetFileName()).c_str(), 0);
++
++  DemuxPacket* pPacket = nullptr;
++  if (m_bResetStream) // reset stream
++  {
++    m_bResetStream = false;
++    Reset();
++
++    CreateStreams(m_program);
++    pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
++    pPacket->iStreamId = DMX_SPECIALID_STREAMRESET;
++    pPacket->demuxerId = GetDemuxerId();
++    CLog::Log(LOGINFO, "CDVDDemuxFFmpeg::Read(): immediate STREAMRESET");
++  }
++  else // update streams
++  {
++    CreateStreams(m_program);
++    pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
++    pPacket->iStreamId = DMX_SPECIALID_STREAMCHANGE;
++    pPacket->demuxerId = GetDemuxerId();
++  }
++
++  return pPacket;
++}
++
+ bool CDVDDemuxFFmpeg::IsProgramChange()
+ {
+   unsigned int m_newStreams = m_pFormatContext->nb_streams;
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+index 6b689b5..7d65049 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+@@ -13,6 +13,7 @@
+ #include "DemuxStreamSSIF.h"
+ #include "threads/CriticalSection.h"
+ #include "threads/SystemClock.h"
++#include <chrono>
+ #include <map>
+ #include <memory>
+ #include <vector>
+@@ -117,6 +118,7 @@ public:
+   bool IsStreaming() const override;
+ 
+   bool Aborted();
++  bool ShouldInterruptForTopologyChange();
+ 
+   AVFormatContext* m_pFormatContext;
+   std::shared_ptr<CDVDInputStream> m_pInput;
+@@ -145,6 +147,7 @@ protected:
+   void ConvertBlurayTimestamps(DemuxPacket* packet, const AVStream* stream);
+ #endif
+   bool IsProgramChange();
++  DemuxPacket* HandleProgramChange();
+   unsigned int HLSSelectProgram();
+ 
+   std::string GetStereoModeFromMetadata(AVDictionary* pMetadata);
+@@ -205,6 +208,16 @@ protected:
+   unsigned int m_oldStreams;
+   unsigned int m_oldProgCount;
+ 
++  // Interrupt a live MPEG-TS read after a stable topology change, so the normal
++  // IsProgramChange path does not have to wait for the 20-second read timeout.
++  bool m_topologyInterruptEnabled{false};
++  bool m_topologyInterruptTriggered{false};
++  std::chrono::steady_clock::time_point m_topologyChangeLastSeenAt{};
++  unsigned int m_topologyBaselineStreams{0};
++  unsigned int m_topologyBaselinePrograms{0};
++  unsigned int m_topologyCandidateStreams{0};
++  unsigned int m_topologyCandidatePrograms{0};
++
+   bool m_streaminfo;
+   bool m_checkTransportStream;
+   int m_displayTime = 0;
+-- 
+2.47.3
+

@@ -3,34 +3,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2018-present Team CoreELEC (https://coreelec.org)
 
-remap_keys () {
-  [ ! -f "$1" ] && return
-
-  sed -i 's/ 15[^0-9]*$/ 1/
-          s/ 63[^0-9]*$/ 90/
-          s/ 97[^0-9]*$/ 28/
-          s/ 102[^0-9]*$/ 172/
-          s/ 125[^0-9]*$/ 46/
-          s/ 128[^0-9]*$/ 45/
-          s/ 139[^0-9]*$/ 46/
-          s/ 142[^0-9]*$/ 116/
-          s/ 143[^0-9]*$/ 116/
-          s/ 158[^0-9]*$/ 1/
-          s/ 183[^0-9]*$/ 59/
-          s/ 184[^0-9]*$/ 399/
-          s/ 185[^0-9]*$/ 400/
-          s/ 186[^0-9]*$/ 60/
-          s/ 232[^0-9]*$/ 28/
-          s/ 240[^0-9]*$/ 164/
-          s/ 241[^0-9]*$/ 163/
-          s/ 242[^0-9]*$/ 165/
-          s/ 244[^0-9]*$/ 208/
-          s/ 245[^0-9]*$/ 168/
-          s/ 264[^0-9]*$/ 63/
-          s/ 704[^0-9]*$/ 116/' \
-    "$1"
-}
-
 [ ! -e "/proc/device-tree/meson-ir/compatible" -o ! -e "/proc/device-tree/meson-remote/compatible" ] && exit
 
 if [ -f "/flash/remote.disable" -o -f "/storage/.config/remote.disable" ]; then
@@ -48,6 +20,8 @@ if [ -f "/flash/remote.conf" ]; then
   REMOTE_CONF_DIR="/flash"
 elif [ -f "/storage/.config/remote.conf" ]; then
   REMOTE_CONF_DIR="/storage/.config"
+elif [ -f "/storage/.config/amremote/remote.conf" ]; then
+  REMOTE_CONF_DIR="/storage/.config/amremote"
 else
   REMOTE_CONF_DIR=""
 
@@ -73,10 +47,7 @@ if [ -d "$REMOTE_CONF_DIR" ]; then
 
   for f in $REMOTE_CONF_DIR/remote*.conf; do
     echo "configuring remote with $f"
-    cp "$f" /tmp/remote.conf
-    remap_keys /tmp/remote.conf
-    remotecfg /tmp/remote.conf
-    rm -f /tmp/remote.conf
+    remotecfg $f
   done
 else
   echo "using meson-ir"
