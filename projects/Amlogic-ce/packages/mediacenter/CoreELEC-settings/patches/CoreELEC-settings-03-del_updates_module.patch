@@ -1,5 +1,5 @@
 diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-settings-patch/src/resources/lib/modules/updates.py
---- CoreELEC-settings/src/resources/lib/modules/updates.py	2025-07-07 16:45:29.000000000 +0000
+--- CoreELEC-settings/src/resources/lib/modules/updates.py	2026-11-09 11:43:09.000000000 +0000
 +++ CoreELEC-settings-patch/src/resources/lib/modules/updates.py	1970-01-01 00:00:00.000000000 +0000
 @@ -1,797 +0,0 @@
 -# SPDX-License-Identifier: GPL-2.0-or-later
@@ -471,7 +471,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -                if self.struct['update']['settings']['Build']['value'] != '':
 -                    self.update_file = self.update_json[self.struct['update']['settings']['Channel']['value']]['url'] + self.get_available_builds(self.struct['update']['settings']['Build']['value'])
 -                    message = '%s: %s\n%s: %s\n%s' % (self.oe._(32188), version, self.oe._(32187), self.struct['update']['settings']['Build']['value'], self.oe._(32180))
--                    answer = xbmcDialog.yesno('CoreELEC Update', message)
+-                    answer = xbmcDialog.yesno(self.oe._(33534), message)
 -                    xbmcDialog = None
 -                    del xbmcDialog
 -                    if answer:
@@ -513,7 +513,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -                                update_json[channel] = custom_update_json[channel]
 -                        elif notify_error:
 -                            ok_window = xbmcgui.Dialog()
--                            answer = ok_window.ok(self.oe._(32191), 'Custom URL is not valid, or currently inaccessible.\n\n%s' % custom_url)
+-                            answer = ok_window.ok(self.oe._(32191), self.oe._(33556) % custom_url)
 -                            if not answer:
 -                                return
 -            self.oe.dbg_log('updates::build_json', 'exit_function', self.oe.LOGDEBUG)
@@ -614,7 +614,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -                    else:
 -                        if self.oe.BUILD == 'official':
 -                            if self.struct['update']['settings']['UpdateNotify']['value'] == '1':
--                                ceUpdate = xbmcgui.Dialog().yesno('CoreELEC', 'An update is available, would you like to download it now?')
+-                                ceUpdate = xbmcgui.Dialog().yesno(self.oe._(33534), self.oe._(33535))
 -                                if(ceUpdate):
 -                                    self.update_in_progress = True
 -                                    self.do_autoupdate(None, True)
@@ -635,7 +635,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -                        self.oe.notify(self.oe._(32363), self.oe._(32366))
 -                    shutil.move(self.oe.TEMP + 'update_file', self.LOCAL_UPDATE_DIR + self.update_file)
 -                    subprocess.call('sync', shell=True, stdin=None, stdout=None, stderr=None)
--                    ceReboot = xbmcgui.Dialog().yesno('CoreELEC', 'An update has been downloaded, would you like to reboot now to apply it?')
+-                    ceReboot = xbmcgui.Dialog().yesno(self.oe._(33534), self.oe._(33536))
 -                    if(ceReboot):
 -                        xbmc.restart()
 -                else:
@@ -738,7 +738,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -            self.oe.dbg_log('updates::set_rpi_bootloader', 'enter_function', self.oe.LOGDEBUG)
 -            value = 'false'
 -            if listItem.getProperty('value') == 'true':
--                if xbmcgui.Dialog().yesno('Update RPi Bootloader', '%s\n\n%s' % (self.oe._(32023), self.oe._(32326))):
+-                if xbmcgui.Dialog().yesno(self.oe._(33537), '%s\n\n%s' % (self.oe._(32023), self.oe._(32326))):
 -                    value = 'true'
 -            self.struct[listItem.getProperty('category')]['settings'][listItem.getProperty('entry')]['value'] = value
 -            self.set_rpi_eeprom()
@@ -751,7 +751,7 @@ diff -Naurp CoreELEC-settings/src/resources/lib/modules/updates.py CoreELEC-sett
 -            self.oe.dbg_log('updates::set_rpi_vl805', 'enter_function', self.oe.LOGDEBUG)
 -            value = 'false'
 -            if listItem.getProperty('value') == 'true':
--                if xbmcgui.Dialog().yesno('Update RPi USB3 Firmware', '%s\n\n%s' % (self.oe._(32023), self.oe._(32326))):
+-                if xbmcgui.Dialog().yesno(self.oe._(33538), '%s\n\n%s' % (self.oe._(32023), self.oe._(32326))):
 -                    value = 'true'
 -            self.struct[listItem.getProperty('category')]['settings'][listItem.getProperty('entry')]['value'] = value
 -            self.set_rpi_eeprom()
