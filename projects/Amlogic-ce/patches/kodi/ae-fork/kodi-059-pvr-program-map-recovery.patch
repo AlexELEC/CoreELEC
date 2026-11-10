@@ -1,0 +1,143 @@
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+@@ -2828,6 +2828,110 @@
+ 
+ bool CDVDDemuxFFmpeg::IsProgramChange()
+ {
++  // The built-in demuxer can also be reopened before a PVR MPEG-TS
++  // exposes PAT/PMT. Recover the missing program/map in the existing demux
++  // context rather than issuing another Reset() and reopening the input.
++  if (m_program == UINT_MAX && m_pInput &&
++      m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) && m_pFormatContext &&
++      m_pFormatContext->iformat && m_pFormatContext->iformat->name &&
++      strcmp(m_pFormatContext->iformat->name, "mpegts") == 0)
++  {
++    auto programHasAudioVideo = [this](unsigned int programIndex)
++    {
++      if (programIndex >= m_pFormatContext->nb_programs)
++        return false;
++
++      const AVProgram* program = m_pFormatContext->programs[programIndex];
++      if (!program || program->nb_stream_indexes == 0)
++        return false;
++
++      for (unsigned int i = 0; i < program->nb_stream_indexes; ++i)
++      {
++        const unsigned int streamIndex = program->stream_index[i];
++        if (streamIndex >= m_pFormatContext->nb_streams)
++          continue;
++
++        const AVStream* stream = m_pFormatContext->streams[streamIndex];
++        if (stream && stream->codecpar &&
++            (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ||
++             stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO))
++          return true;
++      }
++      return false;
++    };
++
++    unsigned int recoveredProgram = UINT_MAX;
++    if (m_initialProgramNumber != UINT_MAX)
++    {
++      for (unsigned int i = 0; i < m_pFormatContext->nb_programs; ++i)
++      {
++        if (m_pFormatContext->programs[i] &&
++            m_pFormatContext->programs[i]->program_num ==
++                static_cast<int>(m_initialProgramNumber) &&
++            programHasAudioVideo(i))
++        {
++          recoveredProgram = i;
++          break;
++        }
++      }
++      if (recoveredProgram == UINT_MAX)
++        return false;
++      m_initialProgramNumber = UINT_MAX;
++    }
++    else
++    {
++      for (unsigned int i = 0; i < m_pFormatContext->nb_programs; ++i)
++      {
++        if (programHasAudioVideo(i))
++        {
++          recoveredProgram = i;
++          break;
++        }
++      }
++    }
++
++    if (recoveredProgram != UINT_MAX)
++    {
++      m_program = recoveredProgram;
++      m_newProgram = recoveredProgram;
++      m_streamsInProgram = 0;
++      m_oldStreams = m_pFormatContext->nb_streams;
++      m_oldProgCount = m_pFormatContext->nb_programs;
++      CLog::Log(LOGINFO,
++                "CDVDDemuxFFmpeg::IsProgramChange(): recovered PVR MPEG-TS program {}; "
++                "publishing stream map without reopening input",
++                recoveredProgram);
++      return true;
++    }
++
++    // A transport stream can create AVStreams before the program table is
++    // available. Publish the first identified A/V stream map once, if empty.
++    if (m_initialProgramNumber == UINT_MAX && m_pFormatContext->nb_programs == 0 &&
++        m_pFormatContext->nb_streams > 0 && GetNrOfStreams() == 0 &&
++        m_pkt.pkt.stream_index >= 0 &&
++        static_cast<unsigned int>(m_pkt.pkt.stream_index) < m_pFormatContext->nb_streams)
++    {
++      const AVStream* stream = m_pFormatContext->streams[m_pkt.pkt.stream_index];
++      if (stream && stream->codecpar &&
++          (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ||
++           stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO))
++      {
++        m_newProgram = UINT_MAX;
++        m_oldStreams = m_pFormatContext->nb_streams;
++        m_oldProgCount = 0;
++        CLog::Log(LOGINFO,
++                  "CDVDDemuxFFmpeg::IsProgramChange(): publishing ungrouped PVR MPEG-TS "
++                  "streams without reopening input");
++        return true;
++      }
++    }
++
++    // Keep waiting while the map is empty: incomplete table discovery must not
++    // trigger another Reset(), which would repeat the failed reopen.
++    if (GetNrOfStreams() == 0)
++      return false;
++  }
++
+   unsigned int m_newStreams = m_pFormatContext->nb_streams;
+   unsigned int m_newProgCount = m_pFormatContext->nb_programs;
+ 
+@@ -3139,6 +3243,9 @@
+   if (m_program == 0 && !m_pFormatContext->nb_programs)
+     return TRANSPORT_STREAM_STATE::NONE;
+ 
++  // A PVR MPEG-TS video stream may carry codec configuration in-band after reset.
++  // Let timestamped H.264/HEVC packets reach the downstream parser before extradata
++  // has been rebuilt; this exception is limited to PVR input.
+   if (m_program != UINT_MAX)
+   {
+     for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
+@@ -3151,7 +3258,8 @@
+             (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
+              st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
+              (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
+-              st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
++              (st->codecpar->codec_id == AV_CODEC_ID_HEVC ||
++               st->codecpar->codec_id == AV_CODEC_ID_H264))))
+         {
+           if (!m_startTime)
+           {
+@@ -3176,7 +3284,8 @@
+             (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
+              st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
+              (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
+-              st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
++              (st->codecpar->codec_id == AV_CODEC_ID_HEVC ||
++               st->codecpar->codec_id == AV_CODEC_ID_H264))))
+         {
+           if (!m_startTime)
+           {

@@ -1,0 +1,66 @@
+From eab7744cdcd2d2f9166d49eeac68451d15e8f737 Mon Sep 17 00:00:00 2001
+From: alexelec <https://alexelec.github.io/>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] VideoPlayer: wake GUI render when toggling debug OSD
+
+Player debug OSD is rendered through the overlay renderer, not through
+CGUIControls. After the dirty-driven GUI render skip was added, toggling
+the debug OSD could change CRenderManager state without producing a dirty
+GUI region. On D2P/video-layer paths this let CApplication skip the GUI
+render, so the OSD did not appear until some unrelated GUI/display event
+forced a redraw.
+
+Mark the overlay path dirty at the debug OSD toggle point. This preserves
+the dirty-driven skip for steady-state playback while ensuring the first
+enabled frame is painted immediately and the disabled frame clears cached
+debug overlay content.
+---
+ xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp | 5 ++---
+ xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp | 8 ++++++++
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
+index 4a2903c53b..90c076ac5b 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
+@@ -47,9 +47,8 @@ void CDebugRenderer::Initialize()
+   m_overlay = m_adapter->CreateOverlay();
+   m_overlayRenderer.AddOverlay(m_overlay, 1000000., 0);
+ 
+-  // Kick the dirty-driven walk skip so the toggle takes effect this frame;
+-  // without this the walk stays idle and the debug overlay never starts
+-  // rendering until something else dirties the GUI.
++  // Mark the fixed debug overlay dirty after it is created. User-visible
++  // enable/disable transitions are handled by CRenderManager::ToggleDebug*().
+   OVERLAY::MarkDirty();
+ }
+ 
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
+index 5328d2163c..34f1942cd6 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
+@@ -973,6 +973,11 @@ void CRenderManager::ToggleDebug()
+   m_renderDebug = !m_renderDebug;
+   m_debugTimer.SetExpired();
+   m_renderDebugVideo = false;
++
++  // Debug OSD is an overlay, not a GUI control. Wake the dirty-driven GUI
++  // skip on state changes so the first enabled frame paints immediately and
++  // the disabled frame clears any cached overlay content.
++  OVERLAY::MarkDirty();
+ }
+ 
+ void CRenderManager::ToggleDebugVideo()
+@@ -980,6 +985,9 @@ void CRenderManager::ToggleDebugVideo()
+   m_renderDebug = !m_renderDebug;
+   m_debugTimer.SetExpired();
+   m_renderDebugVideo = true;
++
++  // See ToggleDebug().
++  OVERLAY::MarkDirty();
+ }
+ 
+ void CRenderManager::SetSubtitleVerticalPosition(int value, bool save)
+-- 
+2.50.0
+

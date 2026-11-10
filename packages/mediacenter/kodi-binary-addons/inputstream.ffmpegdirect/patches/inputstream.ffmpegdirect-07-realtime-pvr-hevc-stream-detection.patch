@@ -1,0 +1,43 @@
+--- a/src/stream/FFmpegStream.cpp	2026-10-20 10:00:11.931302712 +0000
++++ b/src/stream/FFmpegStream.cpp	2026-10-20 10:00:24.838045230 +0000
+@@ -999,19 +999,35 @@ bool FFmpegStream::Open(bool fileinfo)
+                         "empty. Please report this bug.");
+   }
+ 
+-  // don't re-open mpegts streams with hevc encoding as the params are not correctly detected again
++  // MPEG-TS does not guarantee that the video stream is AVStream[0]; audio
++  // streams can come first. Detect HEVC across the discovered stream list.
++  bool hasHevcVideoStream = false;
++  if (m_pFormatContext->streams != nullptr)
++  {
++    for (unsigned int i = 0; i < m_pFormatContext->nb_streams; ++i)
++    {
++      const AVStream* stream = m_pFormatContext->streams[i];
++      if (stream && stream->codecpar &&
++          stream->codecpar->codec_id == AV_CODEC_ID_HEVC)
++      {
++        hasHevcVideoStream = true;
++        break;
++      }
++    }
++  }
++
++  // For a reopened MPEG-TS HEVC stream, run stream-info discovery instead of
++  // taking the transport-stream fallback path based on the first stream.
+   if (iformat && (strcmp(iformat->name, "mpegts") == 0) && !fileinfo && !isBluray &&
+       m_pFormatContext->nb_streams > 0 && m_pFormatContext->streams != nullptr &&
+-      m_pFormatContext->streams[0]->codecpar->codec_id != AV_CODEC_ID_HEVC)
++      !hasHevcVideoStream)
+   {
+     av_opt_set_int(m_pFormatContext, "analyzeduration", 500000, 0);
+     m_checkTransportStream = true;
+     skipCreateStreams = true;
+   }
+   else if (!iformat || ((strcmp(iformat->name, "mpegts") != 0) ||
+-                        ((strcmp(iformat->name, "mpegts") == 0) &&
+-                         m_pFormatContext->nb_streams > 0 && m_pFormatContext->streams != nullptr &&
+-                         m_pFormatContext->streams[0]->codecpar->codec_id == AV_CODEC_ID_HEVC)))
++                        ((strcmp(iformat->name, "mpegts") == 0) && hasHevcVideoStream)))
+   {
+     m_streaminfo = true;
+   }

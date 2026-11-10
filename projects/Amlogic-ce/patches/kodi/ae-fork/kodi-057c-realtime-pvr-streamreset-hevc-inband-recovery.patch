@@ -1,0 +1,102 @@
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+@@ -451,8 +451,24 @@ DemuxPacket* CDVDDemuxClient::Read()
+     m_deferredStreamResetPackets.push_back(m_packet.release());
+   };
+ 
+-  const auto takePendingStreamReset = [this](bool timedOut)
++  const auto takePendingStreamReset = [this, requireVideoStreamForReset, &makeEmptyPacket](bool timedOut)
+   {
++    // For an in-place realtime-PVR transition, never release STREAMRESET merely
++    // because the 5-second guard expired while the replacement video is still
++    // absent or unusable. VideoPlayer cannot reopen the stream map in that state,
++    // and acknowledging this premature reset can strand the demuxer in
++    // m_streamResetAwaitingAck with no A/V streams to open.
++    if (timedOut && requireVideoStreamForReset && !IsVideoReady(true))
++    {
++      const auto now = std::chrono::steady_clock::now();
++      m_streamResetPending = true;
++      m_streamResetPendingSince = now;
++      m_streamResetLastStreamMapRefresh = {};
++      CLog::Log(LOGWARNING,
++                "CDVDDemuxClient: no usable realtime PVR replacement video after 5 seconds; keep STREAMRESET pending and continue refreshing the stream map");
++      return makeEmptyPacket();
++    }
++
+     m_streamResetPending = false;
+     m_streamResetPendingSince = {};
+     m_streamResetAwaitingAck = true;
+@@ -533,10 +549,18 @@ DemuxPacket* CDVDDemuxClient::Read()
+     if (!realtimePVRResetWaiting)
+       return;
+ 
+-    const bool hasVideoStream = std::any_of(
+-        m_streams.begin(), m_streams.end(),
+-        [](const auto& stream) { return stream.second && stream.second->type == StreamType::VIDEO; });
+-    if (hasVideoStream && !unknownStreamId)
++    // Refresh while no usable replacement video exists. HEVC can carry VPS/SPS/PPS
++    // in-band, so do not require client-demux extradata before VideoPlayer reopens
++    // its decoder; non-HEVC codecs retain their established extradata requirement.
++    const bool hasUsableVideoStream = std::any_of(
++        m_streams.begin(), m_streams.end(), [](const auto& stream)
++        {
++          if (!stream.second || stream.second->type != StreamType::VIDEO)
++            return false;
++          return stream.second->codec == AV_CODEC_ID_HEVC ||
++                 !CodecHasExtraData(stream.second->codec) || stream.second->extraData;
++        });
++    if (hasUsableVideoStream && !unknownStreamId)
+       return;
+ 
+     constexpr auto streamMapRefreshInterval = std::chrono::milliseconds(250);
+@@ -619,7 +643,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+         if (m_streamResetAckRequired)
+         {
+           CLog::Log(LOGINFO,
+-                    "CDVDDemuxClient: deferring realtime PVR STREAMRESET until replacement video and required extradata are ready");
++                    "CDVDDemuxClient: deferring realtime PVR STREAMRESET until a usable replacement video stream is available");
+         }
+         else
+         {
+@@ -654,11 +678,9 @@ DemuxPacket* CDVDDemuxClient::Read()
+       return takePendingStreamReset(false);
+     }
+ 
+-    // IsVideoReady() only checks extradata for an already-selected video id; it
+-    // returns true when no video has appeared in the stream map at all. For the
+-    // realtime PVR path, deliver the reset marker but hold subsequent media
+-    // packets until VideoPlayer has opened the replacement streams. HEVC-specific
+-    // decoder recovery remains controlled separately by the discovered codec.
++    // The replacement video is now present (and either has extradata or is HEVC,
++    // which can carry parameter sets in-band). Deliver the reset marker, but hold
++    // subsequent media packets until VideoPlayer acknowledges the reopened streams.
+     if (incomingStreamReset && m_streamResetAckRequired)
+     {
+       m_streamResetAwaitingAck = true;
+@@ -1006,19 +1028,19 @@ bool CDVDDemuxClient::IsVideoReady(bool
+   {
+     // During a realtime-PVR STREAMRESET, m_videoStreamPlaying can still refer
+     // to the previous layout. Do not interpret the absence of that old stream ID
+-    // as proof that the replacement video is ready. Require an actual video in
+-    // the refreshed map, and wait until required codec extradata has been parsed.
+-    bool videoStreamFound = false;
++    // as proof that replacement video exists. Require a video entry in the new
++    // map. HEVC is usable without demux-client extradata because its VPS/SPS/PPS
++    // may arrive in-band; keep the extradata requirement for other codecs.
+     for (const auto& stream : m_streams)
+     {
+       if (!stream.second || stream.second->type != StreamType::VIDEO)
+         continue;
+ 
+-      videoStreamFound = true;
+-      if (CodecHasExtraData(stream.second->codec) && !stream.second->extraData)
+-        return false;
++      if (stream.second->codec == AV_CODEC_ID_HEVC ||
++          !CodecHasExtraData(stream.second->codec) || stream.second->extraData)
++        return true;
+     }
+-    return videoStreamFound;
++    return false;
+   }
+ 
+   // Keep the established readiness rule for non-realtime-PVR paths.

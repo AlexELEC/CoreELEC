@@ -1,0 +1,81 @@
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-26 10:54:52.238177033 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-26 10:54:52.238177033 +0000
+@@ -655,14 +655,13 @@ DemuxPacket* CDVDDemuxClient::Read()
+   {
+     const bool incomingStreamReset = m_packet->iStreamId == DMX_SPECIALID_STREAMRESET;
+ 
+-    // TVLINK uses this marker to force VideoPlayer to reopen the selected streams
+-    // after the inputstream add-on reports a live stream layout change. Refresh the
+-    // stream map first so OpenDefaultStreams() does not use stale stream ids.
+-    // Reset the parser at the source-transition boundary, but preserve the reset
+-    // event if the new video stream still needs extradata from subsequent packets.
++    // Refresh the stream map before VideoPlayer reopens the selected streams so
++    // OpenDefaultStreams() does not use stale stream ids. STREAMCHANGE may retain
++    // parser state when the announced properties are unchanged; STREAMRESET marks
++    // a new source and must recreate the parser even when its announcement matches.
+     CLog::Log(LOGINFO,
+-              "CDVDDemuxClient: input stream layout changed, reset client parser state");
+-    RequestStreams(true);
++              "CDVDDemuxClient: input stream layout changed, refresh client stream state");
++    RequestStreams(true, incomingStreamReset);
+ 
+     // If VideoPlayer is retrying a reset that it has already received, a newer
+     // layout marker supersedes the queued pre-roll. Keep the retry state active and
+@@ -817,15 +816,18 @@ std::vector<CDemuxStream*> CDVDDemuxClie
+   return streams;
+ }
+ 
+-void CDVDDemuxClient::RequestStreams(bool resetParserState)
++void CDVDDemuxClient::RequestStreams(bool resetParserState, bool forceSourceReset)
+ {
+   std::map<int, std::shared_ptr<CDemuxStream>> newStreamMap;
+   for (auto stream : m_IDemux->GetStreams())
+-    SetStreamProps(stream, newStreamMap, resetParserState);
++    SetStreamProps(stream, newStreamMap, resetParserState, forceSourceReset);
+   m_streams = newStreamMap;
+ }
+ 
+-void CDVDDemuxClient::SetStreamProps(CDemuxStream *stream, std::map<int, std::shared_ptr<CDemuxStream>> &map, bool forceInit)
++void CDVDDemuxClient::SetStreamProps(CDemuxStream *stream,
++                                     std::map<int, std::shared_ptr<CDemuxStream>> &map,
++                                     bool forceInit,
++                                     bool forceSourceReset)
+ {
+   if (!stream)
+   {
+@@ -841,7 +843,7 @@ void CDVDDemuxClient::SetStreamProps(CDe
+   // is asked apart, as comparing two announcements leaves it out
+   const auto current = std::dynamic_pointer_cast<CDemuxStreamClientInternal>(currentStream);
+   const CDVDStreamInfo announced(*stream, true);
+-  if (forceInit && current && current->m_announced == announced &&
++  if (forceInit && !forceSourceReset && current && current->m_announced == announced &&
+       current->m_announced.aspect == announced.aspect)
+     forceInit = false;
+ 
+@@ -1177,7 +1179,7 @@ void CDVDDemuxClient::OpenStream(int id)
+       m_videoStreamPlaying = id;
+ 
+     if (bOpenStream)
+-      SetStreamProps(stream, m_streams, false);
++      SetStreamProps(stream, m_streams, false, false);
+   }
+ }
+ 
+diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+--- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-26 10:54:52.250176893 +0000
++++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-26 10:54:52.250176893 +0000
+@@ -59,8 +59,11 @@ public:
+   bool IsStreaming() const override;
+ 
+ protected:
+-  void RequestStreams(bool resetParserState = false);
+-  void SetStreamProps(CDemuxStream *stream, std::map<int, std::shared_ptr<CDemuxStream>> &map, bool forceInit);
++  void RequestStreams(bool resetParserState = false, bool forceSourceReset = false);
++  void SetStreamProps(CDemuxStream *stream,
++                      std::map<int, std::shared_ptr<CDemuxStream>> &map,
++                      bool forceInit,
++                      bool forceSourceReset);
+   bool ParsePacket(DemuxPacket* pPacket);
+   void DisposeStreams();
+   void ClearDeferredStreamResetPackets();

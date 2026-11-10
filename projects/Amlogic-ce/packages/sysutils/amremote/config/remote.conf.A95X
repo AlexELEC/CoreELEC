@@ -1,0 +1,44 @@
+# amlogic NEC remote * A95X
+#
+factory_code	= 0xfe010001
+work_mode	= 0
+repeat_enable	= 1
+repeat_delay	= 130
+repeat_peroid	= 120
+release_delay	= 20
+
+key_begin		
+    0x18 31  # POWER
+    0x2b 45  # STOP
+    0x56 15  # TAB (red)
+    0x57 18  # EPG (green)
+    0x1f 136 # AUDIO (yellow)
+    0x5b 20  # SUBTITLE (blue)
+    0x3c 104 # PAGE UP
+    0x4f 109 # PAGE DOWN
+    0x1a 57  # PLAY/PAUSE
+    0x8  113 # MUTE
+    0x14 114 # VOLUMEDOWN
+    0x10 115 # VOLUMEUP
+    0x47 105 # LEFT
+    0x15 106 # RIGHT
+    0x46 103 # UP
+    0x16 108 # DOWN
+    0x55 28  # OK
+    0x6  172 # HOME
+    0x40 14  # BACKSPACE
+    0x17 46  # CONTEXTMENU
+    0x4  23  # INFO (mouse)
+    0xc  11  # KEY No.0
+    0x54 2   # KEY No.1
+    0x48 3   # KEY No.2
+    0x7  4   # KEY No.3
+    0x50 5   # KEY No.4
+    0x12 6   # KEY No.5
+    0x11 7   # KEY No.6
+    0x4c 8   # KEY No.7
+    0xe  9   # KEY No.8
+    0xd  10  # KEY No.9
+    0x41 24  # OSD INFO (globe)
+    0x4b 1   # ESC (delete)
+key_end

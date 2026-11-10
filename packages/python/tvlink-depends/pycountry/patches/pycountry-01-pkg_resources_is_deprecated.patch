@@ -1,0 +1,73 @@
+diff -Naurp pycountry/src/pycountry/__init__.py pycountry-patch/src/pycountry/__init__.py
+--- pycountry/src/pycountry/__init__.py	2022-03-05 10:26:32.000000000 +0000
++++ pycountry-patch/src/pycountry/__init__.py	2025-06-06 09:30:27.000000000 +0000
+@@ -3,29 +3,50 @@
+ 
+ import os.path
+ import unicodedata
++from importlib import metadata as _importlib_metadata
++from typing import Optional
+ 
+ import pycountry.db
+ 
++# We prioritise importing the backported `importlib_resources`
++# because the function we use (`importlib.resources.files`) is only
++# available from Python 3.9, but the module itself exists since 3.7.
++# We install `importlib_resources` on Python < 3.9.
++# TODO: Remove usage of importlib_resources once support for Python 3.8 is dropped
+ try:
+-    import pkg_resources
+-
+-    resource_filename = pkg_resources.resource_filename
+-    __version__ = pkg_resources.get_distribution("pycountry").version
+-except ImportError:
+-    __version__ = "n/a"
+-
+-    def resource_filename(package_or_requirement, resource_name):
+-        return os.path.join(os.path.dirname(__file__), resource_name)
+-
+-
+-LOCALES_DIR = resource_filename("pycountry", "locales")
+-DATABASE_DIR = resource_filename("pycountry", "databases")
+-
+-
+-def remove_accents(input_str):
+-    # Borrowed from https://stackoverflow.com/a/517974/1509718
+-    nfkd_form = unicodedata.normalize("NFKD", input_str)
+-    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
++    import importlib_resources  # type: ignore
++except ModuleNotFoundError:
++    from importlib import resources as importlib_resources  # type: ignore
++
++
++def resource_filename(package_or_requirement: str, resource_name: str) -> str:
++    return str(
++        importlib_resources.files(package_or_requirement) / resource_name
++    )
++
++
++def get_version(distribution_name: str) -> Optional[str]:
++    try:
++        return _importlib_metadata.version(distribution_name)
++    except _importlib_metadata.PackageNotFoundError:
++        return "n/a"
++
++
++# Variable annotations
++LOCALES_DIR: str = resource_filename("pycountry", "locales")
++DATABASE_DIR: str = resource_filename("pycountry", "databases")
++__version__: Optional[str] = get_version("pycountry")
++
++
++def remove_accents(input_str: str) -> str:
++    output_str = input_str
++    if not input_str.isascii():
++        # Borrowed from https://stackoverflow.com/a/517974/1509718
++        nfkd_form = unicodedata.normalize("NFKD", input_str)
++        output_str = "".join(
++            [c for c in nfkd_form if not unicodedata.combining(c)]
++        )
++    return output_str
+ 
+ 
+ class ExistingCountries(pycountry.db.Database):
