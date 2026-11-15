@@ -1,8 +1,8 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp	2026-06-24 15:57:05.955359026 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp	2026-06-24 15:59:28.000000000 +0000
-@@ -751,7 +751,7 @@ void CRenderManager::Render(bool clear,
-       PresentSingle(clear, flags, alpha);
+diff -Naurp orig/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp new/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
+--- orig/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp	2026-11-15 07:41:13.653078447 +0000
++++ new/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp	2026-11-15 07:41:13.655235904 +0000
+@@ -789,7 +789,7 @@ void CRenderManager::Render(bool clear,
+     m_overlays.RenderHDROverlays(GuiSource());
    }
  
 -  if (gui || m_renderDebug)

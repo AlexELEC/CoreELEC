@@ -1,7 +1,7 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 12:48:47.230009840 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 12:48:47.231565581 +0000
-@@ -1288,6 +1288,26 @@ bool CVideoPlayer::OpenDefaultStreams(bo
+diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+--- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.634690619 +0000
++++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.639198645 +0000
+@@ -1293,6 +1293,26 @@ bool CVideoPlayer::OpenDefaultStreams(bo
  
  static int bad_packet_count = 0;
  
@@ -28,7 +28,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
  bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
  {
    const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
-@@ -1656,7 +1676,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1661,7 +1681,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
        m_pDemuxer->GetPrograms(m_programs);
        UpdateContent();
  
@@ -37,7 +37,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        const bool realtimePlaybackStarted = realtime && m_State.streamsReady;
        const bool incomingHevcVideo = std::ranges::any_of(
            m_SelectionStreams.Get(StreamType::VIDEO),
-@@ -1762,7 +1782,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1767,7 +1787,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
        stream = m_pDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
        if (!stream)
        {
@@ -46,7 +46,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          {
            ++bad_packet_count;
            const auto now = std::chrono::steady_clock::now();
-@@ -2136,11 +2156,11 @@ void CVideoPlayer::Prepare()
+@@ -2141,11 +2161,11 @@ void CVideoPlayer::Prepare()
  
    SetCaching(CACHESTATE_FLUSH);
  
@@ -61,7 +61,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      HandleStreamReset(false);
    }
  }
-@@ -2237,7 +2257,7 @@ void CVideoPlayer::Process()
+@@ -2242,7 +2262,7 @@ void CVideoPlayer::Process()
        int audioLevel = 90;
        int videoLevel = 90;
        bool fillBuffer = false;
@@ -70,7 +70,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        const auto now = std::chrono::steady_clock::now();
        if (m_pendingOpenFile &&
            m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{})
-@@ -2303,7 +2323,7 @@ void CVideoPlayer::Process()
+@@ -2308,7 +2328,7 @@ void CVideoPlayer::Process()
        }
        else if (realtime)
        {
@@ -79,7 +79,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          // The old "audio < 85 && video < 85" condition can stop demux reads when
          // audio is full but video is almost empty. That starves one queue, delays
          // TVLINK reset/new-stream packets behind Kodi's buffered data, and can make
-@@ -2321,7 +2341,7 @@ void CVideoPlayer::Process()
+@@ -2326,7 +2346,7 @@ void CVideoPlayer::Process()
  
      const bool audioQueueFull = !m_VideoPlayerAudio->AcceptsData() && m_CurrentAudio.id >= 0;
      const bool videoQueueFull = !m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0;
@@ -88,28 +88,37 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
      const auto now = std::chrono::steady_clock::now();
      if (m_pendingOpenFile &&
          m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{})
-@@ -2363,13 +2383,13 @@ void CVideoPlayer::Process()
+@@ -2368,14 +2388,14 @@ void CVideoPlayer::Process()
        m_realtimeStreamTransitionReadLogged = true;
      }
  
--    // If queues are full there is normally no room for more packets. For realtime/live
--    // sources, do not stop demux reads only because one queue is full: HLS/TS data is
--    // interleaved, and the other queue may still need data or the input may contain a
--    // one-shot STREAMRESET marker. Blocking on "audio OR video full" can leave Kodi idle
--    // for tens of seconds, enough for TVLINK's client socket send timeout. Keep the old
--    // conservative rule for non-realtime playback, but for realtime stop only when every
--    // active queue is full, and never during live buffering / pending reset transition.
-+    // If queues are full there is normally no room for more packets. For TVLINK PVR
-+    // realtime streams, do not stop demux reads only because one queue is full: HLS/TS
-+    // data is interleaved, and the other queue may still need data or the input may
-+    // contain a one-shot STREAMRESET marker. Blocking on "audio OR video full" can leave
-+    // Kodi idle for tens of seconds, enough for TVLINK's client socket send timeout.
-+    // Keep the conservative queue-blocking rule for all other sources; for TVLINK PVR,
-+    // stop only when every active queue is full, and never during buffering / reset.
+-    // Stop reading the main demuxer only when the existing realtime/non-realtime
+-    // queue policy says it is safe. In realtime playback, one full A/V queue must not
+-    // block the other queue or delay a pending STREAMRESET/STREAMCHANGE.
++    // Stop reading the main demuxer only when the existing queue policy says it is
++    // safe. For TVLINK PVR realtime playback, one full A/V queue must not block the
++    // other queue or delay a pending STREAMRESET/STREAMCHANGE.
+     const auto shouldStopReading = [this]
+     {
+       const bool audioQueueFull = !m_VideoPlayerAudio->AcceptsData() && m_CurrentAudio.id >= 0;
+       const bool videoQueueFull = !m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0;
+-      const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++      const bool realtime = IsRealtimePVRStream(m_pInputStream, m_item);
+       const auto now = std::chrono::steady_clock::now();
+       const bool realtimeBuffering = realtime && m_caching == CACHESTATE_FULL && m_State.streamsReady;
+       const bool realtimeTransitionRead =
+@@ -2397,8 +2417,8 @@ void CVideoPlayer::Process()
+     };
+ 
+     // If the main demuxer must wait for full A/V queues, keep feeding the external
+-    // subtitle demuxer. Recheck the same queue policy on every iteration so realtime
+-    // demux reading resumes as soon as the 042 policy allows it.
++    // subtitle demuxer. Recheck the same PVR/non-PVR queue policy on every iteration
++    // so demux reading resumes as soon as the active policy allows it.
      constexpr auto realtimeQueuesFullSoftRecoveryTime = 8s;
      constexpr auto realtimeQueuesFullHardResetTime = 15s;
      constexpr auto realtimeQueuesFullStableResetTime = 30s;
-@@ -2618,7 +2638,7 @@ void CVideoPlayer::Process()
+@@ -2672,7 +2692,7 @@ void CVideoPlayer::Process()
          continue;
        }
  
@@ -118,7 +127,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            !m_pInputStream->IsEOF())
        {
          constexpr auto pendingResetDemuxerRetryTime = 5s;
-@@ -2644,7 +2664,7 @@ void CVideoPlayer::Process()
+@@ -2698,7 +2718,7 @@ void CVideoPlayer::Process()
          continue;
        }
  
@@ -127,7 +136,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        // upstream IPTV source is stalled or being replaced. Treat this as a buffering
        // condition, not as EOF/retry: do not drain/clear the already-open stream players
        // and do not leave Process(), otherwise Kodi can close the client HTTP socket and
-@@ -2653,7 +2673,7 @@ void CVideoPlayer::Process()
+@@ -2707,7 +2727,7 @@ void CVideoPlayer::Process()
        // because retry loops can otherwise bypass HandlePlaySpeed() long enough for the
        // TVLINK socket to fail after audio/video have already stalled.
        constexpr auto realtimeNoStreamsGraceTime = 10s;
@@ -136,7 +145,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
                                             m_State.streamsReady;
        const bool noActiveStreams = (m_CurrentAudio.id < 0 && m_CurrentVideo.id < 0);
  
-@@ -2847,7 +2867,7 @@ void CVideoPlayer::ProcessAudioData(CDem
+@@ -2902,7 +2922,7 @@ void CVideoPlayer::ProcessAudioData(CDem
    CheckStreamChanges(m_CurrentAudio, pStream);
  
    const bool realtimeHevcGate =
@@ -145,7 +154,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        m_realtimeExpectVideoStream && m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
        (m_realtimeHevcPostResetGate || m_realtimeHevcPostResetAudioCorrectionValid);
  
-@@ -2946,7 +2966,7 @@ void CVideoPlayer::ProcessVideoData(CDem
+@@ -3001,7 +3021,7 @@ void CVideoPlayer::ProcessVideoData(CDem
      checkcont = CheckContinuity(m_CurrentVideo, pPacket);
      UpdateTimestamps(m_CurrentVideo, pPacket);
  
@@ -154,7 +163,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          m_realtimeExpectVideoStream && m_realtimeHevcPostResetGate &&
          m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
          !m_realtimeHevcPostResetVideoSeen)
-@@ -3182,7 +3202,8 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3237,7 +3257,8 @@ void CVideoPlayer::HandlePlaySpeed()
  
  
    const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
@@ -164,7 +173,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
    const bool noActiveStreams = (m_CurrentAudio.id < 0 && m_CurrentVideo.id < 0);
    if (!noActiveStreams)
      m_realtimeNoStreamsSince = {};
-@@ -3238,7 +3259,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3293,7 +3314,7 @@ void CVideoPlayer::HandlePlaySpeed()
                             (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CONT ||
                              m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC);
      const bool deferNoPts =
@@ -173,7 +182,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          ShouldDeferSync(video && audio && !syncAudio && !syncVideo,
                          std::chrono::steady_clock::now());
  
-@@ -3264,7 +3285,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3319,7 +3340,7 @@ void CVideoPlayer::HandlePlaySpeed()
        // Preserve the realtime startup behavior: do not anchor the master clock to
        // zero while both stream start timestamps are still unknown. For non-realtime
        // playback, the upstream ShouldDeferSync() keeps its bounded 2s fallback.
@@ -182,7 +191,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
          CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
                               m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
-@@ -3308,7 +3329,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3363,7 +3384,7 @@ void CVideoPlayer::HandlePlaySpeed()
          clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
        }
  
@@ -191,7 +200,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
        {
          CLog::Log(LOGDEBUG,
                    "VideoPlayer::Sync - waiting for valid start time. Audio start:{:.3f} Video start:{:.3f}",
-@@ -3333,7 +3354,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3388,7 +3409,7 @@ void CVideoPlayer::HandlePlaySpeed()
            std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
  
        const bool realtimeTransitionStartup =
@@ -200,7 +209,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{};
  
        if (realtimeTransitionStartup)
-@@ -3685,7 +3706,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3740,7 +3761,7 @@ void CVideoPlayer::HandlePlaySpeed()
        }
  
        const bool realtimeStartupAudioStallGrace =
@@ -209,7 +218,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            m_realtimeStartupAudioStallGraceUntil != std::chrono::steady_clock::time_point{} &&
            audioStalled &&
            !audioCritical &&
-@@ -3703,7 +3724,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3758,7 +3779,7 @@ void CVideoPlayer::HandlePlaySpeed()
        }
  
        const bool realtimePostTransitionVideoGrace =
@@ -218,7 +227,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
            m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
            (now < m_realtimePostTransitionVideoGraceUntil ||
             m_realtimePostTransitionVideoDropSince != std::chrono::steady_clock::time_point{});
-@@ -5838,7 +5859,7 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -6019,7 +6040,7 @@ bool CVideoPlayer::OpenStream(CCurrentSt
    else
    {
      const bool keepRealtimeHevcRetry =
@@ -227,7 +236,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayer.cpp kodi-patch/xbmc/cores/Vi
          hint.codec == AV_CODEC_ID_HEVC && hint.extradata.GetSize() == 0;
  
      if (stream && !keepRealtimeHevcRetry)
-@@ -6006,7 +6027,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -6187,7 +6208,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
      player->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::GENERAL_RESET), 0);
  
    m_HasVideo = true;

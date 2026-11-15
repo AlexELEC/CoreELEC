@@ -1,7 +1,7 @@
 diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 07:35:46.902460028 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 07:36:42.015398395 +0000
-@@ -1231,6 +1231,9 @@ bool CVideoPlayer::HandleStreamReset(boo
+--- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.561221341 +0000
++++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.565200871 +0000
+@@ -1303,6 +1303,9 @@ bool CVideoPlayer::HandleStreamReset(boo
    const bool wasPending = m_realtimeStreamResetPending;
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
    m_realtimeStreamResetLastTry = now;
@@ -11,7 +11,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
  
    auto markPending = [&](bool restartTimer)
    {
-@@ -1695,6 +1698,9 @@ void CVideoPlayer::Prepare()
+@@ -1766,6 +1769,9 @@ void CVideoPlayer::Prepare()
    m_realtimeStreamResetPending = false;
    m_realtimeStreamResetLastTry = {};
    m_realtimeStreamResetPendingSince = {};
@@ -21,10 +21,10 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
  
    IPlayerCallback *cb = &m_callback;
    CFileItem fileItem = m_item;
-@@ -2082,10 +2088,95 @@ void CVideoPlayer::Process()
-     // for tens of seconds, enough for TVLINK's client socket send timeout. Keep the old
-     // conservative rule for non-realtime playback, but for realtime stop only when every
-     // active queue is full, and never during live buffering / pending reset transition.
+@@ -2186,10 +2192,89 @@ void CVideoPlayer::Process()
+     // If the main demuxer must wait for full A/V queues, keep feeding the external
+     // subtitle demuxer. Recheck the same queue policy on every iteration so realtime
+     // demux reading resumes as soon as the 042 policy allows it.
 -    if ((!realtime &&
 -         ((!realtimeBuffering && (audioQueueFull || videoQueueFull)) ||
 -          (realtimeBuffering && audioQueueFull && videoQueueFull))) ||
@@ -61,6 +61,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
 +      }
 +    }
 +
++    bool stopForFullQueues = false;
 +    if (realtimeQueuesBlocked)
 +    {
 +      if (m_realtimeQueuesFullSleepSince == std::chrono::steady_clock::time_point{})
@@ -105,26 +106,19 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
 +        continue;
 +      }
 +      else
-+      {
-+        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
-+            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-+        {
-+          if (m_pDemuxer)
-+            m_pDemuxer->SetSpeed(DVD_PLAYSPEED_PAUSE);
-+          m_demuxerSpeed = DVD_PLAYSPEED_PAUSE;
-+        }
-+        CThread::Sleep(10ms);
-+        continue;
-+      }
++        stopForFullQueues = true;
 +    }
 +    else if (nonRealtimeQueuesBlocked)
++      stopForFullQueues = true;
++
++    if (stopForFullQueues)
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
 diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 07:35:46.930399055 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 07:36:14.649578500 +0000
-@@ -623,6 +623,9 @@ protected:
+--- orig/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.567475995 +0000
++++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.569485480 +0000
+@@ -699,6 +699,9 @@ protected:
    std::chrono::steady_clock::time_point m_realtimeStreamTransitionReadUntil{};
    std::chrono::steady_clock::time_point m_realtimeStreamResetLastTry{};
    std::chrono::steady_clock::time_point m_realtimeStreamResetPendingSince{};

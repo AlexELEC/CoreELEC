@@ -1,22 +1,7 @@
-From 145b0ca0ca090b7953e1712ae3135ebf9c688d2a Mon Sep 17 00:00:00 2001
-From: AlexElec <patch@alexelec.invalid>
-Date: Sun, 25 Oct 2026 11:17:36 +0000
-Subject: [PATCH] kodi: interrupt realtime MPEG-TS read on stable topology
- change
-
-Mirror the bounded topology-change interrupt used by inputstream.ffmpegdirect in the built-in FFmpeg demuxer. After the stream/program counts stay beyond the existing IsProgramChange threshold for 100 ms, interrupt the active av_read_frame call and route the result through the normal STREAMRESET/STREAMCHANGE logic instead of waiting for the 20-second read timeout.
-
-Signed-off-by: AlexElec <patch@alexelec.invalid>
----
- .../DVDDemuxers/DVDDemuxFFmpeg.cpp            | 178 +++++++++++++++---
- .../VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h  |  13 ++
- 2 files changed, 162 insertions(+), 29 deletions(-)
-
-diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
-index d2739f4..0377a2b 100644
---- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
-+++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
-@@ -153,9 +153,15 @@ CDemuxParserFFmpeg::~CDemuxParserFFmpeg()
+diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+--- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2026-11-15 07:41:13.664639119 +0000
++++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2026-11-15 07:41:13.667785254 +0000
+@@ -153,9 +153,15 @@ CDemuxParserFFmpeg::~CDemuxParserFFmpeg(
  static int interrupt_cb(void* ctx)
  {
    CDVDDemuxFFmpeg* demuxer = static_cast<CDVDDemuxFFmpeg*>(ctx);
@@ -94,7 +79,7 @@ index d2739f4..0377a2b 100644
  bool CDVDDemuxFFmpeg::IsStreaming() const
  {
    if (m_pInput && m_pInput->IsStreaming())
-@@ -1176,6 +1235,7 @@ void CDVDDemuxFFmpeg::ConvertBlurayTimestamps(DemuxPacket* packet, const AVStrea
+@@ -1178,6 +1237,7 @@ void CDVDDemuxFFmpeg::ConvertBlurayTimes
  DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
  {
    DemuxPacket* pPacket = NULL;
@@ -102,7 +87,7 @@ index d2739f4..0377a2b 100644
    // on some cases where the received packet is invalid we will need to return an empty packet (0 length) otherwise the main loop (in CVideoPlayer)
    // would consider this the end of stream and stop.
    bool bReturnEmpty = false;
-@@ -1195,13 +1255,67 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
+@@ -1197,13 +1257,67 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadIntern
          m_pkt.pkt.size = 0;
          m_pkt.pkt.data = NULL;
  
@@ -172,7 +157,7 @@ index d2739f4..0377a2b 100644
        {
          // timeout, probably no real error, return empty packet
          bReturnEmpty = true;
-@@ -1241,31 +1355,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
+@@ -1243,31 +1357,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadIntern
          ParsePacket(&m_pkt.pkt);
  
          if (IsProgramChange())
@@ -205,7 +190,7 @@ index d2739f4..0377a2b 100644
  
          AVStream* stream = m_pFormatContext->streams[m_pkt.pkt.stream_index];
  
-@@ -2824,6 +2914,36 @@ std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
+@@ -2803,6 +2893,36 @@ std::string CDVDDemuxFFmpeg::GetStreamCo
    return {};
  }
  
@@ -241,11 +226,10 @@ index d2739f4..0377a2b 100644
 +
  bool CDVDDemuxFFmpeg::IsProgramChange()
  {
-   unsigned int m_newStreams = m_pFormatContext->nb_streams;
-diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
-index 6b689b5..7d65049 100644
---- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
-+++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+   // The built-in demuxer can also be reopened before a PVR MPEG-TS
+diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+--- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2026-11-15 07:41:13.669815160 +0000
++++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2026-11-15 07:41:13.671536721 +0000
 @@ -13,6 +13,7 @@
  #include "DemuxStreamSSIF.h"
  #include "threads/CriticalSection.h"
@@ -262,7 +246,7 @@ index 6b689b5..7d65049 100644
  
    AVFormatContext* m_pFormatContext;
    std::shared_ptr<CDVDInputStream> m_pInput;
-@@ -145,6 +147,7 @@ protected:
+@@ -146,6 +148,7 @@ protected:
    void ConvertBlurayTimestamps(DemuxPacket* packet, const AVStream* stream);
  #endif
    bool IsProgramChange();
@@ -270,7 +254,7 @@ index 6b689b5..7d65049 100644
    unsigned int HLSSelectProgram();
  
    std::string GetStereoModeFromMetadata(AVDictionary* pMetadata);
-@@ -205,6 +208,16 @@ protected:
+@@ -206,6 +209,16 @@ protected:
    unsigned int m_oldStreams;
    unsigned int m_oldProgCount;
  
@@ -287,6 +271,3 @@ index 6b689b5..7d65049 100644
    bool m_streaminfo;
    bool m_checkTransportStream;
    int m_displayTime = 0;
--- 
-2.47.3
-
