@@ -1,6 +1,7 @@
-diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp
---- kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp	2026-10-15 13:37:19.000000000 +0000
-+++ kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp	2026-10-16 12:39:53.000000000 +0000
+diff --git a/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp b/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp
+index 7990fe4..0393fa9 100644
+--- a/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp
++++ b/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp
 @@ -26,13 +26,17 @@ namespace ActiveAE
  {
  
@@ -52,7 +53,7 @@ diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp ko
  }
  
  void CActiveAESettings::SettingOptionsAudioDevicesFiller(const SettingConstPtr& setting,
-@@ -98,21 +112,26 @@ void CActiveAESettings::SettingOptionsAu
+@@ -98,21 +112,26 @@ void CActiveAESettings::SettingOptionsAudioDevicesPassthroughFiller(
  void CActiveAESettings::SettingOptionsAudioQualityLevelsFiller(
      const SettingConstPtr& /*setting*/, std::vector<IntegerSettingOption>& list, int& /*current*/)
  {
@@ -85,7 +86,7 @@ diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp ko
      list.emplace_back(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(38010),
                        AE_QUALITY_GPU);
  }
-@@ -120,13 +139,18 @@ void CActiveAESettings::SettingOptionsAu
+@@ -120,13 +139,18 @@ void CActiveAESettings::SettingOptionsAudioQualityLevelsFiller(
  void CActiveAESettings::SettingOptionsAudioStreamsilenceFiller(
      const SettingConstPtr& /*setting*/, std::vector<IntegerSettingOption>& list, int& /*current*/)
  {
@@ -106,7 +107,7 @@ diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp ko
    {
      list.emplace_back(
          StringUtils::Format(CServiceBroker::GetResourcesComponent().GetLocalizeStrings().Get(13554),
-@@ -149,11 +173,13 @@ bool CActiveAESettings::IsSettingVisible
+@@ -149,11 +173,13 @@ bool CActiveAESettings::IsSettingVisible(const std::string& condition,
    if (setting == NULL || value.empty())
      return false;
  
@@ -123,7 +124,7 @@ diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp ko
  }
  
  void CActiveAESettings::SettingOptionsAudioDevicesFillerGeneral(
-@@ -165,11 +191,16 @@ void CActiveAESettings::SettingOptionsAu
+@@ -165,11 +191,16 @@ void CActiveAESettings::SettingOptionsAudioDevicesFillerGeneral(
    current = std::static_pointer_cast<const CSettingString>(setting)->GetValue();
    std::string firstDevice;
  
@@ -142,9 +143,10 @@ diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.cpp ko
    if (sinkList.empty())
      list.emplace_back("Error - no devices found", "error");
    else
-diff -Naurp kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h
---- kodi/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h	2026-10-15 13:37:19.000000000 +0000
-+++ kodi-patch/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h	2026-10-16 12:31:25.025295454 +0000
+diff --git a/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h b/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h
+index cc3c822..32bad57 100644
+--- a/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h
++++ b/xbmc/cores/AudioEngine/Engines/ActiveAE/ActiveAESettings.h
 @@ -13,6 +13,7 @@
  
  #include <atomic>

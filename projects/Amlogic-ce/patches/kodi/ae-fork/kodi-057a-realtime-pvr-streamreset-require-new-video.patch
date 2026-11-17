@@ -1,7 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
---- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-19 17:30:09.538062159 +0000
-+++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-19 17:32:31.469242353 +0000
-@@ -395,6 +395,11 @@ DemuxPacket* CDVDDemuxClient::Read()
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index 85de38a..10a4635 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+@@ -409,6 +409,11 @@ DemuxPacket* CDVDDemuxClient::Read()
    if (!m_IDemux)
      return nullptr;
  
@@ -13,7 +14,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
    const auto makeEmptyPacket = [this]()
    {
      DemuxPacket* pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
-@@ -453,8 +458,16 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -472,8 +477,16 @@ DemuxPacket* CDVDDemuxClient::Read()
      m_streamResetAwaitingAck = true;
      if (timedOut)
      {
@@ -32,7 +33,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
      }
      else
      {
-@@ -554,7 +567,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -584,7 +597,7 @@ DemuxPacket* CDVDDemuxClient::Read()
      if (m_streamResetPending)
      {
        CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
@@ -41,7 +42,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
          return takePendingStreamReset(false);
        if (streamResetWaitExpired())
          return takePendingStreamReset(true);
-@@ -599,12 +612,20 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -629,12 +642,20 @@ DemuxPacket* CDVDDemuxClient::Read()
      if (incomingStreamReset && m_streamResetPending)
        ClearDeferredStreamResetPackets();
  
@@ -65,7 +66,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
        }
        m_streamResetPending = true;
        m_streamResetPendingSince = std::chrono::steady_clock::now();
-@@ -614,7 +635,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -644,7 +665,7 @@ DemuxPacket* CDVDDemuxClient::Read()
  
      if (m_streamResetPending)
      {
@@ -74,7 +75,16 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
        {
          // The deferred reset subsumes intermediate layout-change notifications.
          // Do not let one of them reach VideoPlayer before the reset can be handled.
-@@ -674,7 +695,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -707,7 +728,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+       pEmpty->m_inputDropped = inputDropped;
+       if (m_streamResetPending)
+       {
+-        if (IsVideoReady())
++        if (IsVideoReady(requireVideoStreamForReset))
+           return takePendingStreamReset(false);
+         if (streamResetWaitExpired())
+           return takePendingStreamReset(true);
+@@ -717,7 +738,7 @@ DemuxPacket* CDVDDemuxClient::Read()
  
      if (m_streamResetPending)
      {
@@ -83,7 +93,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
          return takePendingStreamReset(false);
        if (streamResetWaitExpired())
          return takePendingStreamReset(true);
-@@ -979,12 +1000,33 @@ int CDVDDemuxClient::GetNrOfStreams() co
+@@ -1036,12 +1057,33 @@ int CDVDDemuxClient::GetNrOfStreams() const
    return m_streams.size();
  }
  
@@ -120,9 +130,10 @@ diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores
        return false;
    }
    return true;
-diff -Naurp a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
---- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-19 17:30:09.539692572 +0000
-+++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-19 17:30:10.352935124 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+index f6855b3..7f11ce8 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
 @@ -65,7 +65,7 @@ protected:
    void DisposeStreams();
    void ClearDeferredStreamResetPackets();

@@ -1,15 +1,16 @@
-diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
---- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-11-15 07:41:13.580400570 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-11-15 07:41:13.582513981 +0000
-@@ -17,6 +17,7 @@
- #include "utils/log.h"
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index bbff0b3..d438a04 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+@@ -18,6 +18,7 @@
  
+ #include <chrono>
  #include <memory>
 +#include <new>
  #include <tuple>
  #include <type_traits>
  #include <utility>
-@@ -105,9 +106,30 @@ void CDVDDemuxClient::DisposeStreams()
+@@ -116,9 +117,30 @@ void CDVDDemuxClient::DisposeStreams()
  
  bool CDVDDemuxClient::Reset()
  {
@@ -41,7 +42,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
  }
  
  void CDVDDemuxClient::Abort()
-@@ -160,6 +182,23 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+@@ -171,6 +193,23 @@ bool CDVDDemuxClient::ParsePacket(DemuxPacket* pkt)
      stream->m_context->time_base.den = DVD_TIME_BASE;
    }
  
@@ -65,7 +66,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    if (stream->m_parser_split && stream->m_parser && stream->m_parser->parser)
    {
      AVPacket* avpkt = av_packet_alloc();
-@@ -184,15 +223,8 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+@@ -195,15 +234,8 @@ bool CDVDDemuxClient::ParsePacket(DemuxPacket* pkt)
      }
  
      FFmpegExtraData retExtraData = GetPacketExtradata(avpkt, codecPar.get());
@@ -82,7 +83,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
        // Allow ffmpeg to transport codec information to stream->m_context
        if (!avcodec_open2(stream->m_context, stream->m_context->codec, nullptr))
        {
-@@ -214,6 +246,26 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+@@ -225,6 +257,26 @@ bool CDVDDemuxClient::ParsePacket(DemuxPacket* pkt)
    // our parse is setup to parse complete frames, so we don't care about outbufs
    if (len >= 0)
    {
@@ -109,7 +110,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
      if (stream->m_context->profile != st->profile &&
          stream->m_context->profile != AV_PROFILE_UNKNOWN)
      {
-@@ -344,7 +396,13 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -366,7 +418,13 @@ DemuxPacket* CDVDDemuxClient::Read()
      // layout change. Keep the marker packet for VideoPlayer::ReadPacket(), but
      // refresh CDVDDemuxClient's stream map first so OpenDefaultStreams() does
      // not request stale/invalid stream ids from the old layout.
@@ -124,7 +125,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    }
    else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
    {
-@@ -409,11 +467,11 @@ std::vector<CDemuxStream*> CDVDDemuxClie
+@@ -433,11 +491,11 @@ std::vector<CDemuxStream*> CDVDDemuxClient::GetStreams() const
    return streams;
  }
  
@@ -138,7 +139,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    m_streams = newStreamMap;
  }
  
-@@ -494,12 +552,12 @@ void CDVDDemuxClient::SetStreamProps(CDe
+@@ -518,12 +576,12 @@ void CDVDDemuxClient::SetStreamProps(CDemuxStream *stream, std::map<int, std::sh
        streamVideo->m_parser = av_parser_init(source->codec);
        if (streamVideo->m_parser)
          streamVideo->m_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
@@ -156,7 +157,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
      streamVideo->iBitRate = source->iBitRate;
      if (source->extraData)
      {
-@@ -735,8 +793,10 @@ bool CDVDDemuxClient::EnableStream(int i
+@@ -759,8 +817,10 @@ bool CDVDDemuxClient::EnableStream(int id, bool enable)
  
  void CDVDDemuxClient::OpenStream(int id)
  {
@@ -169,7 +170,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    if (m_IDemux)
    {
      bool bOpenStream = m_IDemux->OpenStream(id);
-@@ -746,7 +806,7 @@ void CDVDDemuxClient::OpenStream(int id)
+@@ -770,7 +830,7 @@ void CDVDDemuxClient::OpenStream(int id)
        m_videoStreamPlaying = id;
  
      if (bOpenStream)
@@ -178,9 +179,10 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    }
  }
  
-diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
---- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-11-15 07:41:13.584400731 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-11-15 07:41:13.586229714 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+index 0de15cc..6549e0f 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
 @@ -46,7 +46,7 @@ public:
    bool IsStreaming() const override;
  
@@ -195,10 +197,11 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h new/xbmc/co
    static inline bool CodecHasExtraData(AVCodecID id);
  };
 -
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.589321879 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.593698847 +0000
-@@ -1310,6 +1310,17 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 2fdcd97..467aae9 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1318,6 +1318,17 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
    const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
  
@@ -216,7 +219,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    if (wasRealtimePlaybackStarted && expectedRealtimeVideo && m_CurrentVideo.id >= 0 &&
        m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC)
    {
-@@ -1660,8 +1671,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1668,8 +1679,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  
          if (demuxerResetRetry)
          {
@@ -231,7 +234,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
          }
  
          HandleStreamReset(demuxerResetRetry, true);
-@@ -1669,11 +1684,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1677,11 +1692,12 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
        else if (forceInternalReset)
        {
          // In-place H.265 episode boundaries on Amlogic can expose a new stream
@@ -248,7 +251,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
        }
        else
        {
-@@ -1927,6 +1943,7 @@ void CVideoPlayer::Prepare()
+@@ -1935,6 +1951,7 @@ void CVideoPlayer::Prepare()
    m_realtimeStartupAudioStallGraceLogged = false;
    m_realtimeExpectVideoStream = false;
    m_realtimeForceVideoCodecReopen = false;
@@ -256,7 +259,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    m_realtimeHevcPostResetGate = false;
    m_realtimeHevcPostResetVideoSeen = false;
    m_realtimeHevcPostResetAudioReady = false;
-@@ -2511,8 +2528,12 @@ void CVideoPlayer::Process()
+@@ -2528,8 +2545,12 @@ void CVideoPlayer::Process()
  
        if (demuxerResetRetry)
        {
@@ -271,7 +274,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
        }
  
        // A normal demux packet means the demuxer had another chance to expose
-@@ -2611,8 +2632,12 @@ void CVideoPlayer::Process()
+@@ -2643,8 +2664,12 @@ void CVideoPlayer::Process()
  
          if (demuxerResetRetry)
          {
@@ -286,7 +289,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
          }
  
          HandleStreamReset(demuxerResetRetry, true);
-@@ -5902,6 +5927,14 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -6001,6 +6026,14 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
  
    if (res)
    {
@@ -301,7 +304,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
      if (current.type == StreamType::SUBTITLE)
      {
        m_pSubtitleDemuxer = subtitleDemuxer;
-@@ -5947,6 +5980,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -6047,6 +6080,12 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
      }
      else if (stream)
      {
@@ -314,10 +317,11 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
        CLog::Log(LOGWARNING,
                  "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");
      }
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.596389878 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.598730401 +0000
-@@ -714,6 +714,9 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 92b4326..87532cb 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -718,6 +718,9 @@ protected:
    bool m_realtimeStartupBufferingAllowed{true};
    bool m_realtimeExpectVideoStream{false};
    bool m_realtimeForceVideoCodecReopen{false};

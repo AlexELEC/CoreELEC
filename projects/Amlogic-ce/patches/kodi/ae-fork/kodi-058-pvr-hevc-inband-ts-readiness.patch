@@ -1,6 +1,8 @@
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+index aaa270f..7d72ca0 100644
 --- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
 +++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
-@@ -1890,10 +1890,12 @@
+@@ -1918,10 +1918,12 @@ void CDVDDemuxFFmpeg::RestoreProbedStreamParameters()
      }
  
      // Only fill in what the re-open does not know, and never extradata or ch_layout:
@@ -17,7 +19,7 @@
      AVCodecParameters* cur = st->codecpar;
  
      if (cur->profile == AV_PROFILE_UNKNOWN)
-@@ -3146,8 +3148,10 @@
+@@ -3130,8 +3132,10 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
        if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
        {
          if (idx == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
@@ -30,7 +32,7 @@
          {
            if (!m_startTime)
            {
-@@ -3169,8 +3173,10 @@
+@@ -3153,8 +3157,10 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
        if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
        {
          if (static_cast<int>(i) == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&

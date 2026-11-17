@@ -1,7 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 15:12:28.270130266 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-17 15:13:04.677561608 +0000
-@@ -1532,6 +1532,34 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 8f591f9..8022004 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1545,6 +1545,34 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
      m_processInfo->ResetAudioCodecInfo();
    }
  
@@ -36,7 +37,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    const bool openedDefaultStreams =
        OpenDefaultStreams(true, expectedRealtimeVideo, expectedRealtimeVideo);
  
-@@ -3252,10 +3280,18 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3370,10 +3398,18 @@ void CVideoPlayer::HandlePlaySpeed()
                   (m_CurrentAudio.packets == 0 && m_CurrentVideo.packets > threshold) ||
                   (!m_VideoPlayerVideo->AcceptsData() && m_VideoPlayerAudio->GetLevel() < 10);
  

@@ -1,7 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 10:25:06.000000000 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 14:24:25.564398099 +0000
-@@ -1237,6 +1237,22 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index f31eaa1..7e8fb36 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1317,6 +1317,22 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    const bool wasPending = m_realtimeStreamResetPending;
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
    const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
@@ -24,7 +25,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    m_realtimeStreamResetLastTry = now;
    m_realtimeQueuesFullSleepSince = {};
    m_realtimeQueuesFullLastSoftRecovery = {};
-@@ -1377,6 +1393,15 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1457,6 +1473,15 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
                "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
    }
  
@@ -40,7 +41,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    if (expectedRealtimeVideo && m_CurrentAudio.id >= 0)
    {
      // The new video stream must be opened before audio is committed. Until then,
-@@ -1419,6 +1444,7 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1499,6 +1524,7 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    }
  
    m_realtimeStreamResetPending = false;
@@ -48,10 +49,11 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    m_realtimeStreamResetLastTry = {};
    m_realtimeStreamResetPendingSince = {};
    m_realtimeFailedStreamChangeLogged = false;
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
---- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 10:25:06.000000000 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-06-01 14:24:25.565251917 +0000
-@@ -637,6 +637,7 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index d24956d..62c14ee 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -717,6 +717,7 @@ protected:
    bool m_realtimePostTransitionVideoDropLogged{false};
    bool m_realtimeStartupBufferingAllowed{true};
    bool m_realtimeExpectVideoStream{false};

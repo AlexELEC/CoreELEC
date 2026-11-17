@@ -1,7 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 08:23:40.036055679 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-05-22 08:23:40.037832488 +0000
-@@ -1234,6 +1234,10 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index c812f34..76dd1f9 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1314,6 +1314,10 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    m_realtimeQueuesFullSleepSince = {};
    m_realtimeQueuesFullLastSoftRecovery = {};
    m_realtimeQueuesFullSoftRecoveries = 0;
@@ -12,7 +13,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
  
    auto markPending = [&](bool restartTimer)
    {
-@@ -1331,6 +1335,9 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1411,6 +1415,9 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
      m_realtimePostTransitionVideoGraceUntil = {};
      m_realtimePostTransitionVideoDropSince = {};
      m_realtimePostTransitionVideoDropLogged = false;
@@ -22,7 +23,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
  
      CLog::Log(LOGINFO,
                "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
-@@ -1693,6 +1700,9 @@ void CVideoPlayer::Prepare()
+@@ -1772,6 +1779,9 @@ void CVideoPlayer::Prepare()
    m_realtimePostTransitionVideoGraceUntil = {};
    m_realtimePostTransitionVideoDropSince = {};
    m_realtimePostTransitionVideoDropLogged = false;
@@ -32,7 +33,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
    m_realtimeNoStreamsSince = {};
    m_realtimeStreamTransitionReadUntil = {};
    m_realtimeStreamResetPending = false;
-@@ -2716,6 +2726,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -2976,6 +2986,7 @@ void CVideoPlayer::HandlePlaySpeed()
    constexpr auto realtimeBufferEmergencyResetTime = 10000ms;
    constexpr auto realtimePostTransitionReadTime = 20s;
    constexpr auto realtimePostTransitionVideoGraceTime = 3s;
@@ -40,7 +41,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
  
  
    const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
-@@ -2965,18 +2976,45 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3241,18 +3252,45 @@ void CVideoPlayer::HandlePlaySpeed()
            const bool emergencyResetPassed =
                now - m_realtimeBufferReadySince >= realtimeBufferEmergencyResetTime;
  
@@ -88,7 +89,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
              m_realtimeBufferReadySince = {};
              m_realtimeBufferMaxHoldLogged = false;
              m_realtimeAudioStallHoldLogged = false;
-@@ -3148,6 +3186,38 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3424,6 +3462,38 @@ void CVideoPlayer::HandlePlaySpeed()
      if (m_playSpeed == DVD_PLAYSPEED_NORMAL && !tolerateStall)
      {
        const auto now = std::chrono::steady_clock::now();
@@ -127,7 +128,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
        if (m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
            now >= m_realtimePostTransitionVideoGraceUntil &&
            m_realtimePostTransitionVideoDropSince == std::chrono::steady_clock::time_point{})
-@@ -3210,7 +3280,7 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3486,7 +3556,7 @@ void CVideoPlayer::HandlePlaySpeed()
        }
  
        if (realtimePlaybackStarted && !noActiveStreams &&
@@ -136,7 +137,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
        {
          if (audioLevel == 0 && videoLevel == 0 && !audioStalled && videoStalled)
          {
-@@ -3233,15 +3303,21 @@ void CVideoPlayer::HandlePlaySpeed()
+@@ -3509,15 +3579,21 @@ void CVideoPlayer::HandlePlaySpeed()
          return;
        }
  
@@ -160,10 +161,11 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
                (m_CurrentVideo.id >= 0 && m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
                 m_processInfo->GetLevelVQ() == 0))
            {
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
---- a/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 08:23:40.036854490 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-05-22 08:23:40.038550093 +0000
-@@ -635,6 +635,9 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 4884018..712da51 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -715,6 +715,9 @@ protected:
    std::chrono::steady_clock::time_point m_realtimePostTransitionVideoGraceUntil{};
    std::chrono::steady_clock::time_point m_realtimePostTransitionVideoDropSince{};
    bool m_realtimePostTransitionVideoDropLogged{false};

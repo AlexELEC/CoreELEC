@@ -1,7 +1,8 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
---- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-26 10:54:52.238177033 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-26 10:54:52.238177033 +0000
-@@ -655,14 +655,13 @@ DemuxPacket* CDVDDemuxClient::Read()
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index d9f44b6..5172ef7 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+@@ -642,14 +642,13 @@ DemuxPacket* CDVDDemuxClient::Read()
    {
      const bool incomingStreamReset = m_packet->iStreamId == DMX_SPECIALID_STREAMRESET;
  
@@ -22,7 +23,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patc
  
      // If VideoPlayer is retrying a reset that it has already received, a newer
      // layout marker supersedes the queued pre-roll. Keep the retry state active and
-@@ -817,15 +816,18 @@ std::vector<CDemuxStream*> CDVDDemuxClie
+@@ -820,15 +819,18 @@ std::vector<CDemuxStream*> CDVDDemuxClient::GetStreams() const
    return streams;
  }
  
@@ -44,7 +45,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patc
  {
    if (!stream)
    {
-@@ -841,7 +843,7 @@ void CDVDDemuxClient::SetStreamProps(CDe
+@@ -844,7 +846,7 @@ void CDVDDemuxClient::SetStreamProps(CDemuxStream *stream, std::map<int, std::sh
    // is asked apart, as comparing two announcements leaves it out
    const auto current = std::dynamic_pointer_cast<CDemuxStreamClientInternal>(currentStream);
    const CDVDStreamInfo announced(*stream, true);
@@ -53,7 +54,7 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patc
        current->m_announced.aspect == announced.aspect)
      forceInit = false;
  
-@@ -1177,7 +1179,7 @@ void CDVDDemuxClient::OpenStream(int id)
+@@ -1180,7 +1182,7 @@ void CDVDDemuxClient::OpenStream(int id)
        m_videoStreamPlaying = id;
  
      if (bOpenStream)
@@ -62,9 +63,10 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp kodi-patc
    }
  }
  
-diff -Naurp kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
---- kodi/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-26 10:54:52.250176893 +0000
-+++ kodi-patch/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-26 10:54:52.250176893 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+index 7f11ce8..0b6c709 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
 @@ -59,8 +59,11 @@ public:
    bool IsStreaming() const override;
  

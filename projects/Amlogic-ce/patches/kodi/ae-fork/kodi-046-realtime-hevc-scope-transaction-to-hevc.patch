@@ -1,7 +1,8 @@
-diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 15:29:40.984007695 +0000
-+++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-06-01 15:31:05.347574239 +0000
-@@ -1535,6 +1535,10 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 1f37941..f31eaa1 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1589,6 +1589,10 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
        const bool incomingHevcVideo = std::ranges::any_of(
            m_SelectionStreams.Get(StreamType::VIDEO),
            [](const SelectionStream& ss) { return ss.codecId == AV_CODEC_ID_HEVC; });
@@ -12,7 +13,7 @@ diff -Naurp a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/Vi
        const bool forceInternalReset =
            realtimePlaybackStarted && (m_realtimeExpectVideoStream || m_CurrentVideo.id >= 0) &&
            (incomingHevcVideo || m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC);
-@@ -5358,7 +5362,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDS
+@@ -6031,7 +6035,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
  
    m_HasVideo = true;
    if (m_pInputStream && m_pInputStream->IsRealtime())

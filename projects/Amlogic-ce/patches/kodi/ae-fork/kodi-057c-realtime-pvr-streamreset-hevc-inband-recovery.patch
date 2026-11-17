@@ -1,6 +1,8 @@
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index 10a4635..d9f44b6 100644
 --- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
 +++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
-@@ -451,8 +451,24 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -470,8 +470,24 @@ DemuxPacket* CDVDDemuxClient::Read()
      m_deferredStreamResetPackets.push_back(m_packet.release());
    };
  
@@ -26,7 +28,7 @@
      m_streamResetPending = false;
      m_streamResetPendingSince = {};
      m_streamResetAwaitingAck = true;
-@@ -533,10 +549,18 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -563,10 +579,18 @@ DemuxPacket* CDVDDemuxClient::Read()
      if (!realtimePVRResetWaiting)
        return;
  
@@ -49,7 +51,7 @@
        return;
  
      constexpr auto streamMapRefreshInterval = std::chrono::milliseconds(250);
-@@ -619,7 +643,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -649,7 +673,7 @@ DemuxPacket* CDVDDemuxClient::Read()
          if (m_streamResetAckRequired)
          {
            CLog::Log(LOGINFO,
@@ -58,7 +60,7 @@
          }
          else
          {
-@@ -654,11 +678,9 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -684,11 +708,9 @@ DemuxPacket* CDVDDemuxClient::Read()
        return takePendingStreamReset(false);
      }
  
@@ -73,7 +75,7 @@
      if (incomingStreamReset && m_streamResetAckRequired)
      {
        m_streamResetAwaitingAck = true;
-@@ -1006,19 +1028,19 @@ bool CDVDDemuxClient::IsVideoReady(bool
+@@ -1063,19 +1085,19 @@ bool CDVDDemuxClient::IsVideoReady(bool requireVideoStream)
    {
      // During a realtime-PVR STREAMRESET, m_videoStreamPlaying can still refer
      // to the previous layout. Do not interpret the absence of that old stream ID

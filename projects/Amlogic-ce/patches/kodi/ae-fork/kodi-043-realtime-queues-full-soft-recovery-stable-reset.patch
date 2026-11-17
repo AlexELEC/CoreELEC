@@ -1,7 +1,8 @@
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.561221341 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.565200871 +0000
-@@ -1303,6 +1303,9 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index f4ab1a3..c812f34 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1311,6 +1311,9 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    const bool wasPending = m_realtimeStreamResetPending;
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
    m_realtimeStreamResetLastTry = now;
@@ -11,7 +12,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
  
    auto markPending = [&](bool restartTimer)
    {
-@@ -1766,6 +1769,9 @@ void CVideoPlayer::Prepare()
+@@ -1774,6 +1777,9 @@ void CVideoPlayer::Prepare()
    m_realtimeStreamResetPending = false;
    m_realtimeStreamResetLastTry = {};
    m_realtimeStreamResetPendingSince = {};
@@ -21,7 +22,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
  
    IPlayerCallback *cb = &m_callback;
    CFileItem fileItem = m_item;
-@@ -2186,10 +2192,89 @@ void CVideoPlayer::Process()
+@@ -2201,10 +2207,89 @@ void CVideoPlayer::Process()
      // If the main demuxer must wait for full A/V queues, keep feeding the external
      // subtitle demuxer. Recheck the same queue policy on every iteration so realtime
      // demux reading resumes as soon as the 042 policy allows it.
@@ -115,10 +116,11 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
      {
        if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
            m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.567475995 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.569485480 +0000
-@@ -699,6 +699,9 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 841ed88..4884018 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -703,6 +703,9 @@ protected:
    std::chrono::steady_clock::time_point m_realtimeStreamTransitionReadUntil{};
    std::chrono::steady_clock::time_point m_realtimeStreamResetLastTry{};
    std::chrono::steady_clock::time_point m_realtimeStreamResetPendingSince{};

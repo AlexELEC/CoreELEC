@@ -1,7 +1,8 @@
-diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
---- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2026-11-15 07:41:13.664639119 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp	2026-11-15 07:41:13.667785254 +0000
-@@ -153,9 +153,15 @@ CDemuxParserFFmpeg::~CDemuxParserFFmpeg(
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+index edfd78f..7ce4183 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+@@ -153,9 +153,15 @@ CDemuxParserFFmpeg::~CDemuxParserFFmpeg()
  static int interrupt_cb(void* ctx)
  {
    CDVDDemuxFFmpeg* demuxer = static_cast<CDVDDemuxFFmpeg*>(ctx);
@@ -79,7 +80,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/
  bool CDVDDemuxFFmpeg::IsStreaming() const
  {
    if (m_pInput && m_pInput->IsStreaming())
-@@ -1178,6 +1237,7 @@ void CDVDDemuxFFmpeg::ConvertBlurayTimes
+@@ -1178,6 +1237,7 @@ void CDVDDemuxFFmpeg::ConvertBlurayTimestamps(DemuxPacket* packet, const AVStrea
  DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
  {
    DemuxPacket* pPacket = NULL;
@@ -87,7 +88,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/
    // on some cases where the received packet is invalid we will need to return an empty packet (0 length) otherwise the main loop (in CVideoPlayer)
    // would consider this the end of stream and stop.
    bool bReturnEmpty = false;
-@@ -1197,13 +1257,67 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadIntern
+@@ -1199,13 +1259,67 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
          m_pkt.pkt.size = 0;
          m_pkt.pkt.data = NULL;
  
@@ -157,7 +158,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/
        {
          // timeout, probably no real error, return empty packet
          bReturnEmpty = true;
-@@ -1243,31 +1357,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadIntern
+@@ -1246,31 +1360,7 @@ DemuxPacket* CDVDDemuxFFmpeg::ReadInternal(bool keep)
          ParsePacket(&m_pkt.pkt);
  
          if (IsProgramChange())
@@ -190,7 +191,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/
  
          AVStream* stream = m_pFormatContext->streams[m_pkt.pkt.stream_index];
  
-@@ -2803,6 +2893,36 @@ std::string CDVDDemuxFFmpeg::GetStreamCo
+@@ -2810,6 +2900,36 @@ std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
    return {};
  }
  
@@ -227,9 +228,10 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp new/xbmc/
  bool CDVDDemuxFFmpeg::IsProgramChange()
  {
    // The built-in demuxer can also be reopened before a PVR MPEG-TS
-diff -Naurp orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
---- orig/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2026-11-15 07:41:13.669815160 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h	2026-11-15 07:41:13.671536721 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
+index 81e7467..e933da7 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.h
 @@ -13,6 +13,7 @@
  #include "DemuxStreamSSIF.h"
  #include "threads/CriticalSection.h"

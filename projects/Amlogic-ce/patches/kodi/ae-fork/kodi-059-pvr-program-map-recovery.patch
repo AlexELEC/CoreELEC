@@ -1,6 +1,8 @@
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
+index 7d72ca0..edfd78f 100644
 --- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
 +++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp
-@@ -2828,6 +2828,110 @@
+@@ -2812,6 +2812,110 @@ std::string CDVDDemuxFFmpeg::GetStreamCodecName(int iStreamId)
  
  bool CDVDDemuxFFmpeg::IsProgramChange()
  {
@@ -111,7 +113,7 @@
    unsigned int m_newStreams = m_pFormatContext->nb_streams;
    unsigned int m_newProgCount = m_pFormatContext->nb_programs;
  
-@@ -3139,6 +3243,9 @@
+@@ -3123,6 +3227,9 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
    if (m_program == 0 && !m_pFormatContext->nb_programs)
      return TRANSPORT_STREAM_STATE::NONE;
  
@@ -121,7 +123,7 @@
    if (m_program != UINT_MAX)
    {
      for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
-@@ -3151,7 +3258,8 @@
+@@ -3135,7 +3242,8 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
              (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
               st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
               (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
@@ -131,7 +133,7 @@
          {
            if (!m_startTime)
            {
-@@ -3176,7 +3284,8 @@
+@@ -3160,7 +3268,8 @@ TRANSPORT_STREAM_STATE CDVDDemuxFFmpeg::TransportStreamVideoState()
              (st->codecpar->extradata || st->codecpar->codec_id == AV_CODEC_ID_VVC ||
               st->codecpar->codec_id == AV_CODEC_ID_AVS2 ||
               (m_pInput->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&

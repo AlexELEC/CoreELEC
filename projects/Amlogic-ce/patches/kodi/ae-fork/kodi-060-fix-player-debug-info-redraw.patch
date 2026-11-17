@@ -1,29 +1,8 @@
-From eab7744cdcd2d2f9166d49eeac68451d15e8f737 Mon Sep 17 00:00:00 2001
-From: alexelec <https://alexelec.github.io/>
-Date: Mon, 22 Jun 2026 00:00:00 +0000
-Subject: [PATCH] VideoPlayer: wake GUI render when toggling debug OSD
-
-Player debug OSD is rendered through the overlay renderer, not through
-CGUIControls. After the dirty-driven GUI render skip was added, toggling
-the debug OSD could change CRenderManager state without producing a dirty
-GUI region. On D2P/video-layer paths this let CApplication skip the GUI
-render, so the OSD did not appear until some unrelated GUI/display event
-forced a redraw.
-
-Mark the overlay path dirty at the debug OSD toggle point. This preserves
-the dirty-driven skip for steady-state playback while ensuring the first
-enabled frame is painted immediately and the disabled frame clears cached
-debug overlay content.
----
- xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp | 5 ++---
- xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp | 8 ++++++++
- 2 files changed, 10 insertions(+), 3 deletions(-)
-
 diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
-index 4a2903c53b..90c076ac5b 100644
+index d7f3879..45fa8a1 100644
 --- a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
 +++ b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
-@@ -47,9 +47,8 @@ void CDebugRenderer::Initialize()
+@@ -44,9 +44,8 @@ void CDebugRenderer::Initialize()
    m_overlay = m_adapter->CreateOverlay();
    m_overlayRenderer.AddOverlay(m_overlay, 1000000., 0);
  
@@ -36,11 +15,11 @@ index 4a2903c53b..90c076ac5b 100644
  }
  
 diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
-index 5328d2163c..34f1942cd6 100644
+index 83618bf..98a5694 100644
 --- a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
 +++ b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
-@@ -973,6 +973,11 @@ void CRenderManager::ToggleDebug()
-   m_renderDebug = !m_renderDebug;
+@@ -1032,6 +1032,11 @@ void CRenderManager::ToggleDebug()
+   m_renderDebug = isEnabled;
    m_debugTimer.SetExpired();
    m_renderDebugVideo = false;
 +
@@ -51,8 +30,8 @@ index 5328d2163c..34f1942cd6 100644
  }
  
  void CRenderManager::ToggleDebugVideo()
-@@ -980,6 +985,9 @@ void CRenderManager::ToggleDebugVideo()
-   m_renderDebug = !m_renderDebug;
+@@ -1045,6 +1050,9 @@ void CRenderManager::ToggleDebugVideo()
+   m_renderDebug = isEnabled;
    m_debugTimer.SetExpired();
    m_renderDebugVideo = true;
 +
@@ -61,6 +40,3 @@ index 5328d2163c..34f1942cd6 100644
  }
  
  void CRenderManager::SetSubtitleVerticalPosition(int value, bool save)
--- 
-2.50.0
-

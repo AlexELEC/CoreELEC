@@ -1,7 +1,8 @@
-diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.cpp kodi-new/xbmc/addons/interfaces/Filesystem.cpp
---- kodi-base/xbmc/addons/interfaces/Filesystem.cpp	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/addons/interfaces/Filesystem.cpp	2026-10-02 12:57:50.973867047 +0000
-@@ -118,6 +118,7 @@ void Interface_Filesystem::Init(AddonGlo
+diff --git a/xbmc/addons/interfaces/Filesystem.cpp b/xbmc/addons/interfaces/Filesystem.cpp
+index 4bf0cf0..fa65c25 100644
+--- a/xbmc/addons/interfaces/Filesystem.cpp
++++ b/xbmc/addons/interfaces/Filesystem.cpp
+@@ -118,6 +118,7 @@ void Interface_Filesystem::Init(AddonGlobalInterface* addonInterface)
    addonInterface->toKodi->kodi_filesystem->curl_create = curl_create;
    addonInterface->toKodi->kodi_filesystem->curl_add_option = curl_add_option;
    addonInterface->toKodi->kodi_filesystem->curl_open = curl_open;
@@ -9,7 +10,7 @@ diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.cpp kodi-new/xbmc/addons
  }
  
  void Interface_Filesystem::DeInit(AddonGlobalInterface* addonInterface)
-@@ -951,6 +952,18 @@ void Interface_Filesystem::close_file(vo
+@@ -951,6 +952,18 @@ void Interface_Filesystem::close_file(void* kodiBase, void* file)
    delete f;
  }
  
@@ -28,9 +29,10 @@ diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.cpp kodi-new/xbmc/addons
  int Interface_Filesystem::get_file_chunk_size(void* kodiBase, void* file)
  {
    const auto* addon = static_cast<const CAddonDll*>(kodiBase);
-diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.h kodi-new/xbmc/addons/interfaces/Filesystem.h
---- kodi-base/xbmc/addons/interfaces/Filesystem.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/addons/interfaces/Filesystem.h	2026-10-02 12:57:50.974024704 +0000
+diff --git a/xbmc/addons/interfaces/Filesystem.h b/xbmc/addons/interfaces/Filesystem.h
+index 55e90ce..a30dd95 100644
+--- a/xbmc/addons/interfaces/Filesystem.h
++++ b/xbmc/addons/interfaces/Filesystem.h
 @@ -109,6 +109,7 @@ struct Interface_Filesystem
    static int64_t get_file_length(void* kodiBase, void* file);
    static double get_file_download_speed(void* kodiBase, void* file);
@@ -39,9 +41,10 @@ diff -Naurp kodi-base/xbmc/addons/interfaces/Filesystem.h kodi-new/xbmc/addons/i
    static int get_file_chunk_size(void* kodiBase, void* file);
    static bool io_control_get_seek_possible(void* kodiBase, void* file);
    static bool io_control_get_cache_status(void* kodiBase,
-diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
---- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h	2026-10-02 12:57:50.974180960 +0000
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h b/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
+index 9bbcdbf..5f217a6 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
 @@ -1932,6 +1932,15 @@ public:
          CPrivateBase::m_interface->toKodi->kodiBase, m_file);
      m_file = nullptr;
@@ -58,9 +61,10 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h kodi-ne
    //--------------------------------------------------------------------------
  
    //==========================================================================
-diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
---- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h	2026-10-02 12:58:36.968133177 +0000
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h b/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
+index 7f804d0..c669ce5 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
 @@ -1359,6 +1359,12 @@ public:
    /// @note Valid implementation required.
    ///
@@ -74,7 +78,7 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Input
    //----------------------------------------------------------------------------
  
    //============================================================================
-@@ -1927,6 +1933,7 @@ private:
+@@ -1916,6 +1922,7 @@ private:
  
      // Added on 2.0.12
      instance->inputstream->toAddon->block_size_stream = ADDON_GetBlockSize;
@@ -82,7 +86,7 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Input
  
      /*
      // Way to include part on new API version
-@@ -1952,6 +1959,11 @@ private:
+@@ -1940,6 +1947,11 @@ private:
      static_cast<CInstanceInputStream*>(instance->toAddon->addonInstance)->Close();
    }
  
@@ -94,9 +98,10 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Input
    inline static void ADDON_GetCapabilities(const AddonInstance_InputStream* instance,
                                             INPUTSTREAM_CAPABILITIES* capabilities)
    {
-diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
---- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h	2026-10-02 12:57:50.976926288 +0000
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
+index f00f60c..b5d8a62 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
 @@ -729,6 +729,7 @@ extern "C"
      bool(__cdecl* seek_chapter)(const struct AddonInstance_InputStream* instance, int ch);
  
@@ -105,9 +110,10 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance
    } KodiToAddonFuncTable_InputStream;
  
    typedef struct AddonInstance_InputStream /* internal */
-diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
---- kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h	2026-09-30 05:57:23.000000000 +0000
-+++ kodi-new/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h	2026-10-02 12:57:50.974480841 +0000
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
+index 6aa6b5e..018a0b3 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
 @@ -324,6 +324,7 @@ extern "C"
      bool (*get_disk_space)(
          void* kodiBase, const char* path, uint64_t* capacity, uint64_t* free, uint64_t* available);
@@ -116,9 +122,10 @@ diff -Naurp kodi-base/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h k
    } AddonToKodiFuncTable_kodi_filesystem;
  
    //}}}
-diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
---- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp	2026-10-02 12:57:50.976051747 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
+index a129064..1fe0fe2 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
 @@ -89,6 +89,12 @@ void CDVDInputStreamFile::Close()
    m_eof = true;
  }
@@ -132,9 +139,10 @@ diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.
  int CDVDInputStreamFile::Read(uint8_t* buf, int buf_size)
  {
    if(!m_pFile) return -1;
-diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
---- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h	2026-10-02 12:57:50.975958156 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
+index fc6d3ab..55a8a58 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
 @@ -17,6 +17,7 @@ public:
    ~CDVDInputStreamFile() override;
    bool Open() override;
@@ -143,9 +151,10 @@ diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.
    int Read(uint8_t* buf, int buf_size) override;
    int64_t Seek(int64_t offset, int whence) override;
    bool IsEOF() override;
-diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
---- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp	2026-10-02 12:57:50.977018948 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
+index f26f43d..c6ccb50 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
 @@ -204,6 +204,12 @@ bool CInputStreamAddon::Open()
    return ret;
  }
@@ -159,9 +168,10 @@ diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cp
  void CInputStreamAddon::Close()
  {
    if (m_ifc.inputstream->toAddon->close)
-diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
---- kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h	2026-10-02 12:57:50.977068623 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
+index 2f1990c..bf1f363 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
 @@ -54,6 +54,7 @@ public:
    // CDVDInputStream
    bool Open() override;
@@ -170,9 +180,10 @@ diff -Naurp kodi-base/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h 
    int Read(uint8_t* buf, int buf_size) override;
    int64_t Seek(int64_t offset, int whence) override;
    int64_t GetLength() override;
-diff -Naurp kodi-base/xbmc/filesystem/CurlFile.cpp kodi-new/xbmc/filesystem/CurlFile.cpp
---- kodi-base/xbmc/filesystem/CurlFile.cpp	2026-09-30 05:57:23.000000000 +0000
-+++ kodi-new/xbmc/filesystem/CurlFile.cpp	2026-10-02 12:57:50.974629685 +0000
+diff --git a/xbmc/filesystem/CurlFile.cpp b/xbmc/filesystem/CurlFile.cpp
+index cfa0c3b..d0dbfbe 100644
+--- a/xbmc/filesystem/CurlFile.cpp
++++ b/xbmc/filesystem/CurlFile.cpp
 @@ -1109,9 +1109,16 @@ bool CCurlFile::IsInternet()
    return found;
  }
@@ -191,7 +202,7 @@ diff -Naurp kodi-base/xbmc/filesystem/CurlFile.cpp kodi-new/xbmc/filesystem/Curl
    while (m_opened)
      KODI::TIME::Sleep(1ms);
  }
-@@ -1772,9 +1779,6 @@ ssize_t CCurlFile::CReadState::Read(void
+@@ -1772,9 +1779,6 @@ ssize_t CCurlFile::CReadState::Read(void* lpBuf, size_t uiBufSize)
  int8_t CCurlFile::CReadState::FillBuffer(unsigned int want)
  {
    int retry = 0;
@@ -201,7 +212,7 @@ diff -Naurp kodi-base/xbmc/filesystem/CurlFile.cpp kodi-new/xbmc/filesystem/Curl
  
    // only attempt to fill buffer if transactions still running and buffer
    // doesn't exceed required size already
-@@ -1909,71 +1913,17 @@ int8_t CCurlFile::CReadState::FillBuffer
+@@ -1909,71 +1913,17 @@ int8_t CCurlFile::CReadState::FillBuffer(unsigned int want)
      {
        case CURLM_OK:
        {
@@ -280,9 +291,10 @@ diff -Naurp kodi-base/xbmc/filesystem/CurlFile.cpp kodi-new/xbmc/filesystem/Curl
        }
        break;
        case CURLM_CALL_MULTI_PERFORM:
-diff -Naurp kodi-base/xbmc/filesystem/CurlFile.h kodi-new/xbmc/filesystem/CurlFile.h
---- kodi-base/xbmc/filesystem/CurlFile.h	2026-09-30 05:57:23.000000000 +0000
-+++ kodi-new/xbmc/filesystem/CurlFile.h	2026-10-02 12:57:50.974876647 +0000
+diff --git a/xbmc/filesystem/CurlFile.h b/xbmc/filesystem/CurlFile.h
+index 0c3b3f7..0993241 100644
+--- a/xbmc/filesystem/CurlFile.h
++++ b/xbmc/filesystem/CurlFile.h
 @@ -12,6 +12,7 @@
  #include "utils/HttpHeader.h"
  #include "utils/RingBuffer.h"
@@ -308,10 +320,11 @@ diff -Naurp kodi-base/xbmc/filesystem/CurlFile.h kodi-new/xbmc/filesystem/CurlFi
            int64_t m_fileSize;
            int64_t m_filePos;
            bool m_bFirstLoop;
-diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.cpp kodi-new/xbmc/filesystem/DllLibCurl.cpp
---- kodi-base/xbmc/filesystem/DllLibCurl.cpp	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/filesystem/DllLibCurl.cpp	2026-10-02 12:57:50.975024159 +0000
-@@ -87,6 +87,16 @@ CURLMcode DllLibCurl::multi_timeout(CURL
+diff --git a/xbmc/filesystem/DllLibCurl.cpp b/xbmc/filesystem/DllLibCurl.cpp
+index b9a7a65..35e72b9 100644
+--- a/xbmc/filesystem/DllLibCurl.cpp
++++ b/xbmc/filesystem/DllLibCurl.cpp
+@@ -87,6 +87,16 @@ CURLMcode DllLibCurl::multi_timeout(CURLM* multi_handle, long* timeout)
    return curl_multi_timeout(multi_handle, timeout);
  }
  
@@ -328,9 +341,10 @@ diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.cpp kodi-new/xbmc/filesystem/Dl
  CURLMsg* DllLibCurl::multi_info_read(CURLM* multi_handle, int* msgs_in_queue)
  {
    return curl_multi_info_read(multi_handle, msgs_in_queue);
-diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.h kodi-new/xbmc/filesystem/DllLibCurl.h
---- kodi-base/xbmc/filesystem/DllLibCurl.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/filesystem/DllLibCurl.h	2026-10-02 12:57:50.975329509 +0000
+diff --git a/xbmc/filesystem/DllLibCurl.h b/xbmc/filesystem/DllLibCurl.h
+index 760f28d..1cf9966 100644
+--- a/xbmc/filesystem/DllLibCurl.h
++++ b/xbmc/filesystem/DllLibCurl.h
 @@ -57,6 +57,8 @@ public:
                          fd_set* exc_fd_set,
                          int* max_fd);
@@ -340,13 +354,15 @@ diff -Naurp kodi-base/xbmc/filesystem/DllLibCurl.h kodi-new/xbmc/filesystem/DllL
    CURLMsg* multi_info_read(CURLM* multi_handle, int* msgs_in_queue);
    CURLMcode multi_cleanup(CURLM* handle);
    curl_slist* slist_append(curl_slist* list, const char* to_append);
-diff -Naurp kodi-base/xbmc/filesystem/File.cpp kodi-new/xbmc/filesystem/File.cpp
---- kodi-base/xbmc/filesystem/File.cpp	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/filesystem/File.cpp	2026-10-02 12:57:50.975482099 +0000
-@@ -667,6 +667,18 @@ ssize_t CFile::Read(void *lpBuf, size_t
+diff --git a/xbmc/filesystem/File.cpp b/xbmc/filesystem/File.cpp
+index 8cd4426..45593b0 100644
+--- a/xbmc/filesystem/File.cpp
++++ b/xbmc/filesystem/File.cpp
+@@ -666,6 +666,18 @@ ssize_t CFile::Read(void *lpBuf, size_t uiBufSize)
+   return 0;
  }
  
- //*********************************************************************************************
++//*********************************************************************************************
 +void CFile::Abort()
 +{
 +  try
@@ -358,13 +374,13 @@ diff -Naurp kodi-base/xbmc/filesystem/File.cpp kodi-new/xbmc/filesystem/File.cpp
 +  catch (...) { CLog::Log(LOGERROR, "{} - Unhandled exception", __FUNCTION__); }
 +}
 +
-+//*********************************************************************************************
+ //*********************************************************************************************
  void CFile::Close()
  {
-   try
-diff -Naurp kodi-base/xbmc/filesystem/File.h kodi-new/xbmc/filesystem/File.h
---- kodi-base/xbmc/filesystem/File.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/filesystem/File.h	2026-10-02 12:57:50.975685035 +0000
+diff --git a/xbmc/filesystem/File.h b/xbmc/filesystem/File.h
+index b92f678..257765f 100644
+--- a/xbmc/filesystem/File.h
++++ b/xbmc/filesystem/File.h
 @@ -72,6 +72,7 @@ public:
     *         or undetectable error occur, -1 in case of any explicit error
     */
@@ -373,10 +389,11 @@ diff -Naurp kodi-base/xbmc/filesystem/File.h kodi-new/xbmc/filesystem/File.h
  
    /*!
     * \brief String reading by line
-diff -Naurp kodi-base/xbmc/filesystem/FileCache.cpp kodi-new/xbmc/filesystem/FileCache.cpp
---- kodi-base/xbmc/filesystem/FileCache.cpp	2026-09-30 05:57:23.000000000 +0000
-+++ kodi-new/xbmc/filesystem/FileCache.cpp	2026-10-02 12:58:36.968326267 +0000
-@@ -789,6 +789,22 @@ int64_t CFileCache::Seek(int64_t iFilePo
+diff --git a/xbmc/filesystem/FileCache.cpp b/xbmc/filesystem/FileCache.cpp
+index 8e2d8bb..3f2a31a 100644
+--- a/xbmc/filesystem/FileCache.cpp
++++ b/xbmc/filesystem/FileCache.cpp
+@@ -787,6 +787,22 @@ int64_t CFileCache::Seek(int64_t iFilePosition, int iWhence)
    return iTarget;
  }
  
@@ -399,10 +416,11 @@ diff -Naurp kodi-base/xbmc/filesystem/FileCache.cpp kodi-new/xbmc/filesystem/Fil
  void CFileCache::Close()
  {
    StopThread();
-diff -Naurp kodi-base/xbmc/filesystem/FileCache.h kodi-new/xbmc/filesystem/FileCache.h
---- kodi-base/xbmc/filesystem/FileCache.h	2026-09-30 05:57:23.000000000 +0000
-+++ kodi-new/xbmc/filesystem/FileCache.h	2026-10-02 12:57:50.976468449 +0000
-@@ -61,6 +61,7 @@ public:
+diff --git a/xbmc/filesystem/FileCache.h b/xbmc/filesystem/FileCache.h
+index 191c34a..5bc4583 100644
+--- a/xbmc/filesystem/FileCache.h
++++ b/xbmc/filesystem/FileCache.h
+@@ -63,6 +63,7 @@ public:
      // IFIle methods
      bool Open(const CURL& url) override;
      void Close() override;
@@ -410,9 +428,10 @@ diff -Naurp kodi-base/xbmc/filesystem/FileCache.h kodi-new/xbmc/filesystem/FileC
      bool Exists(const CURL& url) override;
      int Stat(const CURL& url, struct __stat64* buffer) override;
  
-diff -Naurp kodi-base/xbmc/filesystem/IFile.h kodi-new/xbmc/filesystem/IFile.h
---- kodi-base/xbmc/filesystem/IFile.h	2026-09-28 10:09:11.000000000 +0000
-+++ kodi-new/xbmc/filesystem/IFile.h	2026-10-02 12:57:50.975839097 +0000
+diff --git a/xbmc/filesystem/IFile.h b/xbmc/filesystem/IFile.h
+index 3925fff..2999ea7 100644
+--- a/xbmc/filesystem/IFile.h
++++ b/xbmc/filesystem/IFile.h
 @@ -117,6 +117,7 @@ public:
    virtual ReadLineResult ReadLine(char* buffer, std::size_t bufferSize);
    virtual int64_t Seek(int64_t iFilePosition, int iWhence = SEEK_SET) = 0;

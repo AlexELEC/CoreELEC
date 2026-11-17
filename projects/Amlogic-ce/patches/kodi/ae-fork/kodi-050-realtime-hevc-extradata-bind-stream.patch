@@ -1,7 +1,8 @@
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.611929969 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-11-15 07:41:13.615616478 +0000
-@@ -1314,10 +1314,19 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 467aae9..8469db2 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1322,10 +1322,19 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    // from inputstream add-ons. Resetting it recreates the parser and discards
    // both already extracted extradata and any partial parser state. Keep it
    // alive until the pending HEVC stream can be opened.
@@ -23,7 +24,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
      resetDemuxer = false;
    }
  
-@@ -1944,6 +1953,12 @@ void CVideoPlayer::Prepare()
+@@ -1952,6 +1961,12 @@ void CVideoPlayer::Prepare()
    m_realtimeExpectVideoStream = false;
    m_realtimeForceVideoCodecReopen = false;
    m_realtimeHevcExtradataPending = false;
@@ -36,7 +37,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    m_realtimeHevcPostResetGate = false;
    m_realtimeHevcPostResetVideoSeen = false;
    m_realtimeHevcPostResetAudioReady = false;
-@@ -5933,6 +5948,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -6032,6 +6047,12 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
                  "VideoPlayer: realtime HEVC extradata recovery succeeded ({} bytes)",
                  hint.extradata.GetSize());
        m_realtimeHevcExtradataPending = false;
@@ -49,7 +50,7 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
      }
  
      if (current.type == StreamType::SUBTITLE)
-@@ -5986,6 +6007,12 @@ bool CVideoPlayer::OpenStream(CCurrentSt
+@@ -6086,6 +6107,12 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
                    "VideoPlayer: realtime HEVC opening deferred; preserve client parser until raw extradata is extracted");
        }
        m_realtimeHevcExtradataPending = true;
@@ -62,10 +63,11 @@ diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
        CLog::Log(LOGWARNING,
                  "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");
      }
-diff -Naurp orig/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
---- orig/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.619105079 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-11-15 07:41:13.621873426 +0000
-@@ -717,6 +717,12 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 87532cb..fba3423 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -721,6 +721,12 @@ protected:
    // CDVDDemuxClient owns the parser which extracts HEVC VPS/SPS/PPS from raw
    // inputstream packets. Do not recreate that demuxer while this is true.
    bool m_realtimeHevcExtradataPending{false};

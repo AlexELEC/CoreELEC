@@ -1,6 +1,7 @@
-diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h
---- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h	2026-10-18 19:20:29.633322352 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h	2026-10-18 19:21:59.699017691 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h
+index 1f481b9..9c321c6 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h
 @@ -269,6 +269,9 @@ public:
     */
    virtual bool HasPendingStreamReset() const { return false; }
@@ -11,19 +12,20 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemux.h new/xbmc/cores/Vi
    /* Notify the demuxer that VideoPlayer has completed handling a STREAMRESET. */
    virtual void AcknowledgeStreamReset() {}
  
-diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
---- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-18 19:20:29.643543529 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp	2026-10-18 19:21:59.701258107 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index 1e0fa03..85de38a 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
 @@ -15,6 +15,8 @@
+ #include "cores/VideoPlayer/Interface/TimingConstants.h"
  #include "utils/StreamUtils.h"
  #include "utils/log.h"
- 
 +#include <algorithm>
 +#include <cstddef>
+ 
+ #include <chrono>
  #include <memory>
- #include <new>
- #include <tuple>
-@@ -74,6 +76,8 @@ bool CDVDDemuxClient::Open(std::shared_p
+@@ -88,6 +90,8 @@ bool CDVDDemuxClient::Open(std::shared_ptr<CDVDInputStream> pInput)
    m_streamResetPending = false;
    m_streamResetPendingSince = {};
    m_streamResetAwaitingAck = false;
@@ -32,7 +34,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    Abort();
  
    m_pInput = std::move(pInput);
-@@ -97,6 +101,8 @@ void CDVDDemuxClient::Dispose()
+@@ -111,6 +115,8 @@ void CDVDDemuxClient::Dispose()
    m_streamResetPending = false;
    m_streamResetPendingSince = {};
    m_streamResetAwaitingAck = false;
@@ -41,7 +43,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    DisposeStreams();
  
    m_pInput = nullptr;
-@@ -110,6 +116,8 @@ void CDVDDemuxClient::ClearDeferredStrea
+@@ -124,6 +130,8 @@ void CDVDDemuxClient::ClearDeferredStreamResetPackets()
      CDVDDemuxUtils::FreeDemuxPacket(m_deferredStreamResetPackets.front());
      m_deferredStreamResetPackets.pop_front();
    }
@@ -50,7 +52,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
  }
  
  void CDVDDemuxClient::DisposeStreams()
-@@ -270,7 +278,7 @@ bool CDVDDemuxClient::ParsePacket(DemuxP
+@@ -284,7 +292,7 @@ bool CDVDDemuxClient::ParsePacket(DemuxPacket* pkt)
        {
          setExtradata(
              FFmpegExtraData(stream->m_context->extradata,
@@ -59,7 +61,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
              "FFmpeg parser context");
        }
        catch (const std::bad_alloc&)
-@@ -396,8 +404,46 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -415,8 +423,46 @@ DemuxPacket* CDVDDemuxClient::Read()
  
    const auto deferCurrentPacket = [this]()
    {
@@ -108,7 +110,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    };
  
    const auto takePendingStreamReset = [this](bool timedOut)
-@@ -437,6 +483,8 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -456,6 +502,8 @@ DemuxPacket* CDVDDemuxClient::Read()
    {
      DemuxPacket* pPacket = m_deferredStreamResetPackets.front();
      m_deferredStreamResetPackets.pop_front();
@@ -117,7 +119,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
      return pPacket;
    }
  
-@@ -461,8 +509,43 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -491,8 +539,43 @@ DemuxPacket* CDVDDemuxClient::Read()
      return takePendingStreamReset(true);
    }
  
@@ -161,7 +163,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
  
    if (m_packet->iStreamId == DMX_SPECIALID_STREAMINFO)
    {
-@@ -549,6 +632,18 @@ DemuxPacket* CDVDDemuxClient::Read()
+@@ -579,6 +662,18 @@ DemuxPacket* CDVDDemuxClient::Read()
        CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
        return takePendingStreamReset(false);
      }
@@ -180,9 +182,10 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp new/xbmc/
    }
    else if (m_packet->iStreamId >= 0 && m_streams.contains(m_packet->iStreamId))
    {
-diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
---- base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-18 19:20:29.638605701 +0000
-+++ new/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h	2026-10-18 19:21:59.700130918 +0000
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+index 75d9ee7..f6855b3 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
 @@ -12,6 +12,7 @@
  #include "DVDInputStreams/DVDInputStream.h"
  
@@ -223,10 +226,11 @@ diff -Naurp base/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h new/xbmc/co
  
  private:
    static inline bool CodecHasExtraData(AVCodecID id);
-diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlayer/VideoPlayer.cpp
---- base/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-18 19:20:29.652805908 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.cpp	2026-10-18 19:21:59.703769984 +0000
-@@ -1323,7 +1323,32 @@ bool CVideoPlayer::HandleStreamReset(boo
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 92bf9de..162b21e 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1336,7 +1336,32 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
  
    const bool wasPending = m_realtimeStreamResetPending;
    const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
@@ -260,7 +264,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
  
    // CDVDDemuxClient extracts HEVC VPS/SPS/PPS from the raw packets it receives
    // from inputstream add-ons. Resetting it recreates the parser and discards
-@@ -1426,6 +1451,24 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1439,6 +1464,24 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    const int videoStreams = m_SelectionStreams.CountType(StreamType::VIDEO);
    const int audioStreams = m_SelectionStreams.CountType(StreamType::AUDIO);
  
@@ -285,7 +289,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    if (videoStreams == 0 && audioStreams == 0)
    {
      if (!wasPending)
-@@ -1441,6 +1484,23 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1454,6 +1497,23 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
      return false;
    }
  
@@ -309,7 +313,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    if (expectedRealtimeVideo && videoStreams == 0)
    {
      if (!wasPending)
-@@ -1579,6 +1639,22 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1592,6 +1652,22 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
      return false;
    }
  
@@ -332,7 +336,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    if (!m_HasVideo && !m_HasAudio)
    {
      if (!wasPending)
-@@ -1593,6 +1669,7 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1606,6 +1682,7 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
    }
  
    m_realtimeStreamResetPending = false;
@@ -340,7 +344,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    m_realtimeStreamResetHardRetryDone = false;
    m_realtimeForceVideoCodecReopen = false;
    m_realtimeStreamResetLastTry = {};
-@@ -1664,6 +1741,12 @@ bool CVideoPlayer::HandleStreamReset(boo
+@@ -1677,6 +1754,12 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
  bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  {
  
@@ -353,7 +357,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    // check if we should read from subtitle demuxer
    if (m_pSubtitleDemuxer && m_VideoPlayerSubtitle->AcceptsData())
    {
-@@ -1725,6 +1808,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1738,6 +1821,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
          constexpr auto pendingResetDemuxerRetryTime = 5s;
          const auto now = std::chrono::steady_clock::now();
          const bool demuxerResetRetry =
@@ -361,7 +365,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
              m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
              now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
  
-@@ -1821,7 +1905,19 @@ bool CVideoPlayer::ReadPacket(DemuxPacke
+@@ -1834,7 +1918,19 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
  
            if (bad_packet_count > 50)
            {
@@ -382,7 +386,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
              {
                CLog::Log(LOGWARNING, "VideoPlayer: Too many invalid packets, perform [STREAM RESET]");
  
-@@ -2019,6 +2115,7 @@ void CVideoPlayer::Prepare()
+@@ -2032,6 +2128,7 @@ void CVideoPlayer::Prepare()
    m_realtimeNoStreamsSince = {};
    m_realtimeStreamTransitionReadUntil = {};
    m_realtimeStreamResetPending = false;
@@ -390,7 +394,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
    m_realtimeStreamResetHardRetryDone = false;
    m_realtimeStreamResetLastTry = {};
    m_realtimeStreamResetPendingSince = {};
-@@ -2543,7 +2640,7 @@ void CVideoPlayer::Process()
+@@ -2615,7 +2712,7 @@ void CVideoPlayer::Process()
        constexpr auto pendingResetDemuxerRetryTime = 5s;
        const auto now = std::chrono::steady_clock::now();
        const bool demuxerResetRetry =
@@ -399,7 +403,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
            m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
            now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
  
-@@ -2571,7 +2668,7 @@ void CVideoPlayer::Process()
+@@ -2643,7 +2740,7 @@ void CVideoPlayer::Process()
        constexpr auto pendingResetDemuxerRetryTime = 5s;
        const auto now = std::chrono::steady_clock::now();
        const bool demuxerResetRetry =
@@ -408,7 +412,7 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
            m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
            now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
  
-@@ -2677,6 +2774,7 @@ void CVideoPlayer::Process()
+@@ -2765,6 +2862,7 @@ void CVideoPlayer::Process()
          constexpr auto pendingResetDemuxerRetryTime = 5s;
          const auto now = std::chrono::steady_clock::now();
          const bool demuxerResetRetry =
@@ -416,10 +420,11 @@ diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.cpp new/xbmc/cores/VideoPlay
              m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
              now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
  
-diff -Naurp base/xbmc/cores/VideoPlayer/VideoPlayer.h new/xbmc/cores/VideoPlayer/VideoPlayer.h
---- base/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-10-18 19:20:29.647966004 +0000
-+++ new/xbmc/cores/VideoPlayer/VideoPlayer.h	2026-10-18 19:21:59.702688318 +0000
-@@ -685,6 +685,9 @@ protected:
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 03e87b8..8bb497c 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -708,6 +708,9 @@ protected:
    std::chrono::steady_clock::time_point m_realtimeQueuesFullLastSoftRecovery{};
    int m_realtimeQueuesFullSoftRecoveries{0};
    bool m_realtimeStreamResetPending{false};

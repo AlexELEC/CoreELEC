@@ -1,6 +1,7 @@
-diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCache.cpp
---- kodi/xbmc/filesystem/FileCache.cpp	2026-10-09 09:26:43.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.cpp	2026-10-09 16:01:21.155717696 +0000
+diff --git a/xbmc/filesystem/FileCache.cpp b/xbmc/filesystem/FileCache.cpp
+index b0ad2b5..8e2d8bb 100644
+--- a/xbmc/filesystem/FileCache.cpp
++++ b/xbmc/filesystem/FileCache.cpp
 @@ -29,6 +29,12 @@
  #include <memory>
  #include <stdexcept>
@@ -156,9 +157,10 @@ diff -Naurp kodi/xbmc/filesystem/FileCache.cpp kodi-patch/xbmc/filesystem/FileCa
      int iTotalWrite = 0;
      while (!m_bStop && (iTotalWrite < iRead))
      {
-diff -Naurp kodi/xbmc/filesystem/FileCache.h kodi-patch/xbmc/filesystem/FileCache.h
---- kodi/xbmc/filesystem/FileCache.h	2026-10-09 09:26:43.000000000 +0000
-+++ kodi-patch/xbmc/filesystem/FileCache.h	2026-10-09 16:10:42.000000000 +0000
+diff --git a/xbmc/filesystem/FileCache.h b/xbmc/filesystem/FileCache.h
+index 3d4be10..191c34a 100644
+--- a/xbmc/filesystem/FileCache.h
++++ b/xbmc/filesystem/FileCache.h
 @@ -96,10 +96,14 @@ public:
      // the events
      friend class ::TestFileCache;
