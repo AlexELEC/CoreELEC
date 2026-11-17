@@ -4,7 +4,7 @@
 # Copyright (C) 2022-present Team CoreELEC (https://coreelec.tv)
 
 PKG_NAME="kodi"
-PKG_VERSION="db35d2653556df7d748cd6aad29721331111cc3b"
+PKG_VERSION="7e8f833dcb546cd93e0a5449277ae73911c9fe23"
 PKG_SHA256=""
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
@@ -374,6 +374,7 @@ post_makeinstall_target() {
   cp ${PKG_DIR}/scripts/kodi-config ${INSTALL}/usr/lib/kodi
   cp ${PKG_DIR}/scripts/kodi-after ${INSTALL}/usr/lib/kodi
   cp ${PKG_DIR}/scripts/kodi-safe-mode ${INSTALL}/usr/lib/kodi
+  cp ${PKG_DIR}/scripts/kodi-waitonnetwork ${INSTALL}/usr/lib/kodi
   cp ${PKG_DIR}/scripts/kodi.sh ${INSTALL}/usr/lib/kodi
   cp ${PKG_DIR}/scripts/kodi-tvlink ${INSTALL}/usr/lib/kodi
 
@@ -445,9 +446,6 @@ post_makeinstall_target() {
   ${PKG_DIR}/scripts/xml_merge.py ${PKG_DIR}/config/appliance.xml \
                                   ${PROJECT_DIR}/${PROJECT}/devices/${DEVICE}/kodi/appliance.xml \
                                   >${INSTALL}/usr/share/kodi/system/settings/appliance.xml
-
-  mkdir -p ${INSTALL}/usr/cache/coreelec
-  cp ${PKG_DIR}/config/network_wait ${INSTALL}/usr/cache/coreelec
 
   # update addon manifest
   ADDON_MANIFEST=${INSTALL}/usr/share/kodi/system/addon-manifest.xml
