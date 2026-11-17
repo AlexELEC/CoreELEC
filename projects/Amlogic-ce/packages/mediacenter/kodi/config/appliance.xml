@@ -42,7 +42,7 @@
       <group id="1">
         <setting id="powermanagement.waitfornetwork">
           <level>1</level>
-          <default>10</default>
+          <default>20</default>
         </setting>
       </group>
     </category>
