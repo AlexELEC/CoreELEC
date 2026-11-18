@@ -1,0 +1,238 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 7042f98..8f591f9 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1301,6 +1301,26 @@ bool CVideoPlayer::OpenDefaultStreams(bool reset, bool keepCurrentOnFailure, boo
+ 
+ static int bad_packet_count = 0;
+ 
++// TVLINK's enhanced recovery is for realtime PVR playback. When a PVR client
++// delegates demuxing to inputstream.ffmpegdirect, Kodi represents the input as
++// DVDSTREAM_TYPE_ADDON rather than DVDSTREAM_TYPE_PVRMANAGER. Require both a PVR
++// item and FFmpeg Direct for that case, so unrelated realtime add-ons such as
++// inputstream.adaptive (YouTube Live) do not enter this recovery path.
++static bool IsRealtimePVRStream(const std::shared_ptr<CDVDInputStream>& inputStream,
++                                const CFileItem& item)
++{
++  if (!inputStream || !inputStream->IsRealtime() || !item.IsPVR())
++    return false;
++
++  if (inputStream->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER))
++    return true;
++
++  // PVR clients can delegate TS demuxing to FFmpeg Direct. In this case Kodi
++  // sees an ADDON input stream, so identify it by both the PVR item and add-on.
++  return inputStream->IsStreamType(DVDSTREAM_TYPE_ADDON) &&
++         item.GetProperty(STREAM_PROPERTY_INPUTSTREAM).asString() == "inputstream.ffmpegdirect";
++}
++
+ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+ {
+   const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
+@@ -1669,7 +1689,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
+       m_pDemuxer->GetPrograms(m_programs);
+       UpdateContent();
+ 
+-      const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++      const bool realtime = IsRealtimePVRStream(m_pInputStream, m_item);
+       const bool realtimePlaybackStarted = realtime && m_State.streamsReady;
+       const bool incomingHevcVideo = std::ranges::any_of(
+           m_SelectionStreams.Get(StreamType::VIDEO),
+@@ -1775,7 +1795,7 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
+       stream = m_pDemuxer->GetStream(packet->demuxerId, packet->iStreamId);
+       if (!stream)
+       {
+-        if (m_pInputStream->IsRealtime())
++        if (IsRealtimePVRStream(m_pInputStream, m_item))
+         {
+           ++bad_packet_count;
+           const auto now = std::chrono::steady_clock::now();
+@@ -2149,11 +2169,11 @@ void CVideoPlayer::Prepare()
+ 
+   SetCaching(CACHESTATE_FLUSH);
+ 
+-  // reset stream for inputstream addon
++  // Reset the initial stream only for inputstream.ffmpegdirect.
+   if (m_pInputStream->IsRealtime() &&
+-      m_pInputStream->IsStreamType(DVDSTREAM_TYPE_ADDON))
++      m_item.GetProperty(STREAM_PROPERTY_INPUTSTREAM).asString() == "inputstream.ffmpegdirect")
+   {
+-    CLog::Log(LOGINFO, "VideoPlayer: forced [STREAM RESET] for inputstream addon");
++    CLog::Log(LOGINFO, "VideoPlayer: forced [STREAM RESET] for inputstream.ffmpegdirect addon");
+     HandleStreamReset(false);
+   }
+ }
+@@ -2251,7 +2271,7 @@ void CVideoPlayer::Process()
+       int audioLevel = 90;
+       int videoLevel = 90;
+       bool fillBuffer = false;
+-      const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++      const bool realtime = IsRealtimePVRStream(m_pInputStream, m_item);
+       const auto now = std::chrono::steady_clock::now();
+       if (m_pendingOpenFile &&
+           m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{})
+@@ -2317,7 +2337,7 @@ void CVideoPlayer::Process()
+       }
+       else if (realtime)
+       {
+-        // For realtime/live sources, keep reading while any active queue needs data.
++        // For TVLINK PVR realtime streams, keep reading while any active queue needs data.
+         // The old "audio < 85 && video < 85" condition can stop demux reads when
+         // audio is full but video is almost empty. That starves one queue, delays
+         // TVLINK reset/new-stream packets behind Kodi's buffered data, and can make
+@@ -2339,7 +2359,7 @@ void CVideoPlayer::Process()
+                                 !m_CurrentAudio.replaying;
+     const bool videoQueueFull = !m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0 &&
+                                 !m_CurrentVideo.replaying;
+-    const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++    const bool realtime = IsRealtimePVRStream(m_pInputStream, m_item);
+     const auto now = std::chrono::steady_clock::now();
+     if (m_pendingOpenFile &&
+         m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{})
+@@ -2390,7 +2410,7 @@ void CVideoPlayer::Process()
+                                   !m_CurrentAudio.replaying;
+       const bool videoQueueFull = !m_VideoPlayerVideo->AcceptsData() && m_CurrentVideo.id >= 0 &&
+                                   !m_CurrentVideo.replaying;
+-      const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
++      const bool realtime = IsRealtimePVRStream(m_pInputStream, m_item);
+       const auto now = std::chrono::steady_clock::now();
+       const bool realtimeBuffering = realtime && m_caching == CACHESTATE_FULL && m_State.streamsReady;
+       const bool realtimeTransitionRead =
+@@ -2412,8 +2432,8 @@ void CVideoPlayer::Process()
+     };
+ 
+     // If the main demuxer must wait for full A/V queues, keep feeding the external
+-    // subtitle demuxer. Recheck the same queue policy on every iteration so realtime
+-    // demux reading resumes as soon as the 042 policy allows it.
++    // subtitle demuxer. Recheck the same PVR/non-PVR queue policy on every iteration
++    // so demux reading resumes as soon as the active policy allows it.
+     constexpr auto realtimeQueuesFullSoftRecoveryTime = 8s;
+     constexpr auto realtimeQueuesFullHardResetTime = 15s;
+     constexpr auto realtimeQueuesFullStableResetTime = 30s;
+@@ -2704,7 +2724,7 @@ void CVideoPlayer::Process()
+         continue;
+       }
+ 
+-      if (m_realtimeStreamResetPending && m_pInputStream && m_pInputStream->IsRealtime() &&
++      if (m_realtimeStreamResetPending && IsRealtimePVRStream(m_pInputStream, m_item) &&
+           !m_pInputStream->IsEOF())
+       {
+         constexpr auto pendingResetDemuxerRetryTime = 5s;
+@@ -2730,7 +2750,7 @@ void CVideoPlayer::Process()
+         continue;
+       }
+ 
+-      // A realtime live stream may temporarily produce no demux packets while the
++      // A TVLINK PVR live stream may temporarily produce no demux packets while the
+       // upstream IPTV source is stalled or being replaced. Treat this as a buffering
+       // condition, not as EOF/retry: do not drain/clear the already-open stream players
+       // and do not leave Process(), otherwise Kodi can close the client HTTP socket and
+@@ -2739,7 +2759,7 @@ void CVideoPlayer::Process()
+       // because retry loops can otherwise bypass HandlePlaySpeed() long enough for the
+       // TVLINK socket to fail after audio/video have already stalled.
+       constexpr auto realtimeNoStreamsGraceTime = 10s;
+-      const bool realtimePlaybackStarted = m_pInputStream && m_pInputStream->IsRealtime() &&
++      const bool realtimePlaybackStarted = IsRealtimePVRStream(m_pInputStream, m_item) &&
+                                            m_State.streamsReady;
+       const bool noActiveStreams = (m_CurrentAudio.id < 0 && m_CurrentVideo.id < 0);
+ 
+@@ -2965,7 +2985,7 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
+   CheckStreamChanges(m_CurrentAudio, pStream);
+ 
+   const bool realtimeHevcGate =
+-      m_pInputStream && m_pInputStream->IsRealtime() &&
++      IsRealtimePVRStream(m_pInputStream, m_item) &&
+       m_realtimeExpectVideoStream && m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
+       (m_realtimeHevcPostResetGate || m_realtimeHevcPostResetAudioCorrectionValid);
+ 
+@@ -3064,7 +3084,7 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
+     checkcont = CheckContinuity(m_CurrentVideo, pPacket);
+     UpdateTimestamps(m_CurrentVideo, pPacket);
+ 
+-    if (m_pInputStream && m_pInputStream->IsRealtime() &&
++    if (IsRealtimePVRStream(m_pInputStream, m_item) &&
+         m_realtimeExpectVideoStream && m_realtimeHevcPostResetGate &&
+         m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC &&
+         !m_realtimeHevcPostResetVideoSeen)
+@@ -3300,7 +3320,8 @@ void CVideoPlayer::HandlePlaySpeed()
+ 
+ 
+   const bool realtime = m_pInputStream && m_pInputStream->IsRealtime();
+-  const bool realtimePlaybackStarted = realtime && m_State.streamsReady;
++  const bool realtimePVR = IsRealtimePVRStream(m_pInputStream, m_item);
++  const bool realtimePlaybackStarted = realtimePVR && m_State.streamsReady;
+   const bool noActiveStreams = (m_CurrentAudio.id < 0 && m_CurrentVideo.id < 0);
+   if (!noActiveStreams)
+     m_realtimeNoStreamsSince = {};
+@@ -3356,7 +3377,7 @@ void CVideoPlayer::HandlePlaySpeed()
+                            (m_CurrentVideo.avsync == CCurrentStream::AV_SYNC_CONT ||
+                             m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC);
+     const bool deferNoPts =
+-        !realtime &&
++        !realtimePVR &&
+         ShouldDeferSync(video && audio && !syncAudio && !syncVideo,
+                         std::chrono::steady_clock::now());
+ 
+@@ -3382,7 +3403,7 @@ void CVideoPlayer::HandlePlaySpeed()
+       // Preserve the realtime startup behavior: do not anchor the master clock to
+       // zero while both stream start timestamps are still unknown. For non-realtime
+       // playback, the upstream ShouldDeferSync() keeps its bounded 2s fallback.
+-      double clock = realtime ? DVD_NOPTS_VALUE : 0;
++      double clock = realtimePVR ? DVD_NOPTS_VALUE : 0;
+       if (m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_WAITSYNC)
+         CLog::Log(LOGDEBUG, "VideoPlayer::Sync - Audio - pts: {:.3f}, cache: {:.3f}, totalcache: {:.3f}, packets:{:d} level:{:d}",
+                              m_CurrentAudio.starttime / DVD_TIME_BASE, m_CurrentAudio.cachetime / DVD_TIME_BASE, m_CurrentAudio.cachetotal / DVD_TIME_BASE, m_CurrentAudio.packets, m_VideoPlayerAudio->GetLevel());
+@@ -3426,7 +3447,7 @@ void CVideoPlayer::HandlePlaySpeed()
+         clock = m_CurrentVideo.starttime - m_CurrentVideo.cachetotal;
+       }
+ 
+-      if (realtime && clock == DVD_NOPTS_VALUE)
++      if (realtimePVR && clock == DVD_NOPTS_VALUE)
+       {
+         CLog::Log(LOGDEBUG,
+                   "VideoPlayer::Sync - waiting for valid start time. Audio start:{:.3f} Video start:{:.3f}",
+@@ -3451,7 +3472,7 @@ void CVideoPlayer::HandlePlaySpeed()
+           std::make_shared<CDVDMsgDouble>(CDVDMsg::GENERAL_RESYNC, clock), 1);
+ 
+       const bool realtimeTransitionStartup =
+-          realtime && !m_pendingOpenFile &&
++          realtimePVR && !m_pendingOpenFile &&
+           m_realtimeStreamTransitionReadUntil != std::chrono::steady_clock::time_point{};
+ 
+       if (realtimeTransitionStartup)
+@@ -3803,7 +3824,7 @@ void CVideoPlayer::HandlePlaySpeed()
+       }
+ 
+       const bool realtimeStartupAudioStallGrace =
+-          realtime &&
++          realtimePVR &&
+           m_realtimeStartupAudioStallGraceUntil != std::chrono::steady_clock::time_point{} &&
+           audioStalled &&
+           !audioCritical &&
+@@ -3821,7 +3842,7 @@ void CVideoPlayer::HandlePlaySpeed()
+       }
+ 
+       const bool realtimePostTransitionVideoGrace =
+-          realtime && !m_pendingOpenFile &&
++          realtimePVR && !m_pendingOpenFile &&
+           m_realtimePostTransitionVideoGraceUntil != std::chrono::steady_clock::time_point{} &&
+           (now < m_realtimePostTransitionVideoGraceUntil ||
+            m_realtimePostTransitionVideoDropSince != std::chrono::steady_clock::time_point{});
+@@ -6119,7 +6140,7 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
+   else
+   {
+     const bool keepRealtimeHevcRetry =
+-        m_pInputStream && m_pInputStream->IsRealtime() && current.type == StreamType::VIDEO &&
++        IsRealtimePVRStream(m_pInputStream, m_item) && current.type == StreamType::VIDEO &&
+         hint.codec == AV_CODEC_ID_HEVC && hint.extradata.GetSize() == 0;
+ 
+     if (stream && !keepRealtimeHevcRetry)
+@@ -6287,7 +6308,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
+     player->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::GENERAL_RESET), 0);
+ 
+   m_HasVideo = true;
+-  if (m_pInputStream && m_pInputStream->IsRealtime())
++  if (IsRealtimePVRStream(m_pInputStream, m_item))
+     m_realtimeExpectVideoStream = (hint.codec == AV_CODEC_ID_HEVC);
+ 
+   static_cast<IDVDStreamPlayerVideo*>(player)->SendMessage(

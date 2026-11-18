@@ -7,6 +7,7 @@ PKG_SHA256=""
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/CoreELEC"
 PKG_DEPENDS_TARGET="toolchain linux"
+PKG_DEPENDS_INIT="toolchain"
 PKG_LONGDESC="OP-TEE SECPU FW Loader"
 PKG_TOOLCHAIN="manual"
 
@@ -30,6 +31,11 @@ makeinstall_target() {
   cp -rP $(get_pkg_directory ${PKG_NAME})/filesystem/${ARCH}/usr ${INSTALL}
 
   cp tee-dummy-rpmb.so ${INSTALL}/usr/lib/coreelec
+}
+
+makeinstall_init() {
+  mkdir -p ${INSTALL}/usr/lib/optee_armtz
+    cp  ${PKG_DIR}/filesystem/${ARCH}/ta/v3.8/*.ta ${INSTALL}/usr/lib/optee_armtz
 }
 
 post_install() {

@@ -1,0 +1,442 @@
+diff --git a/xbmc/addons/interfaces/Filesystem.cpp b/xbmc/addons/interfaces/Filesystem.cpp
+index 4bf0cf0..fa65c25 100644
+--- a/xbmc/addons/interfaces/Filesystem.cpp
++++ b/xbmc/addons/interfaces/Filesystem.cpp
+@@ -118,6 +118,7 @@ void Interface_Filesystem::Init(AddonGlobalInterface* addonInterface)
+   addonInterface->toKodi->kodi_filesystem->curl_create = curl_create;
+   addonInterface->toKodi->kodi_filesystem->curl_add_option = curl_add_option;
+   addonInterface->toKodi->kodi_filesystem->curl_open = curl_open;
++  addonInterface->toKodi->kodi_filesystem->abort_file = abort_file;
+ }
+ 
+ void Interface_Filesystem::DeInit(AddonGlobalInterface* addonInterface)
+@@ -951,6 +952,18 @@ void Interface_Filesystem::close_file(void* kodiBase, void* file)
+   delete f;
+ }
+ 
++void Interface_Filesystem::abort_file(void* kodiBase, void* file)
++{
++  const auto* addon = static_cast<const CAddonDll*>(kodiBase);
++  if (!addon || !file)
++  {
++    CLog::LogF(LOGERROR, "Invalid data (addon='{}', file='{}')", kodiBase, file);
++    return;
++  }
++
++  static_cast<CFile*>(file)->Abort();
++}
++
+ int Interface_Filesystem::get_file_chunk_size(void* kodiBase, void* file)
+ {
+   const auto* addon = static_cast<const CAddonDll*>(kodiBase);
+diff --git a/xbmc/addons/interfaces/Filesystem.h b/xbmc/addons/interfaces/Filesystem.h
+index 55e90ce..a30dd95 100644
+--- a/xbmc/addons/interfaces/Filesystem.h
++++ b/xbmc/addons/interfaces/Filesystem.h
+@@ -109,6 +109,7 @@ struct Interface_Filesystem
+   static int64_t get_file_length(void* kodiBase, void* file);
+   static double get_file_download_speed(void* kodiBase, void* file);
+   static void close_file(void* kodiBase, void* file);
++  static void abort_file(void* kodiBase, void* file);
+   static int get_file_chunk_size(void* kodiBase, void* file);
+   static bool io_control_get_seek_possible(void* kodiBase, void* file);
+   static bool io_control_get_cache_status(void* kodiBase,
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h b/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
+index 9bbcdbf..5f217a6 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/Filesystem.h
+@@ -1932,6 +1932,15 @@ public:
+         CPrivateBase::m_interface->toKodi->kodiBase, m_file);
+     m_file = nullptr;
+   }
++  void Abort()
++  {
++    using namespace kodi::addon;
++
++    if (!m_file)
++      return;
++    CPrivateBase::m_interface->toKodi->kodi_filesystem->abort_file(
++        CPrivateBase::m_interface->toKodi->kodiBase, m_file);
++  }
+   //--------------------------------------------------------------------------
+ 
+   //==========================================================================
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h b/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
+index 7f804d0..c669ce5 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/addon-instance/Inputstream.h
+@@ -1359,6 +1359,12 @@ public:
+   /// @note Valid implementation required.
+   ///
+   virtual void Close() = 0;
++
++  //============================================================================
++  /// @ingroup cpp_kodi_addon_inputstream
++  /// @brief Abort an active stream operation without closing the stream.
++  /// @remarks Used by Kodi to interrupt an active read during stop or channel switch.
++  virtual void Abort() {}
+   //----------------------------------------------------------------------------
+ 
+   //============================================================================
+@@ -1916,6 +1922,7 @@ private:
+ 
+     // Added on 2.0.12
+     instance->inputstream->toAddon->block_size_stream = ADDON_GetBlockSize;
++    instance->inputstream->toAddon->abort = ADDON_Abort;
+ 
+     /*
+     // Way to include part on new API version
+@@ -1940,6 +1947,11 @@ private:
+     static_cast<CInstanceInputStream*>(instance->toAddon->addonInstance)->Close();
+   }
+ 
++  inline static void ADDON_Abort(const AddonInstance_InputStream* instance)
++  {
++    static_cast<CInstanceInputStream*>(instance->toAddon->addonInstance)->Abort();
++  }
++
+   inline static void ADDON_GetCapabilities(const AddonInstance_InputStream* instance,
+                                            INPUTSTREAM_CAPABILITIES* capabilities)
+   {
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
+index f00f60c..b5d8a62 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/addon-instance/inputstream.h
+@@ -729,6 +729,7 @@ extern "C"
+     bool(__cdecl* seek_chapter)(const struct AddonInstance_InputStream* instance, int ch);
+ 
+     int(__cdecl* block_size_stream)(const struct AddonInstance_InputStream* instance);
++    void(__cdecl* abort)(const struct AddonInstance_InputStream* instance);
+   } KodiToAddonFuncTable_InputStream;
+ 
+   typedef struct AddonInstance_InputStream /* internal */
+diff --git a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
+index 6aa6b5e..018a0b3 100644
+--- a/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
++++ b/xbmc/addons/kodi-dev-kit/include/kodi/c-api/filesystem.h
+@@ -324,6 +324,7 @@ extern "C"
+     bool (*get_disk_space)(
+         void* kodiBase, const char* path, uint64_t* capacity, uint64_t* free, uint64_t* available);
+     bool (*remove_directory_recursive)(void* kodiBase, const char* path);
++    void (*abort_file)(void* kodiBase, void* file);
+   } AddonToKodiFuncTable_kodi_filesystem;
+ 
+   //}}}
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
+index a129064..1fe0fe2 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.cpp
+@@ -89,6 +89,12 @@ void CDVDInputStreamFile::Close()
+   m_eof = true;
+ }
+ 
++void CDVDInputStreamFile::Abort()
++{
++  if (m_pFile)
++    m_pFile->Abort();
++}
++
+ int CDVDInputStreamFile::Read(uint8_t* buf, int buf_size)
+ {
+   if(!m_pFile) return -1;
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
+index fc6d3ab..55a8a58 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/DVDInputStreamFile.h
+@@ -17,6 +17,7 @@ public:
+   ~CDVDInputStreamFile() override;
+   bool Open() override;
+   void Close() override;
++  void Abort() override;
+   int Read(uint8_t* buf, int buf_size) override;
+   int64_t Seek(int64_t offset, int whence) override;
+   bool IsEOF() override;
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
+index f26f43d..c6ccb50 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.cpp
+@@ -204,6 +204,12 @@ bool CInputStreamAddon::Open()
+   return ret;
+ }
+ 
++void CInputStreamAddon::Abort()
++{
++  if (m_ifc.inputstream && m_ifc.inputstream->toAddon->abort)
++    m_ifc.inputstream->toAddon->abort(m_ifc.inputstream);
++}
++
+ void CInputStreamAddon::Close()
+ {
+   if (m_ifc.inputstream->toAddon->close)
+diff --git a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
+index 2f1990c..bf1f363 100644
+--- a/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
++++ b/xbmc/cores/VideoPlayer/DVDInputStreams/InputStreamAddon.h
+@@ -54,6 +54,7 @@ public:
+   // CDVDInputStream
+   bool Open() override;
+   void Close() override;
++  void Abort() override;
+   int Read(uint8_t* buf, int buf_size) override;
+   int64_t Seek(int64_t offset, int whence) override;
+   int64_t GetLength() override;
+diff --git a/xbmc/filesystem/CurlFile.cpp b/xbmc/filesystem/CurlFile.cpp
+index cfa0c3b..d0dbfbe 100644
+--- a/xbmc/filesystem/CurlFile.cpp
++++ b/xbmc/filesystem/CurlFile.cpp
+@@ -1109,9 +1109,16 @@ bool CCurlFile::IsInternet()
+   return found;
+ }
+ 
+-void CCurlFile::Cancel()
++void CCurlFile::Abort()
+ {
+   m_state->m_cancelled = true;
++  if (m_state->m_multiHandle)
++    g_curlInterface.multi_wakeup(m_state->m_multiHandle);
++}
++
++void CCurlFile::Cancel()
++{
++  Abort();
+   while (m_opened)
+     KODI::TIME::Sleep(1ms);
+ }
+@@ -1772,9 +1779,6 @@ ssize_t CCurlFile::CReadState::Read(void* lpBuf, size_t uiBufSize)
+ int8_t CCurlFile::CReadState::FillBuffer(unsigned int want)
+ {
+   int retry = 0;
+-  fd_set fdread;
+-  fd_set fdwrite;
+-  fd_set fdexcep;
+ 
+   // only attempt to fill buffer if transactions still running and buffer
+   // doesn't exceed required size already
+@@ -1909,71 +1913,17 @@ int8_t CCurlFile::CReadState::FillBuffer(unsigned int want)
+     {
+       case CURLM_OK:
+       {
+-        int maxfd = -1;
+-        FD_ZERO(&fdread);
+-        FD_ZERO(&fdwrite);
+-        FD_ZERO(&fdexcep);
+-
+-        // get file descriptors from the transfers
+-        g_curlInterface.multi_fdset(m_multiHandle, &fdread, &fdwrite, &fdexcep, &maxfd);
+-
+         long timeout = 0;
+-        if (CURLM_OK != g_curlInterface.multi_timeout(m_multiHandle, &timeout) || timeout == -1 || timeout < 200)
++        if (CURLM_OK != g_curlInterface.multi_timeout(m_multiHandle, &timeout) ||
++            timeout == -1 || timeout < 200)
+           timeout = 200;
+ 
+-        XbmcThreads::EndTime<> endTime{std::chrono::milliseconds(timeout)};
+-        int rc;
+-
+-        do
+-        {
+-          /* On success the value of maxfd is guaranteed to be >= -1. We call
+-           * select(maxfd + 1, ...); specially in case of (maxfd == -1) there are
+-           * no fds ready yet so we call select(0, ...) --or Sleep() on Windows--
+-           * to sleep 100ms, which is the minimum suggested value in the
+-           * curl_multi_fdset() doc.
+-           */
+-          if (maxfd == -1)
+-          {
+-#ifdef TARGET_WINDOWS
+-            /* Windows does not support using select() for sleeping without a dummy
+-             * socket. Instead use Windows' Sleep() and sleep for 100ms which is the
+-             * minimum suggested value in the curl_multi_fdset() doc.
+-             */
+-            KODI::TIME::Sleep(100ms);
+-            rc = 0;
+-#else
+-            /* Portable sleep for platforms other than Windows. */
+-            struct timeval wait = { 0, 100 * 1000 }; /* 100ms */
+-            rc = select(0, NULL, NULL, NULL, &wait);
+-#endif
+-          }
+-          else
+-          {
+-            unsigned int time_left = endTime.GetTimeLeft().count();
+-            struct timeval wait = { (int)time_left / 1000, ((int)time_left % 1000) * 1000 };
+-            rc = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &wait);
+-          }
+-#ifdef TARGET_WINDOWS
+-        } while(rc == SOCKET_ERROR && WSAGetLastError() == WSAEINTR);
+-#else
+-        } while(rc == SOCKET_ERROR && errno == EINTR);
+-#endif
+-
+-        if(rc == SOCKET_ERROR)
+-        {
+-#ifdef TARGET_WINDOWS
+-          char buf[256];
+-          strerror_s(buf, 256, WSAGetLastError());
+-          CLog::Log(LOGERROR, "CCurlFile::CReadState::{} - ({}) Failed with socket error:{}",
+-                    __FUNCTION__, fmt::ptr(this), buf);
+-#else
+-          char const * str = strerror(errno);
+-          CLog::Log(LOGERROR, "CCurlFile::CReadState::{} - ({}) Failed with socket error:{}",
+-                    __FUNCTION__, fmt::ptr(this), str);
+-#endif
+-
++        timeout = std::min(timeout, static_cast<long>(INT_MAX));
++        if (g_curlInterface.multi_poll(m_multiHandle, static_cast<int>(timeout)) != CURLM_OK)
+           return FILLBUFFER_FAIL;
+-        }
++
++        if (m_cancelled)
++          return FILLBUFFER_NO_DATA;
+       }
+       break;
+       case CURLM_CALL_MULTI_PERFORM:
+diff --git a/xbmc/filesystem/CurlFile.h b/xbmc/filesystem/CurlFile.h
+index 0c3b3f7..0993241 100644
+--- a/xbmc/filesystem/CurlFile.h
++++ b/xbmc/filesystem/CurlFile.h
+@@ -12,6 +12,7 @@
+ #include "utils/HttpHeader.h"
+ #include "utils/RingBuffer.h"
+ 
++#include <atomic>
+ #include <map>
+ #include <string>
+ 
+@@ -46,6 +47,7 @@ namespace XFILE
+       int64_t GetLength() override;
+       int Stat(const CURL& url, struct __stat64* buffer) override;
+       void Close() override;
++      void Abort() override;
+       ReadLineResult ReadLine(char* buffer, std::size_t bufferSize) override
+       {
+         return m_state->ReadLine(buffer, bufferSize);
+@@ -112,7 +114,7 @@ namespace XFILE
+           char* m_overflowBuffer; // in the rare case we would overflow the above buffer
+           unsigned int m_overflowSize; // size of the overflow buffer
+           int m_stillRunning; // Is background url fetch still in progress
+-          bool m_cancelled;
++          std::atomic<bool> m_cancelled;
+           int64_t m_fileSize;
+           int64_t m_filePos;
+           bool m_bFirstLoop;
+diff --git a/xbmc/filesystem/DllLibCurl.cpp b/xbmc/filesystem/DllLibCurl.cpp
+index b9a7a65..35e72b9 100644
+--- a/xbmc/filesystem/DllLibCurl.cpp
++++ b/xbmc/filesystem/DllLibCurl.cpp
+@@ -87,6 +87,16 @@ CURLMcode DllLibCurl::multi_timeout(CURLM* multi_handle, long* timeout)
+   return curl_multi_timeout(multi_handle, timeout);
+ }
+ 
++CURLMcode DllLibCurl::multi_poll(CURLM* multi_handle, int timeout_ms)
++{
++  return curl_multi_poll(multi_handle, nullptr, 0, timeout_ms, nullptr);
++}
++
++CURLMcode DllLibCurl::multi_wakeup(CURLM* multi_handle)
++{
++  return curl_multi_wakeup(multi_handle);
++}
++
+ CURLMsg* DllLibCurl::multi_info_read(CURLM* multi_handle, int* msgs_in_queue)
+ {
+   return curl_multi_info_read(multi_handle, msgs_in_queue);
+diff --git a/xbmc/filesystem/DllLibCurl.h b/xbmc/filesystem/DllLibCurl.h
+index 760f28d..1cf9966 100644
+--- a/xbmc/filesystem/DllLibCurl.h
++++ b/xbmc/filesystem/DllLibCurl.h
+@@ -57,6 +57,8 @@ public:
+                         fd_set* exc_fd_set,
+                         int* max_fd);
+   CURLMcode multi_timeout(CURLM* multi_handle, long* timeout);
++  CURLMcode multi_poll(CURLM* multi_handle, int timeout_ms);
++  CURLMcode multi_wakeup(CURLM* multi_handle);
+   CURLMsg* multi_info_read(CURLM* multi_handle, int* msgs_in_queue);
+   CURLMcode multi_cleanup(CURLM* handle);
+   curl_slist* slist_append(curl_slist* list, const char* to_append);
+diff --git a/xbmc/filesystem/File.cpp b/xbmc/filesystem/File.cpp
+index 8cd4426..45593b0 100644
+--- a/xbmc/filesystem/File.cpp
++++ b/xbmc/filesystem/File.cpp
+@@ -666,6 +666,18 @@ ssize_t CFile::Read(void *lpBuf, size_t uiBufSize)
+   return 0;
+ }
+ 
++//*********************************************************************************************
++void CFile::Abort()
++{
++  try
++  {
++    if (m_pFile)
++      m_pFile->Abort();
++  }
++  XBMCCOMMONS_HANDLE_UNCHECKED
++  catch (...) { CLog::Log(LOGERROR, "{} - Unhandled exception", __FUNCTION__); }
++}
++
+ //*********************************************************************************************
+ void CFile::Close()
+ {
+diff --git a/xbmc/filesystem/File.h b/xbmc/filesystem/File.h
+index b92f678..257765f 100644
+--- a/xbmc/filesystem/File.h
++++ b/xbmc/filesystem/File.h
+@@ -72,6 +72,7 @@ public:
+    *         or undetectable error occur, -1 in case of any explicit error
+    */
+   ssize_t Read(void* bufPtr, size_t bufSize);
++  void Abort();
+ 
+   /*!
+    * \brief String reading by line
+diff --git a/xbmc/filesystem/FileCache.cpp b/xbmc/filesystem/FileCache.cpp
+index 8e2d8bb..3f2a31a 100644
+--- a/xbmc/filesystem/FileCache.cpp
++++ b/xbmc/filesystem/FileCache.cpp
+@@ -787,6 +787,22 @@ int64_t CFileCache::Seek(int64_t iFilePosition, int iWhence)
+   return iTarget;
+ }
+ 
++void CFileCache::Abort()
++{
++  m_bStop = true;
++  m_seekEvent.Set();
++  m_reopenEvent.Set();
++
++  if (m_pCache)
++    m_pCache->EndOfInput();
++
++  if (m_source)
++  {
++    if (auto* implementation = m_source->GetImplementation())
++      implementation->Abort();
++  }
++}
++
+ void CFileCache::Close()
+ {
+   StopThread();
+diff --git a/xbmc/filesystem/FileCache.h b/xbmc/filesystem/FileCache.h
+index 191c34a..5bc4583 100644
+--- a/xbmc/filesystem/FileCache.h
++++ b/xbmc/filesystem/FileCache.h
+@@ -63,6 +63,7 @@ public:
+     // IFIle methods
+     bool Open(const CURL& url) override;
+     void Close() override;
++    void Abort() override;
+     bool Exists(const CURL& url) override;
+     int Stat(const CURL& url, struct __stat64* buffer) override;
+ 
+diff --git a/xbmc/filesystem/IFile.h b/xbmc/filesystem/IFile.h
+index 3925fff..2999ea7 100644
+--- a/xbmc/filesystem/IFile.h
++++ b/xbmc/filesystem/IFile.h
+@@ -117,6 +117,7 @@ public:
+   virtual ReadLineResult ReadLine(char* buffer, std::size_t bufferSize);
+   virtual int64_t Seek(int64_t iFilePosition, int iWhence = SEEK_SET) = 0;
+   virtual void Close() = 0;
++  virtual void Abort() {}
+   virtual int64_t GetPosition() = 0;
+   virtual int64_t GetLength() = 0;
+   virtual void Flush() { }

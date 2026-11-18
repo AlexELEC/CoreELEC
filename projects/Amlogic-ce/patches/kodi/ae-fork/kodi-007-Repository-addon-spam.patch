@@ -1,0 +1,21 @@
+diff -Naurp kodi/xbmc/addons/Repository.cpp kodi-patch/xbmc/addons/Repository.cpp
+--- kodi/xbmc/addons/Repository.cpp	2025-11-20 13:46:19.000000000 +0000
++++ kodi-patch/xbmc/addons/Repository.cpp	2025-11-22 06:05:36.000000000 +0000
+@@ -119,7 +119,7 @@ CRepository::CRepository(const AddonInfo
+   // old (dharma compatible) way of defining the addon repository structure, is no longer supported
+   // we error out so the user knows how to migrate. The <dir> way is supported since gotham.
+   //! @todo remove if block completely in v21
+-  if (!Type(AddonType::REPOSITORY)->GetValue("info").empty())
++  /*if (!Type(AddonType::REPOSITORY)->GetValue("info").empty())
+   {
+     CLog::Log(LOGERROR,
+               "Repository add-on {} uses old schema definition for the repository extension point! "
+@@ -146,7 +146,7 @@ CRepository::CRepository(const AddonInfo
+     {
+       CLog::Log(LOGWARNING, "Repository add-on {} disabled peer verification for add-on downloads in path {} - this is insecure and will make your Kodi installation vulnerable to attacks if enabled!", ID(), datadir.GetRedacted());
+     }
+-  }
++  }*/
+ }
+ 
+ void CRepository::OnPostInstall(bool update, bool modal)

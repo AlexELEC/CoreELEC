@@ -1,0 +1,13 @@
+diff --git a/xbmc/interfaces/legacy/ModuleXbmc.cpp b/xbmc/interfaces/legacy/ModuleXbmc.cpp
+index 0ffb3b3..2be501e 100644
+--- a/xbmc/interfaces/legacy/ModuleXbmc.cpp
++++ b/xbmc/interfaces/legacy/ModuleXbmc.cpp
+@@ -274,6 +274,8 @@ namespace XBMCAddon
+         return ret;
+       }
+ 
++      XBMCAddonUtils::GuiLock lock(nullptr, false);
++
+       CGUIInfoManager& infoMgr = CServiceBroker::GetGUI()->GetInfoManager();
+       int ret = infoMgr.TranslateString(cLine);
+       //doesn't seem to be a single InfoTag?
