@@ -144,6 +144,31 @@ function check_path() {
 }
 
 #########################################################
+# fdt_item_exists
+#########################################################
+# Return 0 if the property ('d') or node ('r') of a cmd path exists
+function fdt_item_exists() {
+  if [ "$1" == "r" ]; then
+    fdtget $amlogic_dt_id -p $dtb_file $2 >/dev/null 2>&1
+  else
+    fdtget $amlogic_dt_id $dtb_file $2 >/dev/null 2>&1
+  fi
+}
+
+#########################################################
+# fdt_parent_exists
+#########################################################
+# Return 0 if the node holding the property ('d') or node ('r') exists
+function fdt_parent_exists() {
+  if [ "$1" == "r" ]; then
+    parent=$(dirname "$2")
+  else
+    parent="${2%% *}"
+  fi
+  fdtget $amlogic_dt_id -p $dtb_file $parent >/dev/null 2>&1
+}
+
+#########################################################
 # log
 #########################################################
 function log() {
@@ -189,11 +214,12 @@ function update_migrated_xml() {
               continue 2
             fi
             ;;
-          c)
+          c|e)
             fdtget $amlogic_dt_id $dtb_file $cmd_path >/dev/null 2>&1 || continue 2
             ;;
           d|r)
-            fdtget $amlogic_dt_id $dtb_file $cmd_path >/dev/null 2>&1 && continue 2
+            fdt_item_exists $fdt_option "$cmd_path" && continue 2
+            fdt_parent_exists $fdt_option "$cmd_path" || continue 2
             ;;
       esac
     done
@@ -283,11 +309,12 @@ function migrate_dtb_to_xml() {
                 continue 2
               fi
               ;;
-            c)
+            c|e)
               fdtget $amlogic_dt_id $dtb_file $cmd_path >/dev/null 2>&1 || continue 2
               ;;
             d|r)
-              fdtget $amlogic_dt_id $dtb_file $cmd_path >/dev/null 2>&1 && continue 2
+              fdt_item_exists $fdt_option "$cmd_path" && continue 2
+              fdt_parent_exists $fdt_option "$cmd_path" || continue 2
               [ -n "$cmd_remove_exist" ] || continue 2
               ;;
       esac
@@ -455,9 +482,16 @@ function update_dtb_by_dtb_xml() {
             log " cmd[$cnt]: created, $cmd_path: run option '$fdt_option', result: $?"
             changed=1
             ;;
+          e)
+            if ! fdtget $amlogic_dt_id $dtb_file $cmd_path >/dev/null 2>&1; then
+              log " not applicable"
+              xmlstarlet ed -L -u "//$node/@status" -v "migrated" $xml_file
+              continue 2
+            fi
+            log " cmd[$cnt]: unchanged, $cmd_path: exists"
+            ;;
           d|r)
-            prop_exist=$(fdtget $amlogic_dt_id $dtb_file $cmd_path 2>/dev/null)
-            if [ "$?" == "1" -a -z "$prop_exist" ]; then
+            if ! fdt_item_exists $fdt_option "$cmd_path"; then
               log " cmd[$cnt]: unchanged, still not exist"
             else
               cmd="fdtput $amlogic_dt_id $cmd_type $dtb_file $cmd_path"
