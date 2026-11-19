@@ -179,12 +179,12 @@ index 76dd1f9..1f37941 100644
    }
    else
    {
--    if(stream)
+-    if (stream && !m_bStop)
 +    const bool keepRealtimeHevcRetry =
 +        m_pInputStream && m_pInputStream->IsRealtime() && current.type == StreamType::VIDEO &&
 +        hint.codec == AV_CODEC_ID_HEVC && hint.extradata.GetSize() == 0;
 +
-+    if (stream && !keepRealtimeHevcRetry)
++    if (stream && !m_bStop && !keepRealtimeHevcRetry)
      {
        /* mark stream as disabled, to disallow further attempts*/
        CLog::Log(LOGWARNING, "{} - Unsupported stream {}. Stream disabled.", __FUNCTION__,
@@ -192,7 +192,7 @@ index 76dd1f9..1f37941 100644
        failedStream.source = source;
        SetEnableStream(failedStream, false);
      }
-+    else if (stream)
++    else if (stream && !m_bStop)
 +    {
 +      CLog::Log(LOGWARNING,
 +                "VideoPlayer: realtime HEVC stream has no extradata yet, keep stream enabled for retry");

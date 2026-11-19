@@ -226,7 +226,7 @@ index 7042f98..8f591f9 100644
 +        IsRealtimePVRStream(m_pInputStream, m_item) && current.type == StreamType::VIDEO &&
          hint.codec == AV_CODEC_ID_HEVC && hint.extradata.GetSize() == 0;
  
-     if (stream && !keepRealtimeHevcRetry)
+     if (stream && !m_bStop && !keepRealtimeHevcRetry)
 @@ -6287,7 +6308,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
      player->SendMessage(std::make_shared<CDVDMsg>(CDVDMsg::GENERAL_RESET), 0);
  

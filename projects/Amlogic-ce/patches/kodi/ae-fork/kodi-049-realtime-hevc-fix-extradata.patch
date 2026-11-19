@@ -306,7 +306,7 @@ index 2fdcd97..467aae9 100644
        m_pSubtitleDemuxer = subtitleDemuxer;
 @@ -6047,6 +6080,12 @@ bool CVideoPlayer::OpenStream(CCurrentStream& current, int64_t demuxerId, int iS
      }
-     else if (stream)
+     else if (stream && !m_bStop)
      {
 +      if (!m_realtimeHevcExtradataPending)
 +      {
