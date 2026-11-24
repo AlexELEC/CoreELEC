@@ -1,0 +1,42 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
+index d7f3879..45fa8a1 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/DebugRenderer.cpp
+@@ -44,9 +44,8 @@ void CDebugRenderer::Initialize()
+   m_overlay = m_adapter->CreateOverlay();
+   m_overlayRenderer.AddOverlay(m_overlay, 1000000., 0);
+ 
+-  // Kick the dirty-driven walk skip so the toggle takes effect this frame;
+-  // without this the walk stays idle and the debug overlay never starts
+-  // rendering until something else dirties the GUI.
++  // Mark the fixed debug overlay dirty after it is created. User-visible
++  // enable/disable transitions are handled by CRenderManager::ToggleDebug*().
+   OVERLAY::MarkDirty();
+ }
+ 
+diff --git a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
+index 83618bf..98a5694 100644
+--- a/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
++++ b/xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp
+@@ -1032,6 +1032,11 @@ void CRenderManager::ToggleDebug()
+   m_renderDebug = isEnabled;
+   m_debugTimer.SetExpired();
+   m_renderDebugVideo = false;
++
++  // Debug OSD is an overlay, not a GUI control. Wake the dirty-driven GUI
++  // skip on state changes so the first enabled frame paints immediately and
++  // the disabled frame clears any cached overlay content.
++  OVERLAY::MarkDirty();
+ }
+ 
+ void CRenderManager::ToggleDebugVideo()
+@@ -1045,6 +1050,9 @@ void CRenderManager::ToggleDebugVideo()
+   m_renderDebug = isEnabled;
+   m_debugTimer.SetExpired();
+   m_renderDebugVideo = true;
++
++  // See ToggleDebug().
++  OVERLAY::MarkDirty();
+ }
+ 
+ void CRenderManager::SetSubtitleVerticalPosition(int value, bool save)

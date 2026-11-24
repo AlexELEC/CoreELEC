@@ -1,0 +1,50 @@
+From 9dd9c581a1b7b5bdb4ad3e2c502f7cb5933011e9 Mon Sep 17 00:00:00 2001
+From: OpenAI Patch Builder <patch-builder@openai.invalid>
+Date: Sun, 22 Nov 2026 07:22:00 +0200
+Subject: [PATCH] inputstream.ffmpegdirect: preserve NOPTS in catch-up timestamps
+
+Do not add the catch-up seek offset to missing PTS/DTS values. The sentinel
+must remain unchanged so Kodi can recognize timestamp-less packets.
+
+Keep the last known demux time when a packet has no PTS or DTS, and use DTS
+as a fallback when PTS is missing. This prevents a NOPTS packet from turning
+m_currentDemuxTime into a huge bogus value and disturbing catch-up EOF/seek
+handling.
+---
+ src/stream/FFmpegCatchupStream.cpp | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/stream/FFmpegCatchupStream.cpp b/src/stream/FFmpegCatchupStream.cpp
+index 754be66266091d26ba6655d4f4f7a7a164a8c636..0d8829074603e914a33b75c489dd66e7e38d72ec 100644
+--- a/src/stream/FFmpegCatchupStream.cpp
++++ b/src/stream/FFmpegCatchupStream.cpp
+@@ -115,8 +115,11 @@ DEMUX_PACKET* FFmpegCatchupStream::DemuxRead()
+   if (pPacket)
+   {
+     std::lock_guard<std::recursive_mutex> lock(m_mutex);
+-    pPacket->pts += m_seekOffset;
+-    pPacket->dts += m_seekOffset;
++    // NOPTS is a sentinel, not a timestamp; never apply the catch-up offset to it.
++    if (pPacket->pts != STREAM_NOPTS_VALUE)
++      pPacket->pts += m_seekOffset;
++    if (pPacket->dts != STREAM_NOPTS_VALUE)
++      pPacket->dts += m_seekOffset;
+ 
+     if (m_lastPacketResult == AVERROR_EOF && m_catchupTerminates && !m_isOpeningStream && !m_lastSeekWasLive)
+     {
+@@ -136,7 +139,11 @@ DEMUX_PACKET* FFmpegCatchupStream::DemuxRead()
+       m_lastPacketWasAvoidedEOF = false;
+     }
+ 
+-    m_currentDemuxTime = static_cast<double>(pPacket->pts) / 1000;
++    // Keep the last known demux time when neither timestamp is present.
++    if (pPacket->pts != STREAM_NOPTS_VALUE)
++      m_currentDemuxTime = static_cast<double>(pPacket->pts) / 1000;
++    else if (pPacket->dts != STREAM_NOPTS_VALUE)
++      m_currentDemuxTime = static_cast<double>(pPacket->dts) / 1000;
+   }
+ 
+   return pPacket;
+
+-- 
+2.47.3

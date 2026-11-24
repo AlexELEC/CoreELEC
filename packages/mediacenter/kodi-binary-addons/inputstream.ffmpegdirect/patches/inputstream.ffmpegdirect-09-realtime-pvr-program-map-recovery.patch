@@ -1,0 +1,152 @@
+--- a/src/stream/FFmpegStream.cpp
++++ b/src/stream/FFmpegStream.cpp
+@@ -1210,6 +1210,114 @@
+ 
+ bool FFmpegStream::IsProgramChange()
+ {
++  // A live MPEG-TS reopen can finish before PAT/PMT is available. In that case
++  // CreateStreams() leaves m_program unset. Do not wait forever in the normal
++  // m_program == UINT_MAX guard below: adopt a usable program once it appears,
++  // and publish a stream change without reopening the HTTP input again.
++  if (m_program == UINT_MAX && m_isRealTimeStream && m_pFormatContext &&
++      m_pFormatContext->iformat && m_pFormatContext->iformat->name &&
++      strcmp(m_pFormatContext->iformat->name, "mpegts") == 0)
++  {
++    auto programHasAudioVideo = [this](unsigned int programIndex)
++    {
++      if (programIndex >= m_pFormatContext->nb_programs)
++        return false;
++
++      const AVProgram* program = m_pFormatContext->programs[programIndex];
++      if (!program || program->nb_stream_indexes == 0)
++        return false;
++
++      for (unsigned int i = 0; i < program->nb_stream_indexes; ++i)
++      {
++        const unsigned int streamIndex = program->stream_index[i];
++        if (streamIndex >= m_pFormatContext->nb_streams)
++          continue;
++
++        const AVStream* stream = m_pFormatContext->streams[streamIndex];
++        if (stream && stream->codecpar &&
++            (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ||
++             stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO))
++          return true;
++      }
++      return false;
++    };
++
++    unsigned int recoveredProgram = UINT_MAX;
++    if (m_initialProgramNumber != UINT_MAX)
++    {
++      for (unsigned int i = 0; i < m_pFormatContext->nb_programs; ++i)
++      {
++        if (m_pFormatContext->programs[i] &&
++            m_pFormatContext->programs[i]->program_num ==
++                static_cast<int>(m_initialProgramNumber) &&
++            programHasAudioVideo(i))
++        {
++          recoveredProgram = i;
++          break;
++        }
++      }
++      // Respect an explicitly requested program; wait for that one instead of
++      // silently switching to a different program.
++      if (recoveredProgram == UINT_MAX)
++        return false;
++      m_initialProgramNumber = UINT_MAX;
++    }
++    else
++    {
++      for (unsigned int i = 0; i < m_pFormatContext->nb_programs; ++i)
++      {
++        if (programHasAudioVideo(i))
++        {
++          recoveredProgram = i;
++          break;
++        }
++      }
++    }
++
++    if (recoveredProgram != UINT_MAX)
++    {
++      m_program = recoveredProgram;
++      m_newProgram = recoveredProgram;
++      m_streamsInProgram = 0;
++      m_oldStreams = m_pFormatContext->nb_streams;
++      m_oldProgCount = m_pFormatContext->nb_programs;
++      Log(LOGLEVEL_INFO,
++          "FFmpegStream::IsProgramChange(): recovered live MPEG-TS program %u; "
++          "publishing stream map without reopening input",
++          recoveredProgram);
++      return true;
++    }
++
++    // Some MPEG-TS sources expose AVStreams before they expose an AVProgram.
++    // If no stream map was built, publish those streams once the current packet
++    // identifies audio/video; CreateStreams(UINT_MAX) will map all of them.
++    if (m_initialProgramNumber == UINT_MAX && m_pFormatContext->nb_programs == 0 &&
++        m_pFormatContext->nb_streams > 0 && GetNrOfStreams() == 0 &&
++        m_pkt.pkt.stream_index >= 0 &&
++        static_cast<unsigned int>(m_pkt.pkt.stream_index) < m_pFormatContext->nb_streams)
++    {
++      const AVStream* stream = m_pFormatContext->streams[m_pkt.pkt.stream_index];
++      if (stream && stream->codecpar &&
++          (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ||
++           stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO))
++      {
++        m_newProgram = UINT_MAX;
++        m_oldStreams = m_pFormatContext->nb_streams;
++        m_oldProgCount = 0;
++        Log(LOGLEVEL_INFO,
++            "FFmpegStream::IsProgramChange(): publishing ungrouped live MPEG-TS streams "
++            "without reopening input");
++        return true;
++      }
++    }
++
++    // While the stream map is empty, avoid interpreting incomplete PAT/PMT
++    // discovery as another stream reset/reopen. IsProgramChange() will try
++    // again on the next packet.
++    if (GetNrOfStreams() == 0)
++      return false;
++  }
++
+   unsigned int m_newStreams = m_pFormatContext->nb_streams;
+   unsigned int m_newProgCount = m_pFormatContext->nb_programs;
+ 
+@@ -1876,9 +1984,9 @@
+   if (m_program == 0 && !m_pFormatContext->nb_programs)
+     return TRANSPORT_STREAM_STATE::NONE;
+ 
+-  // Live HEVC can carry VPS/SPS/PPS in-band after a stream reset. Let the
+-  // first timestamped video packets through so Kodi can extract the missing
+-  // codec extradata instead of blocking the whole transport stream.
++  // Live H.264/HEVC can carry SPS/PPS (and VPS for HEVC) in-band after a
++  // stream reset. Let timestamped video packets through so Kodi can recover
++  // codec parameters from the packets instead of blocking the transport stream.
+   if (m_program != UINT_MAX)
+   {
+     for (unsigned int i = 0; i < m_pFormatContext->programs[m_program]->nb_stream_indexes; i++)
+@@ -1889,7 +1997,9 @@
+       {
+         if (idx == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
+             (st->codecpar->extradata ||
+-             (IsRealTimeStream() && st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
++             (IsRealTimeStream() &&
++              (st->codecpar->codec_id == AV_CODEC_ID_HEVC ||
++               st->codecpar->codec_id == AV_CODEC_ID_H264))))
+         {
+           if (!m_startTime)
+           {
+@@ -1911,7 +2021,9 @@
+       {
+         if (static_cast<int>(i) == m_pkt.pkt.stream_index && m_pkt.pkt.dts != AV_NOPTS_VALUE &&
+             (st->codecpar->extradata ||
+-             (IsRealTimeStream() && st->codecpar->codec_id == AV_CODEC_ID_HEVC)))
++             (IsRealTimeStream() &&
++              (st->codecpar->codec_id == AV_CODEC_ID_HEVC ||
++               st->codecpar->codec_id == AV_CODEC_ID_H264))))
+         {
+           if (!m_startTime)
+           {

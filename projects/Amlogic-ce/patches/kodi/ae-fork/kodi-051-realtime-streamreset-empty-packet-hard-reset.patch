@@ -1,0 +1,92 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 8469db2..7042f98 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1375,6 +1375,9 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+ 
+   auto markPending = [&](bool restartTimer)
+   {
++    if (!m_realtimeStreamResetPending)
++      m_realtimeStreamResetHardRetryDone = false;
++
+     if (!m_realtimeStreamResetPending ||
+         m_realtimeStreamResetPendingSince == std::chrono::steady_clock::time_point{} ||
+         restartTimer)
+@@ -1555,6 +1558,7 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+   }
+ 
+   m_realtimeStreamResetPending = false;
++  m_realtimeStreamResetHardRetryDone = false;
+   m_realtimeForceVideoCodecReopen = false;
+   m_realtimeStreamResetLastTry = {};
+   m_realtimeStreamResetPendingSince = {};
+@@ -1977,6 +1981,7 @@ void CVideoPlayer::Prepare()
+   m_realtimeNoStreamsSince = {};
+   m_realtimeStreamTransitionReadUntil = {};
+   m_realtimeStreamResetPending = false;
++  m_realtimeStreamResetHardRetryDone = false;
+   m_realtimeStreamResetLastTry = {};
+   m_realtimeStreamResetPendingSince = {};
+   m_realtimeQueuesFullSleepSince = {};
+@@ -2555,11 +2560,13 @@ void CVideoPlayer::Process()
+       constexpr auto pendingResetDemuxerRetryTime = 5s;
+       const auto now = std::chrono::steady_clock::now();
+       const bool demuxerResetRetry =
++          !m_realtimeStreamResetHardRetryDone &&
+           m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
+           now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
+ 
+       if (demuxerResetRetry)
+       {
++        m_realtimeStreamResetHardRetryDone = true;
+         if (m_realtimeHevcExtradataPending)
+           CLog::Log(LOGWARNING,
+                     "VideoPlayer: [STREAM RESET] pending for too long, retry stream open while preserving HEVC parser");
+@@ -2576,6 +2583,35 @@ void CVideoPlayer::Process()
+       continue;
+     }
+ 
++    if (m_realtimeStreamResetPending && pPacket && !pStream)
++    {
++      constexpr auto pendingResetDemuxerRetryTime = 5s;
++      const auto now = std::chrono::steady_clock::now();
++      const bool demuxerResetRetry =
++          !m_realtimeStreamResetHardRetryDone &&
++          m_realtimeStreamResetPendingSince != std::chrono::steady_clock::time_point{} &&
++          now - m_realtimeStreamResetPendingSince >= pendingResetDemuxerRetryTime;
++
++      if (demuxerResetRetry)
++      {
++        m_realtimeStreamResetHardRetryDone = true;
++        if (m_realtimeHevcExtradataPending)
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry stream open while preserving HEVC parser");
++        else
++          CLog::Log(LOGWARNING,
++                    "VideoPlayer: [STREAM RESET] pending for too long, retry with demuxer reset");
++      }
++
++      // STREAMRESET is a one-shot marker and Process() normally discards packets
++      // which have no CDemuxStream immediately below. While a realtime reset is
++      // pending, use this otherwise empty packet as another opportunity to retry
++      // the stream reset before freeing it.
++      HandleStreamReset(demuxerResetRetry, true);
++      CDVDDemuxUtils::FreeDemuxPacket(pPacket);
++      continue;
++    }
++
+     if (pPacket && !pStream)
+     {
+       const auto now = std::chrono::steady_clock::now();
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index fba3423..03e87b8 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -703,6 +703,7 @@ protected:
+   std::chrono::steady_clock::time_point m_realtimeStreamTransitionReadUntil{};
+   std::chrono::steady_clock::time_point m_realtimeStreamResetLastTry{};
+   std::chrono::steady_clock::time_point m_realtimeStreamResetPendingSince{};
++  bool m_realtimeStreamResetHardRetryDone{false};
+   std::chrono::steady_clock::time_point m_realtimeQueuesFullSleepSince{};
+   std::chrono::steady_clock::time_point m_realtimeQueuesFullLastSoftRecovery{};
+   int m_realtimeQueuesFullSoftRecoveries{0};

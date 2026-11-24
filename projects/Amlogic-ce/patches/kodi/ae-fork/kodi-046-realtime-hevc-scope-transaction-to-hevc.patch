@@ -1,0 +1,24 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 1f37941..f31eaa1 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1589,6 +1589,10 @@ bool CVideoPlayer::ReadPacket(DemuxPacket*& packet, CDemuxStream*& stream)
+       const bool incomingHevcVideo = std::ranges::any_of(
+           m_SelectionStreams.Get(StreamType::VIDEO),
+           [](const SelectionStream& ss) { return ss.codecId == AV_CODEC_ID_HEVC; });
++
++      if (realtimePlaybackStarted && incomingHevcVideo)
++        m_realtimeExpectVideoStream = true;
++
+       const bool forceInternalReset =
+           realtimePlaybackStarted && (m_realtimeExpectVideoStream || m_CurrentVideo.id >= 0) &&
+           (incomingHevcVideo || m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC);
+@@ -6031,7 +6035,7 @@ bool CVideoPlayer::OpenVideoStream(CDVDStreamInfo& hint, bool reset)
+ 
+   m_HasVideo = true;
+   if (m_pInputStream && m_pInputStream->IsRealtime())
+-    m_realtimeExpectVideoStream = true;
++    m_realtimeExpectVideoStream = (hint.codec == AV_CODEC_ID_HEVC);
+ 
+   static_cast<IDVDStreamPlayerVideo*>(player)->SendMessage(
+       std::make_shared<CDVDMsg>(CDVDMsg::PLAYER_REQUEST_STATE), 1);

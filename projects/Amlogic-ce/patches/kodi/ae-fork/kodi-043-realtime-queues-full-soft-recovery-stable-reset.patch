@@ -1,0 +1,132 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index f4ab1a3..c812f34 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1311,6 +1311,9 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+   const bool wasPending = m_realtimeStreamResetPending;
+   const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
+   m_realtimeStreamResetLastTry = now;
++  m_realtimeQueuesFullSleepSince = {};
++  m_realtimeQueuesFullLastSoftRecovery = {};
++  m_realtimeQueuesFullSoftRecoveries = 0;
+ 
+   auto markPending = [&](bool restartTimer)
+   {
+@@ -1774,6 +1777,9 @@ void CVideoPlayer::Prepare()
+   m_realtimeStreamResetPending = false;
+   m_realtimeStreamResetLastTry = {};
+   m_realtimeStreamResetPendingSince = {};
++  m_realtimeQueuesFullSleepSince = {};
++  m_realtimeQueuesFullLastSoftRecovery = {};
++  m_realtimeQueuesFullSoftRecoveries = 0;
+ 
+   IPlayerCallback *cb = &m_callback;
+   CFileItem fileItem = m_item;
+@@ -2201,10 +2207,89 @@ void CVideoPlayer::Process()
+     // If the main demuxer must wait for full A/V queues, keep feeding the external
+     // subtitle demuxer. Recheck the same queue policy on every iteration so realtime
+     // demux reading resumes as soon as the 042 policy allows it.
+-    if ((!realtime &&
+-         ((!realtimeBuffering && (audioQueueFull || videoQueueFull)) ||
+-          (realtimeBuffering && audioQueueFull && videoQueueFull))) ||
+-        (realtime && !realtimeLiveTransition && realtimeQueuesFull))
++    constexpr auto realtimeQueuesFullSoftRecoveryTime = 8s;
++    constexpr auto realtimeQueuesFullHardResetTime = 15s;
++    constexpr auto realtimeQueuesFullStableResetTime = 30s;
++    constexpr int realtimeQueuesFullMaxSoftRecoveries = 3;
++
++    const bool nonRealtimeQueuesBlocked =
++        !realtime && ((!realtimeBuffering && (audioQueueFull || videoQueueFull)) ||
++                      (realtimeBuffering && audioQueueFull && videoQueueFull));
++    const bool realtimeQueuesBlocked = realtime && !realtimeLiveTransition && realtimeQueuesFull;
++
++    if (!realtimeQueuesBlocked)
++    {
++      m_realtimeQueuesFullSleepSince = {};
++
++      // A soft socket recovery is only part of the same incident while Kodi keeps
++      // returning to the queue-full sleep guard shortly after it. If playback stays
++      // out of this guard for a while, treat the next starvation as a new incident
++      // instead of counting it as 2/3 or 3/3 and escalating to a hard reset.
++      if (m_realtimeQueuesFullSoftRecoveries > 0 &&
++          m_realtimeQueuesFullLastSoftRecovery != std::chrono::steady_clock::time_point{} &&
++          now - m_realtimeQueuesFullLastSoftRecovery >= realtimeQueuesFullStableResetTime)
++      {
++        CLog::Log(LOGINFO,
++                  "VideoPlayer: realtime soft socket recovery counter reset after {} ms without queue-full sleep",
++                  std::chrono::duration_cast<std::chrono::milliseconds>(
++                      now - m_realtimeQueuesFullLastSoftRecovery)
++                      .count());
++        m_realtimeQueuesFullLastSoftRecovery = {};
++        m_realtimeQueuesFullSoftRecoveries = 0;
++      }
++    }
++
++    bool stopForFullQueues = false;
++    if (realtimeQueuesBlocked)
++    {
++      if (m_realtimeQueuesFullSleepSince == std::chrono::steady_clock::time_point{})
++        m_realtimeQueuesFullSleepSince = now;
++
++      const auto queuesFullSleepTime = now - m_realtimeQueuesFullSleepSince;
++
++      if (m_realtimeQueuesFullSoftRecoveries < realtimeQueuesFullMaxSoftRecoveries &&
++          queuesFullSleepTime >= realtimeQueuesFullSoftRecoveryTime)
++      {
++        ++m_realtimeQueuesFullSoftRecoveries;
++        m_realtimeQueuesFullLastSoftRecovery = now;
++        m_realtimeQueuesFullSleepSince = {};
++
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime queues full for {} ms without demux read, start soft socket recovery {}/{}: keep demux reads active before hard reset. A/V queues full: {}/{}",
++                  std::chrono::duration_cast<std::chrono::milliseconds>(queuesFullSleepTime)
++                      .count(),
++                  m_realtimeQueuesFullSoftRecoveries, realtimeQueuesFullMaxSoftRecoveries,
++                  audioQueueFull, videoQueueFull);
++
++        // First try to recover without closing A/V stream players. Enter realtime
++        // buffering and arm a bounded read window so the demuxer/input socket is
++        // consumed again instead of extending the queue-full sleep starvation.
++        SetCaching(CACHESTATE_FULL);
++        m_realtimeStreamTransitionReadUntil = now + 20s;
++        m_realtimeStreamTransitionReadLogged = false;
++      }
++      else if (m_realtimeQueuesFullSoftRecoveries >= realtimeQueuesFullMaxSoftRecoveries &&
++               queuesFullSleepTime >= realtimeQueuesFullHardResetTime)
++      {
++        CLog::Log(LOGWARNING,
++                  "VideoPlayer: realtime queues stayed full after {} soft recoveries and {} ms more sleep, hard reset pipeline as last resort. A/V queues full: {}/{}",
++                  m_realtimeQueuesFullSoftRecoveries,
++                  std::chrono::duration_cast<std::chrono::milliseconds>(queuesFullSleepTime)
++                      .count(),
++                  audioQueueFull, videoQueueFull);
++        m_realtimeQueuesFullSleepSince = {};
++        m_realtimeQueuesFullLastSoftRecovery = {};
++        m_realtimeQueuesFullSoftRecoveries = 0;
++        HandleStreamReset(true);
++        continue;
++      }
++      else
++        stopForFullQueues = true;
++    }
++    else if (nonRealtimeQueuesBlocked)
++      stopForFullQueues = true;
++
++    if (stopForFullQueues)
+     {
+       if (m_playSpeed == DVD_PLAYSPEED_PAUSE &&
+           m_demuxerSpeed != DVD_PLAYSPEED_PAUSE)
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index 841ed88..4884018 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -703,6 +703,9 @@ protected:
+   std::chrono::steady_clock::time_point m_realtimeStreamTransitionReadUntil{};
+   std::chrono::steady_clock::time_point m_realtimeStreamResetLastTry{};
+   std::chrono::steady_clock::time_point m_realtimeStreamResetPendingSince{};
++  std::chrono::steady_clock::time_point m_realtimeQueuesFullSleepSince{};
++  std::chrono::steady_clock::time_point m_realtimeQueuesFullLastSoftRecovery{};
++  int m_realtimeQueuesFullSoftRecoveries{0};
+   bool m_realtimeStreamResetPending{false};
+   bool m_realtimeBufferMaxHoldLogged{false};
+   bool m_realtimeFailedStreamChangeLogged{false};

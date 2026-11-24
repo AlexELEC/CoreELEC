@@ -1,0 +1,145 @@
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+index 85de38a..10a4635 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp
+@@ -409,6 +409,11 @@ DemuxPacket* CDVDDemuxClient::Read()
+   if (!m_IDemux)
+     return nullptr;
+ 
++  // Only require a replacement video for in-place realtime-PVR transitions
++  // that started while a video stream was actually open. Audio-only playback
++  // keeps the previous readiness behavior.
++  const bool requireVideoStreamForReset = m_streamResetAckRequired && m_videoStreamPlaying >= 0;
++
+   const auto makeEmptyPacket = [this]()
+   {
+     DemuxPacket* pPacket = CDVDDemuxUtils::AllocateDemuxPacket(0);
+@@ -472,8 +477,16 @@ DemuxPacket* CDVDDemuxClient::Read()
+     m_streamResetAwaitingAck = true;
+     if (timedOut)
+     {
+-      CLog::Log(LOGWARNING,
+-                "CDVDDemuxClient: video extradata was not ready after 5 seconds; delivering deferred STREAMRESET");
++      if (m_streamResetAckRequired)
++      {
++        CLog::Log(LOGWARNING,
++                  "CDVDDemuxClient: replacement video stream/extradata was not ready after 5 seconds; delivering deferred STREAMRESET");
++      }
++      else
++      {
++        CLog::Log(LOGWARNING,
++                  "CDVDDemuxClient: video extradata was not ready after 5 seconds; delivering deferred STREAMRESET");
++      }
+     }
+     else
+     {
+@@ -584,7 +597,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+     if (m_streamResetPending)
+     {
+       CDVDDemuxUtils::FreeDemuxPacket(m_packet.release());
+-      if (IsVideoReady())
++      if (IsVideoReady(requireVideoStreamForReset))
+         return takePendingStreamReset(false);
+       if (streamResetWaitExpired())
+         return takePendingStreamReset(true);
+@@ -629,12 +642,20 @@ DemuxPacket* CDVDDemuxClient::Read()
+     if (incomingStreamReset && m_streamResetPending)
+       ClearDeferredStreamResetPackets();
+ 
+-    if (incomingStreamReset && !IsVideoReady())
++    if (incomingStreamReset && !IsVideoReady(requireVideoStreamForReset))
+     {
+       if (!m_streamResetPending)
+       {
+-        CLog::Log(LOGINFO,
+-                  "CDVDDemuxClient: deferring STREAMRESET until video extradata is ready");
++        if (m_streamResetAckRequired)
++        {
++          CLog::Log(LOGINFO,
++                    "CDVDDemuxClient: deferring realtime PVR STREAMRESET until replacement video and required extradata are ready");
++        }
++        else
++        {
++          CLog::Log(LOGINFO,
++                    "CDVDDemuxClient: deferring STREAMRESET until video extradata is ready");
++        }
+       }
+       m_streamResetPending = true;
+       m_streamResetPendingSince = std::chrono::steady_clock::now();
+@@ -644,7 +665,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+ 
+     if (m_streamResetPending)
+     {
+-      if (!IsVideoReady())
++      if (!IsVideoReady(requireVideoStreamForReset))
+       {
+         // The deferred reset subsumes intermediate layout-change notifications.
+         // Do not let one of them reach VideoPlayer before the reset can be handled.
+@@ -707,7 +728,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+       pEmpty->m_inputDropped = inputDropped;
+       if (m_streamResetPending)
+       {
+-        if (IsVideoReady())
++        if (IsVideoReady(requireVideoStreamForReset))
+           return takePendingStreamReset(false);
+         if (streamResetWaitExpired())
+           return takePendingStreamReset(true);
+@@ -717,7 +738,7 @@ DemuxPacket* CDVDDemuxClient::Read()
+ 
+     if (m_streamResetPending)
+     {
+-      if (IsVideoReady())
++      if (IsVideoReady(requireVideoStreamForReset))
+         return takePendingStreamReset(false);
+       if (streamResetWaitExpired())
+         return takePendingStreamReset(true);
+@@ -1036,12 +1057,33 @@ int CDVDDemuxClient::GetNrOfStreams() const
+   return m_streams.size();
+ }
+ 
+-bool CDVDDemuxClient::IsVideoReady()
++bool CDVDDemuxClient::IsVideoReady(bool requireVideoStream)
+ {
++  if (requireVideoStream)
++  {
++    // During a realtime-PVR STREAMRESET, m_videoStreamPlaying can still refer
++    // to the previous layout. Do not interpret the absence of that old stream ID
++    // as proof that the replacement video is ready. Require an actual video in
++    // the refreshed map, and wait until required codec extradata has been parsed.
++    bool videoStreamFound = false;
++    for (const auto& stream : m_streams)
++    {
++      if (!stream.second || stream.second->type != StreamType::VIDEO)
++        continue;
++
++      videoStreamFound = true;
++      if (CodecHasExtraData(stream.second->codec) && !stream.second->extraData)
++        return false;
++    }
++    return videoStreamFound;
++  }
++
++  // Keep the established readiness rule for non-realtime-PVR paths.
+   for (const auto& stream : m_streams)
+   {
+-    if (stream.first == m_videoStreamPlaying && stream.second->type == StreamType::VIDEO &&
+-        CodecHasExtraData(stream.second->codec) && !stream.second->extraData)
++    if (stream.first == m_videoStreamPlaying && stream.second &&
++        stream.second->type == StreamType::VIDEO && CodecHasExtraData(stream.second->codec) &&
++        !stream.second->extraData)
+       return false;
+   }
+   return true;
+diff --git a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+index f6855b3..7f11ce8 100644
+--- a/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
++++ b/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.h
+@@ -65,7 +65,7 @@ protected:
+   void DisposeStreams();
+   void ClearDeferredStreamResetPackets();
+   std::shared_ptr<CDemuxStream> GetStreamInternal(int iStreamId);
+-  bool IsVideoReady();
++  bool IsVideoReady(bool requireVideoStream = false);
+ 
+   std::shared_ptr<CDVDInputStream> m_pInput;
+   std::shared_ptr<CDVDInputStream::IDemux> m_IDemux;

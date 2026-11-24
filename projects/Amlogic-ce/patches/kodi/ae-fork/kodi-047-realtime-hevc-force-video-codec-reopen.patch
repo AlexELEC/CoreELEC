@@ -1,0 +1,63 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index f31eaa1..7e8fb36 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -1317,6 +1317,22 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+   const bool wasPending = m_realtimeStreamResetPending;
+   const bool wasRealtimePlaybackStarted = realtime && m_State.streamsReady;
+   const bool expectedRealtimeVideo = realtime && m_realtimeExpectVideoStream;
++
++  if (wasRealtimePlaybackStarted && expectedRealtimeVideo && m_CurrentVideo.id >= 0 &&
++      m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC)
++  {
++    // GENERAL_RESET is not enough for the Amlogic HEVC decoder/output path after
++    // an in-place live STREAMRESET. If the stream id/hints look unchanged,
++    // OpenVideoStream() would otherwise keep the same video thread/codec alive
++    // and only send GENERAL_RESET, leaving a stuck CAMLCodec/renderer in
++    // OutputPicture/GetPicture timeouts. Force a real video player reopen, but
++    // keep the inputstream/socket and demuxer session alive.
++    m_realtimeForceVideoCodecReopen = true;
++  }
++
++  if (!wasRealtimePlaybackStarted)
++    m_realtimeForceVideoCodecReopen = false;
++
+   m_realtimeStreamResetLastTry = now;
+   m_realtimeQueuesFullSleepSince = {};
+   m_realtimeQueuesFullLastSoftRecovery = {};
+@@ -1457,6 +1473,15 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+               "VideoPlayer: realtime stream reset will restart A/V sync as fresh playback");
+   }
+ 
++  if (expectedRealtimeVideo && m_realtimeForceVideoCodecReopen && m_CurrentVideo.id >= 0)
++  {
++    CLog::Log(LOGWARNING,
++              "VideoPlayer: realtime HEVC stream reset will reopen video codec/player without closing input socket");
++    CloseStream(m_CurrentVideo, false);
++    m_processInfo->ResetVideoCodecInfo();
++    m_HasVideo = false;
++  }
++
+   if (expectedRealtimeVideo && m_CurrentAudio.id >= 0)
+   {
+     // The new video stream must be opened before audio is committed. Until then,
+@@ -1499,6 +1524,7 @@ bool CVideoPlayer::HandleStreamReset(bool resetDemuxer, bool retryPending)
+   }
+ 
+   m_realtimeStreamResetPending = false;
++  m_realtimeForceVideoCodecReopen = false;
+   m_realtimeStreamResetLastTry = {};
+   m_realtimeStreamResetPendingSince = {};
+   m_realtimeFailedStreamChangeLogged = false;
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.h b/xbmc/cores/VideoPlayer/VideoPlayer.h
+index d24956d..62c14ee 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.h
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.h
+@@ -717,6 +717,7 @@ protected:
+   bool m_realtimePostTransitionVideoDropLogged{false};
+   bool m_realtimeStartupBufferingAllowed{true};
+   bool m_realtimeExpectVideoStream{false};
++  bool m_realtimeForceVideoCodecReopen{false};
+   std::chrono::steady_clock::time_point m_realtimeStartupAudioStallGraceUntil{};
+   bool m_realtimeStartupAudioStallGraceLogged{false};
+ 

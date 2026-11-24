@@ -1,0 +1,94 @@
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayer.cpp b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+index 9ff5ba8..4a7aa66 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayer.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayer.cpp
+@@ -3062,22 +3062,23 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
+   const bool realtimeVideoPostResetCodec =
+       m_CurrentVideo.hint.codec == AV_CODEC_ID_H264 ||
+       (m_realtimeExpectVideoStream && m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC);
+-  const bool realtimeVideoPostResetGate =
++  const bool realtimeVideoPostResetAudio =
+       IsRealtimePVRStream(m_pInputStream, m_item) && realtimeVideoPostResetCodec &&
+-      (m_realtimeVideoPostResetGate || m_realtimeVideoPostResetAudioCorrectionValid);
++      (m_realtimeVideoPostResetGate || m_realtimeVideoPostResetAudioReady);
+ 
+-  if (realtimeVideoPostResetGate)
++  if (realtimeVideoPostResetAudio)
+   {
+-    // Normalize either signed form of a missing timestamp before the generic
+-    // CheckContinuity()/UpdateTimestamps() logic sees this packet. Those paths
+-    // compare directly with DVD_NOPTS_VALUE and must not consume a negative
+-    // sentinel as a genuine DTS/PTS.
++    // Keep both missing-timestamp representations out of the generic
++    // CheckContinuity()/UpdateTimestamps() logic for the whole post-reset phase.
++    // Once initial synchronization is complete, timestamp-less AAC packets are
++    // still forwarded; they are not candidates for the one-time A/V alignment.
+     if (!IsValidRealtimeTimestamp(pPacket->dts))
+       pPacket->dts = DVD_NOPTS_VALUE;
+     if (!IsValidRealtimeTimestamp(pPacket->pts))
+       pPacket->pts = DVD_NOPTS_VALUE;
+ 
+-    const double audioDts = pPacket->dts != DVD_NOPTS_VALUE ? pPacket->dts : pPacket->pts;
++    const double audioDts =
++        IsValidRealtimeTimestamp(pPacket->dts) ? pPacket->dts : pPacket->pts;
+     const auto now = std::chrono::steady_clock::now();
+     auto logDrop = [&](const char* reason)
+     {
+@@ -3096,13 +3097,8 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
+       }
+     };
+ 
+-    if (!IsValidRealtimeTimestamp(audioDts))
+-    {
+-      logDrop("invalid audio timestamp");
+-      CDVDDemuxUtils::FreeDemuxPacket(pPacket);
+-      return;
+-    }
+-
++    // This gate is only for the initial post-reset alignment. Do not apply its
++    // timestamp requirement to later AAC packets once audioReady is established.
+     if (m_realtimeVideoPostResetGate && !m_realtimeVideoPostResetVideoSeen)
+     {
+       logDrop("waiting for first valid video timestamp");
+@@ -3112,9 +3108,15 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
+ 
+     if (m_realtimeVideoPostResetGate && !m_realtimeVideoPostResetAudioReady)
+     {
+-      // The gate is released only after both sides provide valid timestamps.
+-      // ProcessVideoData normally guarantees this, but keep the audio path
+-      // defensive so an invalid stored timestamp can never become a correction.
++      if (!IsValidRealtimeTimestamp(audioDts))
++      {
++        logDrop("waiting for first valid audio timestamp");
++        CDVDDemuxUtils::FreeDemuxPacket(pPacket);
++        return;
++      }
++
++      // Keep the one-time A/V alignment: only the first valid audio timestamp
++      // is compared with the first valid video timestamp after STREAMRESET.
+       if (!m_realtimeVideoPostResetVideoSeen ||
+           !IsValidRealtimeTimestamp(m_realtimeVideoPostResetVideoDts))
+       {
+@@ -3137,6 +3139,8 @@ void CVideoPlayer::ProcessAudioData(CDemuxStream* pStream, DemuxPacket* pPacket)
+       m_realtimeVideoPostResetGate = false;
+     }
+ 
++    // UpdateCorrection() adjusts only valid PTS/DTS fields. If both are NOPTS,
++    // leave them untouched and still pass the AAC payload to the audio decoder.
+     if (m_realtimeVideoPostResetAudioCorrectionValid)
+       UpdateCorrection(pPacket, m_realtimeVideoPostResetAudioCorrection);
+   }
+@@ -3180,9 +3184,12 @@ void CVideoPlayer::ProcessVideoData(CDemuxStream* pStream, DemuxPacket* pPacket)
+           ? IsRealtimePVRStream(m_pInputStream, m_item)
+           : m_pInputStream && m_pInputStream->IsRealtime() && m_realtimeExpectVideoStream &&
+                 m_CurrentVideo.hint.codec == AV_CODEC_ID_HEVC;
++  const bool realtimeVideoPostResetVideo =
++      realtimeVideoPostResetVideoCodec &&
++      (m_realtimeVideoPostResetGate || m_realtimeVideoPostResetAudioReady);
+   const bool realtimeVideoPostResetVideoGate =
+       realtimeVideoPostResetVideoCodec && m_realtimeVideoPostResetGate;
+-  if (realtimeVideoPostResetVideoGate)
++  if (realtimeVideoPostResetVideo)
+   {
+     // Normalize malformed/missing timestamp sentinels before generic continuity
+     // and timestamp tracking sees this packet, just as in the audio path below.
